@@ -41,10 +41,9 @@ from scripts.stock_radar import generate_html_radar_section
 
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
-from ml_services.a_stock_gates import get_a_gates
 
-# D59：标签口径与三周期（rank=横截面百分位回归，score 无概率语义）
-RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+# D59：分析端只输出排序模型（无概率语义）；不再保留 absolute 展示口径
+RANK_MODE = True
 HORIZONS = (5, 10, 20)
 
 # 尝试导入技术分析模块（用于筹码阻力）
@@ -227,8 +226,8 @@ def load_a_stock_model_accuracy(horizon=20):
     - dict: 包含准确率信息
       {
         'catboost': {'accuracy': float, 'std': float},
-        '1d': {'accuracy': float, 'std': float},
         '5d': {'accuracy': float, 'std': float},
+        '10d': {'accuracy': float, 'std': float},
         '20d': {'accuracy': float, 'std': float}
       }
     """
@@ -237,8 +236,8 @@ def load_a_stock_model_accuracy(horizon=20):
     # 默认准确率值（A股个股预测准确率通常在50-60%）
     default_accuracy = {
         'catboost': {'accuracy': 0.55, 'std': 0.05},
-        '1d': {'accuracy': 0.52, 'std': 0.08},
         '5d': {'accuracy': 0.54, 'std': 0.06},
+        '10d': {'accuracy': 0.55, 'std': 0.05},
         '20d': {'accuracy': 0.55, 'std': 0.05}
     }
 
@@ -259,7 +258,7 @@ def load_a_stock_model_accuracy(horizon=20):
             else:
                 result['catboost'] = default_accuracy['catboost']
 
-            for period in ['1d', '5d', '20d']:
+            for period in ['5d', '10d', '20d']:
                 key = f'catboost_{period}'
                 if key in data:
                     result[period] = {
@@ -294,8 +293,8 @@ def load_a_stock_model_accuracy(horizon=20):
 
                     result = {
                         'catboost': {'accuracy': accuracy, 'std': std},
-                        '1d': default_accuracy['1d'],
                         '5d': default_accuracy['5d'],
+                        '10d': default_accuracy['10d'],
                         '20d': {'accuracy': accuracy, 'std': std}
                     }
                     print(f"✅ 从Walk-forward结果加载准确率: {latest_file}")
@@ -773,7 +772,7 @@ def get_a_stock_calibrator():
 
 def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     """
-    生成三周期预测（1天、5天、20天）- 增强版，包含筹码阻力、风险得分、网络洞察
+    生成三周期预测（5天、10天、20天）- 增强版，包含筹码阻力、风险得分、网络洞察
 
     Args:
         stock_list: 股票代码列表
@@ -918,10 +917,10 @@ def get_market_sentiment(stock_analyses):
         stock_analyses: 股票分析结果
 
     Returns:
-        dict: {layer: 'normal'/'bear'/'extreme_bear', up_ratio: 0.5, dynamic_threshold: 0.5}
+        dict: {layer: 'normal'/'bear'/'extreme_bear', up_ratio: 0.5}
     """
     if not stock_analyses:
-        return {'layer': 'normal', 'up_ratio': 0.5, 'dynamic_threshold': 0.5}
+        return {'layer': 'normal', 'up_ratio': 0.5}
 
     # 计算上涨比例
     up_count = 0
@@ -935,24 +934,19 @@ def get_market_sentiment(stock_analyses):
 
     up_ratio = up_count / total if total > 0 else 0.5
 
-    # 计算情绪层级
+    # 计算情绪层级（排序口径无概率门槛）
     if up_ratio < 0.20:
         layer = 'extreme_bear'
-        dynamic_threshold = 1.0  # 暂停交易
     elif up_ratio < 0.30:
         layer = 'bear'
-        dynamic_threshold = get_a_gates()['bear']  # 校准概率 P92 分位（D8 同款，非绝对 0.70）
     elif up_ratio < 0.40:
         layer = 'weak'
-        dynamic_threshold = get_a_gates()['weak']  # 校准概率 P90 分位（D8 同款，非绝对 0.65）
     else:
         layer = 'normal'
-        dynamic_threshold = 0.50  # 标准
 
     return {
         'layer': layer,
         'up_ratio': up_ratio,
-        'dynamic_threshold': dynamic_threshold,
     }
 
 
@@ -1574,8 +1568,7 @@ def generate_comprehensive_recommendations_with_llm(
     main_fund_trend: dict,
     sector_analysis: dict,
     anomaly_result: dict,
-    llm_recommendations: dict = None,
-    model_accuracy: dict = None
+    llm_recommendations: dict = None
 ) -> str:
     """
     使用AI生成综合买卖建议（参考港股实现）
@@ -1588,7 +1581,6 @@ def generate_comprehensive_recommendations_with_llm(
         sector_analysis: 板块分析结果
         anomaly_result: 异常检测结果
         llm_recommendations: 大模型短期/中期建议（新增）
-        model_accuracy: 模型准确率信息（新增）
 
     Returns:
         str: Markdown格式的综合买卖建议
@@ -1612,16 +1604,15 @@ def generate_comprehensive_recommendations_with_llm(
         ml_stock_list.append({
             'code': code,
             'name': A_STOCK_WATCHLIST.get(code, code),
-            'probability_20d': round(prob_20d, 4),
-            'prediction_20d': (('偏强' if prob_20d >= 0.50 else '偏弱') if RANK_MODE
-                               else ('上涨' if prob_20d >= 0.50 else '下跌')),
+            'score_20d': round(prob_20d, 4),
+            'prediction_20d': ('偏强' if prob_20d >= 0.50 else '偏弱'),
             'chip_resistance': resistance_level,
             'risk_score': risk_reward.get('risk_score', '-'),
             'comprehensive_score': risk_reward.get('comprehensive_score', '-'),
         })
 
-    # 按概率排序
-    ml_stock_list.sort(key=lambda x: x['probability_20d'], reverse=True)
+    # 按排序分数排序
+    ml_stock_list.sort(key=lambda x: x['score_20d'], reverse=True)
 
     # 构建ML预测JSON文本
     ml_predictions_text = "【CatBoost模型预测结果（20天）- JSON格式】\n"
@@ -1629,22 +1620,19 @@ def generate_comprehensive_recommendations_with_llm(
     ml_predictions_text += json.dumps(ml_stock_list, ensure_ascii=False, indent=2)
     ml_predictions_text += "\n```\n\n"
     ml_predictions_text += "**字段说明**：\n"
-    if RANK_MODE:
-        ml_predictions_text += "- `probability_20d`: 20天**相对强弱分位**（rank 口径；越高=池内越偏强，非上涨概率）\n"
-    else:
-        ml_predictions_text += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+    ml_predictions_text += "- `score_20d`: 20天**排序分数**（0-1 横截面分位；越高=池内越偏强；**不是概率/胜率/置信度**）\n"
+    ml_predictions_text += "- `prediction_20d`: 偏强/偏弱（按分数 ≥0.50 / <0.50 标注）\n"
     ml_predictions_text += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
-    ml_predictions_text += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
+    ml_predictions_text += "- **使用建议**：score_20d 高 + chip_resistance 低 = 更可靠信号；不得把 score_20d 写成概率/胜率/置信度\n"
 
     # 市场情绪
     sentiment_layer = market_sentiment.get('layer', 'normal')
     up_ratio = market_sentiment.get('up_ratio', 0.5)
-    dynamic_threshold = market_sentiment.get('dynamic_threshold', 0.5)
 
     layer_names = {
         'extreme_bear': '极端熊市-暂停交易',
-        'bear': f"熊市-需分数≥{get_a_gates()['bear']:.2f}",
-        'weak': f"弱震荡-需分数≥{get_a_gates()['weak']:.2f}",
+        'bear': '熊市-仅提示收紧止损/降仓（排序口径无概率门槛）',
+        'weak': '弱震荡-谨慎，优先池内偏强档信号',
         'normal': '正常市场'
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
@@ -1709,26 +1697,21 @@ def generate_comprehensive_recommendations_with_llm(
     llm_short_term = llm_recommendations.get('short_term', '暂无短期建议') if llm_recommendations else '暂无短期建议'
     llm_medium_term = llm_recommendations.get('medium_term', '暂无中期建议') if llm_recommendations else '暂无中期建议'
 
-    # 模型准确率
-    accuracy = model_accuracy.get('catboost', {}).get('accuracy', 0.55) if model_accuracy else 0.55
-    std = model_accuracy.get('catboost', {}).get('std', 0.05) if model_accuracy else 0.05
-
     # 日期
     date_str = datetime.now().strftime('%Y-%m-%d')
 
-    # 构建Prompt（参考港股格式）
-    gates = get_a_gates()   # P3.2 分位门槛（bear/weak），prompt 文案与判定同口径
+    # 构建Prompt（rank-only：排序分数，无概率语义）
     prompt = f"""你是一位专业的A股投资分析师。请根据以下四部分信息，进行综合分析，给出实质的买卖建议。
 
 === 信息来源 ===
 
-【主要信息源 - 决策依据】
+【主要信息源】
 
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_medium_term}
 
-【2. CatBoost模型20天预测结果】
-**重要：probability 字段 = 20天相对强弱分（rank 口径=横截面分位；越高=池内越偏强；absolute 口径=校准上涨概率）**
+【2. CatBoost模型20天排序分数（交叉参考，非硬约束）】
+**重要：score_20d = 20天排序分数（横截面分位，0-1；越高=池内越偏强）。它是排序分位，不是上涨概率、不是胜率、不是置信度；只作交叉参考，不是买卖的唯一依据。**
 {ml_predictions_text}
 
 【辅助信息源 - 操作时机参考】
@@ -1739,7 +1722,7 @@ def generate_comprehensive_recommendations_with_llm(
 【4. 市场情绪】
 - 情绪层级：{sentiment_name}
 - 上涨比例：{up_ratio:.1%}
-- 动态阈值：买入需分数≥{dynamic_threshold:.0%}
+- 排序口径不做概率门槛；市场情绪仅作风险提示（收紧止损/降低总仓位），不改变分数分档
 
 【5. 主力资金趋势】
 {main_fund_prompt}
@@ -1753,68 +1736,52 @@ def generate_comprehensive_recommendations_with_llm(
 【8. 新闻摘要】
 {news_summary}
 
-=== 核心硬性约束（不可违反）===
+=== 排序分数定位（交叉参考，非硬约束）===
 
-⚠️ **CatBoost分数约束（最高优先级，无例外）**：
-- CatBoost分数 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
-- CatBoost分数 < 0.40 → **绝对禁止推荐持有或观望**
-- CatBoost分数 ≥ 0.50 → 可以考虑买入
-- CatBoost分数 ≥ 0.60 → 可以考虑强烈买入
-- **即使短期和中期方向一致，也绝对不允许违反此约束**
-- **违反此约束的建议将被视为错误**
+- **主判据**：短期时机 + 中期方向 + 技术面/基本面 + 风险收益
+- `score_20d` 只作**交叉参考**：用于确认或质疑主判据，**不单独决定买卖**
+- 分数偏强（≥0.55）且短中期同向 → 可提高信心/仓位一档（仍受单票与总仓位上限约束）
+- 分数中性（0.50-0.55）→ 不改变主判据；若仍看多，仓位≤2%
+- 分数偏弱（≤0.50）→ **不是自动否决**：写明分歧，降低仓位/收紧止损，或列为观察
+- **不得仅因分数排除一个短中期一致、且技术面/基本面支持的标的**
 
-⚠️ **仓位唯一口径（决策点 4 / 口径C，不得自行发明区间）**——按 20 日分数定单票仓位：
-- ≥ 0.60 → 单票 **4-6%**（强烈买入档）
-- 0.55 ≤ p < 0.60 → 单票 **2-3%**（买入档）
-- 0.50 < p < 0.55 → **仅观望、最多 2%**，不得列为买入信号
-- ≤ 0.50 → **禁止买入**
-
-🔥 **决策顺序（严格遵守）**：
-第一步：检查CatBoost分数 → 不满足则直接排除
-第二步：检查市场情绪 → 极端熊市暂停交易，熊市需分数≥{gates['bear']:.2f}，弱震荡需分数≥{gates['weak']:.2f}
-第三步：检查短期和中期一致性
-第四步：生成综合建议
+🔥 **分析顺序**：
+第一步：短期与中期一致性
+第二步：技术面、基本面、风险收益
+第三步：CatBoost 排序分数交叉参考（确认/分歧）
+第四步：生成建议
 
 === 综合分析规则 ===
 
-**规则1：时间维度匹配（业界最佳实践）**
+**规则1：时间维度匹配**
 - **短期信号（触发器）**：负责"何时做"（Timing）
 - **中期信号（确认器）**：负责"是否做"（Direction）
-- **CatBoost模型（验证器）**：负责提升置信度
-- 只有短期和中期方向一致时，才采取行动
-- 短期和中期冲突时，选择观望（避免不确定性）
+- **CatBoost 分数（交叉参考）**：提供池内相对强弱，不单独决定买卖
+- 短期与中期冲突 → 观望；一致 → 进入风险与交叉参考评估
 
-**决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
-- **第一步：检查CatBoost分数（硬约束）**
-  - CatBoost分数 ≤ 0.50 → 排除买入或强烈买入
-  - probability ≥ 0.50 → 进入下一步
-- **第二步：检查市场情绪**
-  - 极端熊市 → 暂停所有买入
-  - 熊市 → 需probability ≥ {gates['bear']:.2f}
-  - 弱震荡 → 需probability ≥ {gates['weak']:.2f}
-- **第三步：检查短期和中期一致性**
-  - 短期看好，中期看好 → 进入下一步
-  - 方向不一致 → 观望
-- **第四步：生成建议**
-  - 强烈买入：短期看好，中期看好，CatBoost probability ≥ 0.60，市场情绪正常
-  - 买入：短期看好，中期看好，0.50 < CatBoost probability < 0.60
-  - 持有/观望：CatBoost分数 ≤ 0.50 或 方向不一致
-  - 卖出：短期看跌，中期看跌
+**决策逻辑（短中期为主，CatBoost 交叉参考）**：
+- **第一步：短期与中期一致性** → 一致进入评估，冲突观望
+- **第二步：技术面/基本面/风险收益** → 形成主建议
+- **第三步：CatBoost 分数交叉参考**
+  - 一致（≥0.55）→ 基准仓位最多 +2 个百分点（不超单票上限）
+  - 中性（0.50-0.55）→ 维持主建议，仓位≤2%
+  - 分歧（≤0.50）→ 写明分歧；仓位≤2%并收紧止损，或列观察
+- **第四步：生成建议**（理由同时包含短中期结论与分数交叉参考）
 
-**规则2：CatBoost分数评估**
+**规则2：CatBoost 分数评估（仅作交叉参考）**
+- **偏强**：>0.60
+- **中等**：0.55-0.60
+- **中性**：0.50-0.55
+- **偏弱**：≤0.50
+- 分数只表示池内相对强弱，跨日不可比；不是概率/胜率/置信度
+- 不得把分数写成"硬约束"或"第三重否决"；不得仅因分数排除标的
+- 0.60 不代表"胜率60%"或"池内前11%"：排序口径没有"校准分布"概念
 
-**CatBoost分数阈值（rank 口径=池内分位；absolute 口径=校准上涨概率）**：
-- **偏强/高置信**：分数 > 0.60
-- **中等/观望**：0.50 < 分数 ≤ 0.60
-- **偏弱**：分数 ≤ 0.50
-
-**阈值口径说明（D3：不看绝对准确率）**：
-- 当前CatBoost模型20天历史准确率约{accuracy:.2%}（±{std:.2%}）——**仅作背景参考，不作买入依据**
-  （基准本身随行情浮动：牛市人人看涨也能"准确"，要看的是扣除基准后的超额与方向技能）
-- 0.60/0.50 档位是**分数分档**，买入与否以「分数档 + 市场情绪门槛」决定：
-  极端熊市暂停 → 熊市需 ≥{gates['bear']:.2f} → 弱震荡需 ≥{gates['weak']:.2f} → 正常 ≥0.50 进入评估
-  （熊市/弱震荡门槛 = A股回测校准概率 P92/P90 分位，随重跑更新，非固定绝对值）
-- 高置信度预测错误时损失可达 -73%，必须配合止损（建议 -8%）
+**规则3：仓位与风险（分数只微调）**
+- 主仓位由「短中期一致 + 风险收益 + 总仓位上限」决定
+- 分数与主判据一致 → 基准仓位最多 +2pp；分数分歧 → 单票≤2%
+- 单票上限 6%，单票止损 -8%
+- 市场情绪只收紧风控，不改变分数分档
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -1824,7 +1791,7 @@ def generate_comprehensive_recommendations_with_llm(
 1. [股票代码] [股票名称]
    - 推荐理由：[包含短期建议、中期建议、CatBoost分数]
    - 操作建议：买入
-   - 建议仓位（三档均须落在上方「概率→仓位」口径区间内）：
+   - 建议仓位（三档均须落在主判据与风险预算区间内；分数仅作交叉参考）：
      * 保守型：[X]%
      * 适度型：[X]%
      * 激进型：[X]%
@@ -2148,11 +2115,8 @@ A股综合分析报告
             code = str(row.get('Stock_Code', '')).zfill(6)  # 标准化为6位代码
             name = A_STOCK_WATCHLIST.get(code, code)
             pred_proba = row.get('Prediction_Proba', 0.5)
-            pred_label = (('偏强' if pred_proba >= 0.5 else '偏弱') if RANK_MODE
-                          else ('上涨' if pred_proba >= 0.5 else '下跌'))
-            confidence = pred_proba if pred_proba >= 0.5 else 1 - pred_proba
-            conf_line = (f"- 相对强弱分位: {pred_proba:.1%}\n" if RANK_MODE
-                         else f"- 置信度: {confidence:.1%}\n")
+            pred_label = '偏强' if pred_proba >= 0.5 else '偏弱'
+            conf_line = f"- 排序分位: {pred_proba:.1%}（池内相对强弱，非概率）\n"
 
             report += f"""### {name} ({code})
 - 预测方向: **{pred_label}**
@@ -2428,14 +2392,13 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     # 市场情绪层级名称
     layer_names = {
         'extreme_bear': ('🔴 极端熊市 - 暂停交易', '#dc2626'),
-        'bear': (f"🟠 熊市 - 需分数≥{get_a_gates()['bear']:.2f}", '#ea580c'),
-        'weak': (f"🟡 弱震荡 - 需分数≥{get_a_gates()['weak']:.2f}", '#eab308'),
+        'bear': ('🟠 熊市 - 收紧止损/降仓（排序口径无概率门槛）', '#ea580c'),
+        'weak': ('🟡 弱震荡 - 谨慎，优先池内偏强档', '#eab308'),
         'normal': ('🟢 正常市场', '#16a34a'),
     }
     sentiment_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
     sentiment_name, sentiment_color = layer_names.get(sentiment_layer, ('正常市场', '#16a34a'))
     up_ratio = market_sentiment.get('up_ratio', 0.5) if market_sentiment else 0.5
-    dynamic_threshold = market_sentiment.get('dynamic_threshold', 0.5) if market_sentiment else 0.5
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -2606,9 +2569,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                 <td>全量股票上涨数量占比（53只）</td>
             </tr>
             <tr>
-                <td>动态置信阈值</td>
-                <td>{dynamic_threshold:.0%}</td>
-                <td>买入信号需达到的分数</td>
+                <td>排序口径</td>
+                <td>无概率门槛</td>
+                <td>分数分档：≥0.60 偏强 / 0.55-0.60 中等 / &lt;0.55 中性或偏弱（≤2%）；分数仅作交叉参考</td>
             </tr>
         </table>
     </div>
@@ -2671,11 +2634,11 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if three_horizon_results and len(three_horizon_results) > 0:
         html += """
     <h2>🔮 机器学习分析预测</h2>
-    <p style="color: #666; font-size: 12px;">按股票代码排序 | 三色系统：分数≥60%绿色，50-60%橙色，<50%红色</p>
+    <p style="color: #666; font-size: 12px;">按股票代码排序 | 排序分数：≥0.60 偏强（绿），0.50-0.60 中等（橙），&lt;0.50 偏弱（红）</p>
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
-            <th>1天</th><th>5天</th><th>20天</th><th>市场调整</th>
+            <th>5天</th><th>10天</th><th>20天</th><th>市场调整</th>
             <th>模式</th><th>量化建议</th><th>胜率</th>
             <th>筹码阻力</th><th>盈亏比</th><th>期望收益</th>
             <th>风险得分</th><th>综合得分</th><th>风险建议</th>
@@ -2720,23 +2683,13 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                     return f'<span style="color: #dc2626; font-weight: bold;">↓ {prob:.2f}</span>'
                 return f'{direction} {prob:.2f}'
 
-            pred_1d = format_pred(1)
             pred_5d = format_pred(5)
+            pred_10d = format_pred(10)
             pred_20d = format_pred(20)
 
-            # 市场调整（基于市场情绪）
+            # 市场调整：排序口径无概率门槛（仅极端熊市提示暂停）
             market_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
-            prob_20d = preds.get(20, {}).get('probability', 0.5) if 20 in preds else 0.5
-
-            if market_layer == 'extreme_bear':
-                market_adjust = '🔴暂停'
-            elif market_layer == 'bear':
-                market_adjust = ('🟠高置信' if prob_20d >= get_a_gates()['bear']
-                                 else '🟡降级')
-            elif market_layer == 'weak':
-                market_adjust = '🟡谨慎'
-            else:
-                market_adjust = '🟢正常'
+            market_adjust = '🔴暂停' if market_layer == 'extreme_bear' else '-'
 
             # 涨跌颜色
             change_str = f"{change_pct:+.2f}%" if change_pct else "-"
@@ -2775,8 +2728,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <td class="{change_class}">{change_str}</td>
             <td>{sector_name}</td>
             <td>{sector_type}</td>
-            <td>{pred_1d}</td>
             <td>{pred_5d}</td>
+            <td>{pred_10d}</td>
             <td>{pred_20d}</td>
             <td>{market_adjust}</td>
             <td><strong>{pattern_name}</strong><br><small>{pattern}</small></td>
@@ -2794,8 +2747,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         html += """    </table>
 
     <div style="color: #888; font-size: 10px; margin-top: 8px; background: #fafafa; padding: 6px 8px; border-radius: 4px; line-height: 1.6;">
-        <span style="margin-right: 12px;"><strong>颜色</strong>：<span style="color: #16a34a;">↑≥60%</span> 高置信 | <span style="color: #ea580c;">↑50-60%</span> 中等 | <span style="color: #dc2626;">↓&lt;50%</span> 看跌</span>
-        <span style="margin-right: 12px;"><strong>市场</strong>：🟢正常 | 🟡谨慎 | 🟠高置信 | 🔴暂停</span>
+        <span style="margin-right: 12px;"><strong>颜色</strong>：<span style="color: #16a34a;">↑≥0.60</span> 偏强 | <span style="color: #ea580c;">↑0.50-0.60</span> 中等 | <span style="color: #dc2626;">↓&lt;0.50</span> 偏弱（排序分数，非概率）</span>
+        <span style="margin-right: 12px;"><strong>市场</strong>：🟢正常 | 🟡谨慎 | 🔴暂停（排序口径无概率门槛）</span>
         <span><strong>筹码阻力</strong>：✅低 &lt;30% | ⚠️中 30-60% | 🔴高 &gt;60%</span><br>
         <span style="margin-right: 12px;"><strong>盈亏比</strong>：基于历史回测验证数据计算，⭐⭐⭐ ≥3.0 | ⭐⭐ ≥2.0 | ⭐ ≥1.5 | ⚠️ &lt;1.5</span>
         <span><strong>期望收益</strong>：胜率×平均盈利-(1-胜率)×平均亏损，正值表示正期望</span><br>
@@ -2893,8 +2846,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <ul>
         <li><strong>涨跌停限制</strong>：创业板/科创板 20%，主板 10%，ST股 5%</li>
         <li><strong>主力资金</strong>：关注大资金流向变化，连续流出需警惕</li>
-        <li><strong>市场情绪</strong>：极端熊市时暂停交易，保护本金</li>
-        <li><strong>动态阈值</strong>：熊市需更高置信度才可买入</li>
+        <li><strong>市场情绪</strong>：极端熊市时暂停交易；熊市/弱震荡收紧止损与总仓位</li>
     </ul>
 
     <div class="footer">
@@ -3043,10 +2995,6 @@ def main():
             print(f"  ✅ 提取短期建议: {len(llm_recommendations.get('short_term', ''))} 字符")
             print(f"  ✅ 提取中期建议: {len(llm_recommendations.get('medium_term', ''))} 字符")
 
-    # 1b. 加载模型准确率
-    print("\n📊 加载模型准确率...")
-    model_accuracy = load_a_stock_model_accuracy(horizon=args.horizon)
-
     # 2. 读取ML预测结果
     print("\n📊 读取ML预测结果...")
     ml_predictions = read_ml_predictions(args.horizon)
@@ -3077,7 +3025,7 @@ def main():
         sector_stock_analyses[code] = analysis
 
     # 5. 生成三周期预测（核心新增，增强版）
-    print("\n🔮 生成三周期预测（1d/5d/20d）...")
+    print("\n🔮 生成三周期预测（5d/10d/20d）...")
     three_horizon_results = None
     if not args.use_cached_predictions:
         three_horizon_results = generate_three_horizon_predictions(STOCK_LIST, sector_stock_analyses)
@@ -3177,7 +3125,7 @@ def main():
     }
     print(f"  市场情绪: {layer_names.get(market_sentiment['layer'], market_sentiment['layer'])}")
     print(f"  上涨比例: {market_sentiment['up_ratio']:.1%}")
-    print(f"  动态阈值: {market_sentiment['dynamic_threshold']:.0%}")
+    print(f"  市场情绪层级: {market_sentiment['layer']}")
 
     # 7. 获取主力资金趋势
     print("\n💰 获取主力资金趋势...")
@@ -3226,8 +3174,7 @@ def main():
         main_fund_trend=main_fund_trend,
         sector_analysis=sector_analysis,
         anomaly_result=anomaly_result,
-        llm_recommendations=llm_recommendations,
-        model_accuracy=model_accuracy
+        llm_recommendations=llm_recommendations
     )
 
     # 保存综合买卖建议到文件

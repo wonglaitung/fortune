@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""ML 概率直填/缺失展示 测试
+"""ML 排序分数直填/缺失展示 测试
 
-背景：LLM 把概率抄成 null → 展示层 or 0 误显"0% 看跌"（3968.HK 案例）。
-修复：数值不经 LLM，三周期值（DailyConfidence 已校准）直填；缺失显示"-"。
-注意：Isotonic 不幂等（0.57 再校准→0.51），直填必须透传、禁止二次 transform。
+背景：LLM 把分数抄成 null → 展示层 or 0 误显"0 看跌"（3968.HK 案例）。
+修复：数值不经 LLM，三周期排序分数直填；缺失显示"-"。
+注意：排序分数无概率语义，不做 Isotonic 校准，直填必须透传。
 """
 import os
 
@@ -59,11 +59,11 @@ def test_section_missing_prob_shows_dash_not_zero():
     assert '>↑ 上涨<' not in html.split('二、三周期预测')[1].split('</table>')[0]
 
 
-def test_section_with_prob_shows_calibrated_value():
+def test_section_with_rank_score_shows_value():
     html = ca.generate_stock_section_html({
         'ml_prob_20d': 56.6, 'ml_prob_10d': 41.0, 'ml_prob_5d': 43.2})
-    assert '<td>57%</td>' in html  # 20d 56.6 → 57%
-    assert '中等置信度，50-60%' in html
+    assert '<td class="metric-neutral">57</td>' in html
+    assert '相对强弱分位（高=池内偏强，低=偏弱）' in html
     assert '看跌，<50%硬约束禁止买入' not in html.split('一、核心指标')[1].split('</table>')[0]
 
 

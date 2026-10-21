@@ -2,7 +2,6 @@
 """D59 rank 口径展示层契约（HK 个股邮件）
 
 rank 口径：三周期 = {5,10,20}，输出为 0-100 相对强弱分（无概率语义、无校准、无置信度）。
-absolute 口径（默认）：保留三色概率 + 置信度后缀。
 """
 import comprehensive_analysis as ca
 
@@ -12,23 +11,14 @@ def test_horizons_is_5_10_20():
 
 
 def test_format_hcell_rank_shows_bare_score():
-    out = ca._format_hcell({'direction': '↑', 'probability': 0.73}, rank_mode=True)
+    out = ca._format_hcell({'direction': '↑', 'probability': 0.73})
     assert out == '73'
     assert '<span' not in out
     assert '置信' not in out
 
 
-def test_format_hcell_absolute_shows_color_and_confidence():
-    out = ca._format_hcell(
-        {'direction': '↑', 'probability': 0.73, 'confidence': 0.8}, rank_mode=False)
-    assert '0.73' in out
-    assert '<span' in out
-    assert '置信80%' in out
-
-
 def test_format_hcell_none_returns_dash():
-    assert ca._format_hcell(None, rank_mode=True) == '-'
-    assert ca._format_hcell(None, rank_mode=False) == '-'
+    assert ca._format_hcell(None) == '-'
 
 
 def test_rebuild_patterns_uses_5_10_20_keys():

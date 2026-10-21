@@ -9,7 +9,6 @@ A股综合买卖建议生成器
 3. 生成综合买卖建议（强烈买入、买入、持有、卖出）
 """
 
-import os
 import re
 import json
 from datetime import datetime
@@ -18,20 +17,20 @@ from typing import Dict, List, Optional, Tuple
 # A股配置
 from a_stock_config import A_STOCK_WATCHLIST, A_STOCK_SECTOR_MAPPING, get_limit_rate
 
-# D59：标签口径与三周期（rank=横截面百分位回归，score 无概率语义）
-RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+# D59：三周期（rank=横截面百分位回归，score 无概率语义）
 HORIZONS = (5, 10, 20)
 
 
-def position_band(prob: float):
-    """口径C：分数 → 单票仓位区间（%，决策点 4 唯一口径）"""
-    if prob >= 0.60:
-        return 4, 6
-    if prob >= 0.55:
-        return 2, 3
-    if prob > 0.50:
-        return 0, 2
-    return 0, 0
+def position_cap(score: float) -> int:
+    """交叉参考口径：排序分数只给单票仓位上限（%，不设下限）。
+
+    分数不是买卖否决项；弱分只收紧仓位，主判据仍决定方向。
+    """
+    if score >= 0.60:
+        return 6
+    if score >= 0.55:
+        return 3
+    return 2
 
 
 def clamp_positions_to_band(cons: int, mod: int, aggr: int, lo: int, hi: int):
@@ -66,7 +65,7 @@ class AStockRecommendationGenerator:
 
         Args:
             llm_report: 大模型分析报告文本
-            ml_predictions: ML预测结果 {stock_code: {'predictions': {1: {}, 5: {}, 20: {}}, 'pattern': str}}
+            ml_predictions: ML预测结果 {stock_code: {'predictions': {5: {}, 10: {}, 20: {}}, 'pattern': str}}
             stock_analyses: 股票技术分析 {stock_code: {...}}
             market_data: 市场数据
             northbound_data: 北向资金数据
@@ -112,10 +111,10 @@ class AStockRecommendationGenerator:
             else:
                 recommendations['hold'].append(recommendation)
 
-        # 按概率排序
+        # 按排序分数排序
         for key in ['strong_buy', 'buy', 'hold', 'sell']:
             recommendations[key].sort(
-                key=lambda x: x.get('probability_20d', 0.5),
+                key=lambda x: x.get('score_20d', 0.5),
                 reverse=(key in ['strong_buy', 'buy'])
             )
 
@@ -223,22 +222,21 @@ class AStockRecommendationGenerator:
         """
         生成单只股票的建议
 
-        决策逻辑（口径C / 决策点 4，与港股一致）：
-        - 强烈买入：短期买入 + 中期买入 + 分数 ≥ 0.60 → 单票 4-6%
-        - 买入：短期买入 + 中期买入 + 0.55 ≤ 分数 < 0.60 → 单票 2-3%
-        - 观望：0.50 < 分数 < 0.55 → 弱信号，最多 2%，不列买入
-        - 持有：其他情况（分数 ≤ 0.50 禁止买入）
-        - 卖出：短期卖出 + 中期卖出 + 分数 ≤ 0.45
+        决策逻辑（排序分数 = 交叉参考，非硬约束）：
+        - 主判据：短期与中期方向一致 + 风险收益
+        - 分数只给单票仓位上限：≥0.60 → 6%；0.55-0.60 → 3%；<0.55 → 2%
+        - 分数偏弱（≤0.50）仍可买入，但必须写明分歧并收紧止损
+        - 分数不单独触发买卖，也不作为否决项
         """
         stock_name = self.stock_names.get(stock_code, stock_code)
         current_price = analysis.get('current_price', 0)
 
-        # 获取ML预测分数（rank 口径=横截面分位；absolute 口径=上涨概率）
+        # 获取ML排序分数（横截面分位；无概率语义）
         predictions = ml_pred.get('predictions', {})
         prob_5d = predictions.get(5, {}).get('probability', 0.5)
         prob_10d = predictions.get(10, {}).get('probability', 0.5)
         prob_20d = predictions.get(20, {}).get('probability', 0.5)
-        _noun = "相对强弱分" if RANK_MODE else "上涨概率"
+        _noun = "相对强弱分"
 
         # 获取大模型建议
         short_term = llm_rec.get('short_term', '观望')
@@ -248,31 +246,29 @@ class AStockRecommendationGenerator:
         signal_type = 'hold'
         reason = ''
 
-        # 短期和中期一致买入
+        # 短期和中期一致买入（分数只调节档位/仓位，不否决）
         if '买入' in short_term and '买入' in mid_term:
             if prob_20d >= 0.60:
                 signal_type = 'strong_buy'
-                reason = f"短期建议买入，中期建议买入，预测{_noun}{prob_20d:.2f}（≥0.60 高置信档），方向一致，单票4-6%"
+                reason = f"短期建议买入，中期建议买入，{_noun}{prob_20d:.2f}（池内偏强，与主判据一致），基准仓位4-6%"
             elif prob_20d >= 0.55:
                 signal_type = 'buy'
-                reason = f"短期建议买入，中期建议买入，预测{_noun}{prob_20d:.2f}（0.55-0.60 买入档），单票2-3%"
+                reason = f"短期建议买入，中期建议买入，{_noun}{prob_20d:.2f}（中等，与主判据一致），基准仓位2-3%"
             elif prob_20d > 0.50:
-                signal_type = 'hold'
-                reason = f"短期建议买入，中期建议买入，但{_noun}{prob_20d:.2f} 落在 0.50-0.55 弱信号区，仅观望（≤2%），不列买入"
+                signal_type = 'buy'
+                reason = f"短期建议买入，中期建议买入，{_noun}{prob_20d:.2f}（中性），维持主判据，单票≤2%"
             else:
-                signal_type = 'hold'
-                reason = f"短期建议买入，中期建议买入，但预测{_noun}{prob_20d:.2f}（≤0.50），违反硬约束，禁止买入"
+                signal_type = 'buy'
+                reason = f"短期建议买入，中期建议买入，但{_noun}{prob_20d:.2f}（≤0.50，交叉参考分歧），单票≤2%并收紧止损"
 
-        # 短期和中期一致卖出
+        # 短期或中期看跌：主判据优先，分数只作分歧提示
         elif '卖出' in short_term or '卖出' in mid_term:
-            if prob_20d <= 0.45:
-                signal_type = 'sell'
-                reason = (f"短期建议{short_term}，中期建议{mid_term}，CatBoost相对强弱分{prob_20d:.2f}"
-                          if RANK_MODE else
-                          f"短期建议{short_term}，中期建议{mid_term}，CatBoost预测下跌概率{1-prob_20d:.2f}")
+            signal_type = 'sell'
+            if prob_20d <= 0.50:
+                reason = f"短期建议{short_term}，中期建议{mid_term}，{_noun}{prob_20d:.2f}偏弱，支持减仓"
             else:
-                signal_type = 'hold'
-                reason = f"短期建议{short_term}，中期建议{mid_term}，但CatBoost分数{prob_20d:.2f}，建议观望"
+                reason = (f"短期建议{short_term}，中期建议{mid_term}；{_noun}{prob_20d:.2f}偏强"
+                          f"（交叉参考分歧），建议减仓并收紧止损，不因分数取消看跌判断")
 
         # 观望
         else:
@@ -285,16 +281,16 @@ class AStockRecommendationGenerator:
         stop_loss = current_price * 0.92  # -8%
         target_price = current_price * 1.10  # +10%
 
-        # 建议仓位（三种风险偏好）—— 钳制到口径C区间（决策点 4 唯一口径）
-        band_lo, band_hi = position_band(prob_20d)
+        # 建议仓位（三种风险偏好）—— LLM 给基准，分数只给上限（不设下限）
+        cap = position_cap(prob_20d)
         position_conservative, position_moderate, position_aggressive = \
             clamp_positions_to_band(
                 llm_rec.get('position_conservative', 0),
                 llm_rec.get('position_moderate', 0),
                 llm_rec.get('position_aggressive', 0),
-                band_lo, band_hi)
+                0, cap)
 
-        # 默认使用适度型仓位作为主要建议（已在口径C区间内）
+        # 默认使用适度型仓位作为主要建议
         position_pct = position_moderate
 
         return {
@@ -311,9 +307,9 @@ class AStockRecommendationGenerator:
             'buy_price': buy_price,
             'stop_loss': stop_loss,
             'target_price': target_price,
-            'probability_10d': prob_10d,
-            'probability_5d': prob_5d,
-            'probability_20d': prob_20d,
+            'score_10d': prob_10d,
+            'score_5d': prob_5d,
+            'score_20d': prob_20d,
             'limit_rate': limit_rate,
             'change_percent': analysis.get('change_percent', 0)
         }
@@ -379,7 +375,7 @@ class AStockRecommendationGenerator:
             <td>{rec['stock_code']}</td>
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #16a34a; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td style="color: #16a34a; font-weight: bold;">{rec['score_20d']:.2f}</td>
             <td>{rec.get('position_conservative', 0)}%</td>
             <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
             <td>{rec.get('position_aggressive', 0)}%</td>
@@ -407,7 +403,7 @@ class AStockRecommendationGenerator:
             <td>{rec['stock_code']}</td>
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #ea580c; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td style="color: #ea580c; font-weight: bold;">{rec['score_20d']:.2f}</td>
             <td>{rec.get('position_conservative', 0)}%</td>
             <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
             <td>{rec.get('position_aggressive', 0)}%</td>
@@ -434,7 +430,7 @@ class AStockRecommendationGenerator:
             <td>{rec['stock_code']}</td>
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
-            <td>{rec['probability_20d']:.2f}</td>
+            <td>{rec['score_20d']:.2f}</td>
             <td>观望</td>
             <td>{rec['reason']}</td>
         </tr>
@@ -457,7 +453,7 @@ class AStockRecommendationGenerator:
             <td>{rec['stock_code']}</td>
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #dc2626; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td style="color: #dc2626; font-weight: bold;">{rec['score_20d']:.2f}</td>
             <td>{rec['current_price']:.2f}</td>
             <td>{rec['reason']}</td>
         </tr>

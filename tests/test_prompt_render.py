@@ -14,6 +14,13 @@ from pathlib import Path
 
 SRC_PATH = Path(__file__).resolve().parents[1] / 'comprehensive_analysis.py'
 SRC = SRC_PATH.read_text(encoding='utf-8')
+A_SRC = (SRC_PATH.parent / 'a_stock_comprehensive_analysis.py').read_text(encoding='utf-8')
+A_EMAIL_SRC = (SRC_PATH.parent / 'a_stock_email.py').read_text(encoding='utf-8')
+
+RANK_FORBIDDEN = ['0.70', '0.65', '前约11%', '（前约11%）', 'probability_20d',
+                  'P(模型方向判对)', '置信度评估', '动态阈值']
+HARD_GATE_FORBIDDEN = ['最高优先级', '绝对禁止', '必须100%', '缺一不可', '三重确认',
+                       '违反硬约束']
 
 MODEL_ACCURACY = {
     'learner_20d': 'LightGBM',
@@ -163,8 +170,76 @@ def test_stock_analysis_prompt_uses_ml_prob_field():
     assert found, '未找到 STOCK_ANALYSIS_PROMPT 定义'
 
 
+def _prompt_const_segment(src, name):
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name) and t.id == name:
+                    return ast.get_source_segment(src, node) or ''
+    return ''
+
+
+def test_hk_prompts_rank_only():
+    for name in ('STOCK_ANALYSIS_PROMPT', 'COMPREHENSIVE_ANALYSIS_PROMPT',
+                 'HOLDER_ADVICE_PROMPT'):
+        seg = _prompt_const_segment(SRC, name)
+        assert seg, f'未找到 {name}'
+        for pat in RANK_FORBIDDEN:
+            assert pat not in seg, f'{name} 仍含旧口径: {pat}'
+
+
+def test_a_stock_prompt_rank_only():
+    start = A_SRC.index('prompt = f"""你是一位专业的A股')
+    end = A_SRC.index('请按照以下格式输出', start)
+    seg = A_SRC[start:end]
+    for pat in RANK_FORBIDDEN:
+        assert pat not in seg, f'A股 prompt 仍含旧口径: {pat}'
+    assert 'score_20d' in seg and '排序分数' in seg
+
+
+def test_score_is_cross_reference_not_hard_gate():
+    for name in ('COMPREHENSIVE_ANALYSIS_PROMPT', 'HOLDER_ADVICE_PROMPT'):
+        seg = _prompt_const_segment(SRC, name)
+        assert '交叉参考' in seg, f'{name} 未声明分数为交叉参考'
+        for pat in HARD_GATE_FORBIDDEN:
+            assert pat not in seg, f'{name} 仍把分数当硬门槛: {pat}'
+    # 主分析 prompt 为局部 f-string
+    start = SRC.index('prompt = f"""你是一位专业的投资分析师')
+    end = SRC.index('请按照以下格式输出', start)
+    seg = SRC[start:end]
+    assert '交叉参考' in seg
+    for pat in HARD_GATE_FORBIDDEN:
+        assert pat not in seg, f'港股主 prompt 仍把分数当硬门槛: {pat}'
+    # A股主 prompt
+    a_start = A_SRC.index('prompt = f"""你是一位专业的A股')
+    a_end = A_SRC.index('请按照以下格式输出', a_start)
+    a_seg = A_SRC[a_start:a_end]
+    assert '交叉参考' in a_seg
+    for pat in HARD_GATE_FORBIDDEN:
+        assert pat not in a_seg, f'A股主 prompt 仍把分数当硬门槛: {pat}'
+
+
+def test_a_stock_email_prompt_cross_reference():
+    start = A_EMAIL_SRC.index('market_info = f"""')
+    end = A_EMAIL_SRC.index('"""', start + len('market_info = f"""')) + 3
+    market_seg = A_EMAIL_SRC[start:end]
+    assert '交叉参考' in market_seg
+    for pat in HARD_GATE_FORBIDDEN + ['需概率≥', '校准后20日概率', '动态阈值']:
+        assert pat not in market_seg, f'A股邮件市场段仍含旧硬门槛: {pat}'
+    p_start = A_EMAIL_SRC.index('prompt = f"""你是一位专业的A股投资分析师')
+    p_end = A_EMAIL_SRC.index('请按照以下六层分析框架', p_start)
+    prompt_seg = A_EMAIL_SRC[p_start:p_end]
+    for pat in HARD_GATE_FORBIDDEN + ['需概率≥', '校准后20日概率', '动态阈值']:
+        assert pat not in prompt_seg, f'A股邮件 prompt 仍含旧硬门槛: {pat}'
+
+
 if __name__ == '__main__':
     test_prompt_render_no_stale_values()
     test_prompt_no_hardcoded_learner_conflict()
     test_stock_analysis_prompt_uses_ml_prob_field()
+    test_hk_prompts_rank_only()
+    test_a_stock_prompt_rank_only()
+    test_score_is_cross_reference_not_hard_gate()
+    test_a_stock_email_prompt_cross_reference()
     print('ALL PASS')

@@ -158,300 +158,6 @@ HSI_THREE_HORIZON_PATTERNS = {
     '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '47.54%', 'avg_return': '净-10.3pp', 'confidence': '低'},
 }
 
-# 恒指传导律准确率数据（PIT/embargo，697个恒指样本，2026-09-26 复测）
-HSI_TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 65.32,      # 1天+5天都正确时，20天准确率（n=222）
-    'independent_20d_rate': 59.11,   # 独立20天准确率
-    'improvement': 6.21              # 传导效应提升（弱）
-}
-
-# 个股传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
-# 更新日期：2026-09-26，59只港股，43,610条预测（PIT/embargo）
-TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 57.08,      # 1天+5天都正确时，20天准确率（n=12239）
-    'independent_20d_rate': 51.76,   # 独立20天准确率
-    'improvement': 5.32              # 提升幅度（弱）
-}
-
-
-def format_transmission_display(transmission_info):
-    """
-    格式化传导模式显示字符串
-
-    参数:
-    - transmission_info: check_transmission_mode() 返回的字典
-
-    返回:
-    - str: 格式化的显示字符串
-    """
-    pred_1d_dir = transmission_info.get('pred_1d_direction')
-    pred_5d_dir = transmission_info.get('pred_5d_direction')
-    pred_20d_dir = transmission_info.get('pred_20d_direction')
-    pred_1d_correct = transmission_info.get('pred_1d_correct')
-    pred_5d_correct = transmission_info.get('pred_5d_correct')
-    pred_20d_correct = transmission_info.get('pred_20d_correct')
-    transmission_mode = transmission_info.get('transmission_mode')
-    prediction_date = transmission_info.get('prediction_date')
-
-    # 如果没有预测数据
-    if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
-        return "暂无数据"
-
-    # 方向符号
-    def get_dir_symbol(direction):
-        if direction == 'up':
-            return "↑"
-        elif direction == 'down':
-            return "↓"
-        else:
-            return "?"
-
-    dir_1d_symbol = get_dir_symbol(pred_1d_dir)
-    dir_5d_symbol = get_dir_symbol(pred_5d_dir)
-    dir_20d_symbol = get_dir_symbol(pred_20d_dir)
-
-    # 结果符号
-    def get_result_symbol(correct):
-        if correct is None:
-            return "⏳"  # 待验证
-        elif correct:
-            return "✓"   # 正确
-        else:
-            return "✗"   # 错误
-
-    result_1d = get_result_symbol(pred_1d_correct)
-    result_5d = get_result_symbol(pred_5d_correct)
-    result_20d = get_result_symbol(pred_20d_correct)
-
-    # 构建显示字符串
-    parts = []
-
-    if pred_1d_dir is not None:
-        parts.append(f"1天{dir_1d_symbol}{result_1d}")
-
-    if pred_5d_dir is not None:
-        parts.append(f"5天{dir_5d_symbol}{result_5d}")
-
-    if pred_20d_dir is not None:
-        parts.append(f"20天{dir_20d_symbol}{result_20d}")
-
-    display = " ".join(parts)
-
-    # 如果传导模式激活，添加标记
-    if transmission_mode:
-        display = f"✅传导({display})"
-    elif display:
-        display = display
-    else:
-        display = "-"
-
-    return display if display else "-"
-
-
-def check_transmission_mode(stock_code, data_date):
-    """
-    检查传导模式：查看5个交易日前的预测验证情况
-
-    逻辑：在4月19日时，查看4月10日做的预测：
-    - 1天预测（目标4月11日）已到期，可验证
-    - 5天预测（目标4月17日）已到期，可验证
-    - 20天预测（目标5月8日）未到期
-
-    传导律：当1天和5天预测都正确时，20天预测准确率提升5.53%
-
-    参数:
-    - stock_code: 股票代码（如 '0005.HK'）
-    - data_date: 当前报告日期（如 '2026-04-19'）
-
-    返回:
-    - dict: {
-        'transmission_mode': bool,      # 是否进入传导模式
-        'pred_1d_correct': bool/None,   # 1天预测是否正确
-        'pred_5d_correct': bool/None,   # 5天预测是否正确
-        'pred_20d_correct': bool/None,  # 20天预测是否正确
-        'pred_1d_direction': str/None,  # 1天预测方向
-        'pred_5d_direction': str/None,  # 5天预测方向
-        'pred_20d_direction': str/None, # 20天预测方向
-        'prediction_date': str,         # 预测日期（5个交易日前）
-        'both_correct_rate': 62.28,     # 传导模式准确率
-        'independent_20d_rate': 56.75   # 独立20天准确率
-      }
-    """
-    import json
-    from datetime import datetime, timedelta
-
-    history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prediction_history.json')
-
-    # 计算5个交易日前的日期
-    try:
-        import akshare as ak
-        df = ak.tool_trade_date_hist_sina()
-        trading_dates = df['trade_date'].astype(str).tolist()
-
-        # 找到当前日期在交易日列表中的位置，往前推5个交易日
-        current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
-
-        # 如果当前日期不在交易日列表中，找最近的交易日
-        if current_date_str in trading_dates:
-            current_idx = trading_dates.index(current_date_str)
-        else:
-            # 找最近的交易日
-            for i, d in enumerate(trading_dates):
-                if d >= current_date_str:
-                    current_idx = i
-                    break
-            else:
-                current_idx = len(trading_dates) - 1
-
-        # 往前推5个交易日
-        target_idx = max(0, current_idx - 5)
-        prediction_date = trading_dates[target_idx]
-    except Exception as e:
-        # 回退到自然日计算
-        if isinstance(data_date, str):
-            data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
-        else:
-            data_date_obj = data_date
-        prediction_date = (data_date_obj - timedelta(days=7)).strftime('%Y-%m-%d')
-
-    if not os.path.exists(history_file):
-        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
-                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None,
-                'prediction_date': prediction_date}
-
-    try:
-        with open(history_file, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-
-        predictions = history.get('predictions', [])
-
-        # 查找该股票在5个交易日前的1天、5天、20天预测
-        pred_1d = None
-        pred_5d = None
-        pred_20d = None
-
-        for pred in predictions:
-            if pred['stock_code'] == stock_code and pred['data_date'] == prediction_date:
-                if pred['horizon'] == 1:
-                    pred_1d = pred
-                elif pred['horizon'] == 5:
-                    pred_5d = pred
-                elif pred['horizon'] == 20:
-                    pred_20d = pred
-
-        # 检查是否都存在
-        if not (pred_1d and pred_5d):
-            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                    'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
-                    'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
-                    'pred_20d_correct': pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None,
-                    'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-                    'prediction_date': prediction_date}
-
-        # 如果outcome字段已存在，直接使用
-        if pred_1d.get('outcome') is not None and pred_5d.get('outcome') is not None:
-            pred_1d_correct = pred_1d.get('outcome') == 'correct'
-            pred_5d_correct = pred_5d.get('outcome') == 'correct'
-            pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
-            return {
-                'transmission_mode': pred_1d_correct and pred_5d_correct,
-                'pred_1d_correct': pred_1d_correct,
-                'pred_5d_correct': pred_5d_correct,
-                'pred_20d_correct': pred_20d_correct,
-                'pred_1d_direction': pred_1d.get('predicted_direction'),
-                'pred_5d_direction': pred_5d.get('predicted_direction'),
-                'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-                'prediction_date': prediction_date,
-                'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
-                'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
-            }
-        
-        # 动态计算：检查预测是否已到期并验证正确
-        now = datetime.now()
-        
-        def verify_prediction(pred, horizon):
-            """验证单个预测是否正确"""
-            if not pred:
-                return None
-            
-            # 检查是否有entry_price
-            entry_price = pred.get('entry_price')
-            predicted_direction = pred.get('predicted_direction')
-            
-            if not entry_price or entry_price <= 0:
-                return None
-            
-            # 计算目标日期（data_date + horizon个交易日，近似为horizon天）
-            try:
-                data_date_obj = datetime.strptime(pred['data_date'], '%Y-%m-%d')
-            except (ValueError, KeyError):
-                return None
-            
-            # 检查是否已到期（当前日期 >= data_date + horizon天）
-            target_date = data_date_obj + timedelta(days=horizon)
-            if now < target_date:
-                # 尚未到期，无法验证
-                return None
-            
-            # 获取目标日期的收盘价
-            try:
-                ticker = yf.Ticker(stock_code)
-                # 获取目标日期附近的数据
-                hist = ticker.history(start=target_date - timedelta(days=3), end=target_date + timedelta(days=3))
-                if hist.empty:
-                    return None
-                
-                # 找到最接近目标日期的收盘价
-                exit_price = hist['Close'].iloc[-1]
-                
-                # 计算实际收益
-                actual_return = (exit_price - entry_price) / entry_price
-                actual_direction = 'up' if actual_return > 0 else 'down'
-                
-                # 判断预测是否正确
-                return predicted_direction == actual_direction
-            except Exception:
-                return None
-        
-        # 验证1天和5天预测
-        pred_1d_correct = verify_prediction(pred_1d, 1)
-        pred_5d_correct = verify_prediction(pred_5d, 5)
-        pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
-
-        # 如果任一预测尚未到期或无法验证，返回None
-        if pred_1d_correct is None or pred_5d_correct is None:
-            return {
-                'transmission_mode': False,
-                'pred_1d_correct': pred_1d_correct,
-                'pred_5d_correct': pred_5d_correct,
-                'pred_20d_correct': pred_20d_correct,
-                'pred_1d_direction': pred_1d.get('predicted_direction'),
-                'pred_5d_direction': pred_5d.get('predicted_direction'),
-                'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-                'prediction_date': prediction_date,
-                'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
-                'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
-            }
-
-        return {
-            'transmission_mode': pred_1d_correct and pred_5d_correct,
-            'pred_1d_correct': pred_1d_correct,
-            'pred_5d_correct': pred_5d_correct,
-            'pred_20d_correct': pred_20d_correct,
-            'pred_1d_direction': pred_1d.get('predicted_direction'),
-            'pred_5d_direction': pred_5d.get('predicted_direction'),
-            'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-            'prediction_date': prediction_date,
-            'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
-            'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
-        }
-
-    except Exception as e:
-        print(f"⚠️ 检查传导模式失败: {e}")
-        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
-                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None, 'prediction_date': None}
-
-
 def get_sector_type(sector_code):
     """
     获取板块类型（周期/防御）
@@ -487,31 +193,16 @@ def get_pattern_action(pattern, is_hsi=False):
 # D59：三周期口径（原 1/5/20 → 5/10/20）；单点定义，勿散落硬编码
 HORIZONS = (5, 10, 20)
 
-# D59：标签口径（rank=横截面百分位回归，score 无概率语义）；模块级单点，供各函数共用
-RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+# D59：分析端只输出排序模型（无概率语义）；不再保留 absolute 展示口径
+RANK_MODE = True
 
 
-def _format_hcell(pred, rank_mode):
-    """邮件单周期单元：rank 模式显示**相对强弱分（0-100）**；否则三色概率。"""
+def _format_hcell(pred):
+    """邮件单周期单元：显示相对强弱分（0-100），无概率/置信度语义。"""
     if not pred:
         return '-'
-    direction = pred.get('direction', '-')
     val = pred.get('probability', None)
-    if rank_mode:
-        return f"{val*100:.0f}" if isinstance(val, (int, float)) else '-'
-    if not isinstance(val, (int, float)):
-        return f"{direction}"
-    if direction == '↑':
-        color = '#16a34a' if val >= 0.60 else '#ea580c'
-        out = f'<span style="color: {color}; font-weight: bold;">↑</span> {val:.2f}'
-    elif direction == '↓':
-        out = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {val:.2f}'
-    else:
-        out = f"{direction} {val:.2f}"
-    conf = pred.get('confidence')
-    if isinstance(conf, (int, float)):
-        out += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf:.0%})</span>'
-    return out
+    return f"{val*100:.0f}" if isinstance(val, (int, float)) else '-'
 
 
 def rebuild_three_horizon_patterns(three_horizon_results):
@@ -693,7 +384,7 @@ _model_cache = {}
 
 def load_multi_horizon_models():
     """
-    加载三周期预测模型（1d, 5d, 20d）
+    加载三周期预测模型（5d, 10d, 20d）
 
     返回:
     - dict: 包含三个模型的字典，失败则为 None
@@ -866,101 +557,6 @@ def safe_float_format(value, format_spec='.2f', default=''):
         return default
 
 
-def load_model_accuracy(horizon=20):
-    """
-    从文件加载模型准确率信息
-
-    参数:
-    - horizon: 预测周期（默认20天）
-
-    返回:
-    - dict: 各周期生产模型准确率
-      {
-        'ml_20d': {'accuracy': float, 'std': float, 'date': str},  # 20d 生产模型（含准确率数据日期）
-        'learner_20d': str,                          # 20天生产学习器名
-        'catboost': {'accuracy': float, 'std': float},  # 兼容旧字段（指定horizon）
-        '1d': {'accuracy': float, 'std': float},
-        '5d': {'accuracy': float, 'std': float},
-        '20d': {'accuracy': float, 'std': float}     # 与 ml_20d 相同（20天生产模型）
-      }
-    """
-    # 默认准确率值（如果文件不存在）
-    default_accuracy = {
-        'catboost': {'accuracy': 0.6101, 'std': 0.0219},
-        'ml_20d': {'accuracy': 0.5833, 'std': 0.0764},
-        '1d': {'accuracy': 0.5100, 'std': 0.0500},
-        '5d': {'accuracy': 0.5600, 'std': 0.0400},
-        '20d': {'accuracy': 0.5833, 'std': 0.0764}
-    }
-
-    accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
-
-    def _pick(data, keys, fallback):
-        """按优先级取第一个 accuracy>0 的记录（0值=未评估，视为无效）"""
-        import math
-        for key in keys:
-            entry = data.get(key)
-            if isinstance(entry, dict):
-                acc = entry.get('accuracy')
-                if isinstance(acc, (int, float)) and math.isfinite(acc) and acc > 0:
-                    ts = str(entry.get('timestamp', '') or '')
-                    return {
-                        'accuracy': acc,
-                        'std': entry.get('std', 0.0) or 0.0,
-                        'date': ts[:10] if ts else ''
-                    }
-        return {**fallback, 'date': ''}
-
-    try:
-        if os.path.exists(accuracy_file):
-            import json
-            with open(accuracy_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            result = {}
-
-            # 20d 生产模型：在 lgbm_20d / catboost_20d 中取记录时间最新且 accuracy>0 的一条
-            # （CI 流水线每日训练 CatBoost 并回流 model_accuracy.json，避免固定引用陈旧记录）
-            import math as _math
-            cands = [k for k in ('lgbm_20d', 'catboost_20d')
-                     if isinstance(data.get(k), dict)
-                     and isinstance(data[k].get('accuracy'), (int, float))
-                     and _math.isfinite(data[k].get('accuracy'))
-                     and data[k].get('accuracy') > 0]
-            if cands:
-                best_key = max(cands, key=lambda k: str(data[k].get('timestamp') or ''))
-                _mt = str(data[best_key].get('model_type') or '').lower()
-                result['learner_20d'] = ('LightGBM' if _mt == 'lgbm' else 'CatBoost') \
-                    if _mt else ('LightGBM' if best_key == 'lgbm_20d' else 'CatBoost')
-                result['ml_20d'] = _pick(data, [best_key], default_accuracy['ml_20d'])
-            else:
-                result['learner_20d'] = 'LightGBM'
-                result['ml_20d'] = {**default_accuracy['ml_20d'], 'date': ''}
-
-            # 兼容旧字段：指定horizon的CatBoost准确率（0值回退默认）
-            result['catboost'] = _pick(data, [f'catboost_{horizon}d'],
-                                       default_accuracy['catboost'])
-
-            # 加载三个周期的准确率（1/5天生产模型为CatBoost，20天为LightGBM）
-            for period in ['1d', '5d']:
-                result[period] = _pick(data, [f'catboost_{period}'],
-                                       default_accuracy[period])
-            result['20d'] = result['ml_20d']
-
-            print(f"✅ 已加载模型准确率: {accuracy_file}")
-            print(f"   CatBoost 1天: {result['1d']['accuracy']:.2%} (±{result['1d']['std']:.2%})")
-            print(f"   CatBoost 5天: {result['5d']['accuracy']:.2%} (±{result['5d']['std']:.2%})")
-            print(f"   {result['learner_20d']} 20天: {result['20d']['accuracy']:.2%} (±{result['20d']['std']:.2%})")
-            return result
-        else:
-            print(f"⚠️ 准确率文件不存在: {accuracy_file}，使用默认值")
-            return default_accuracy
-    except Exception as e:
-        print(f"⚠️ 读取准确率文件失败: {e}，使用默认值")
-        return default_accuracy
-
-
-# 综合建议必须包含的章节（缺一说明模型没按格式输出）
 _REQUIRED_ADVICE_SECTIONS = ('# 综合买卖建议', '## 强烈买入信号', '## 买入信号',
                              '## 持有/观望', '## 卖出信号', '## 风险控制建议')
 
@@ -1074,7 +670,6 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
     """
     # 市场情绪默认值（在 try 外初始化，保证异常路径下变量一定存在，且可被返回）
     market_layer = 'normal'
-    dynamic_threshold = 0.50
     up_ratio = 0.50
 
     try:
@@ -1123,9 +718,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Return_1d')
 
                 # 获取当日的市场情绪
-                threshold, layer, ratio = market_filter.get_threshold(date_str)
+                _, layer, ratio = market_filter.get_threshold(date_str)
                 market_layer = layer
-                dynamic_threshold = threshold
                 up_ratio = ratio
 
                 layer_names = {
@@ -1134,7 +728,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'weak': '🟡 弱震荡',
                     'normal': '🟢 正常市场'
                 }
-                print(f"  ✅ 市场情绪: {layer_names.get(layer, layer)}, 上涨比例: {ratio:.1%}, 阈值: {threshold:.2f}")
+                print(f"  ✅ 市场情绪: {layer_names.get(layer, layer)}, 上涨比例: {ratio:.1%}")
             else:
                 print(f"  ⚠️ 无法获取股票收益率数据，使用默认市场情绪")
         except Exception as e:
@@ -1240,31 +834,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
 
-            # ========== 每日预测优化：概率校准 + 置信度 ==========
-            # 让用户看到的"相对强弱分"变真，并给出"这次预测靠谱程度"（P(主模型判对)）
-            # D59：rank 模式输出 score（无概率语义）——**不得**做概率校准（会对分数做无效等距变换）
-            try:
-                if RANK_MODE:
-                    print("  ⏭️ rank 模式：跳过概率校准/置信度（score 无概率语义）")
-                else:
-                    from ml_services.daily_confidence import DailyConfidence
-                    dc = DailyConfidence()
-                    n_cal = dc.apply_to_results(three_horizon_results)
-                    if n_cal:
-                        print(f"  ✅ 概率校准+置信度已应用（{n_cal} 项）")
-            except Exception as e:
-                print(f"  ⚠️ 概率校准/置信度失败（不影响预测）: {e}")
-
-            # 校准后方向已按校准概率重判 → 模式/交易建议/胜率随之重算（同口径）
-            try:
-                if RANK_MODE:
-                    pass  # rank 模式无校准，方向无需重算
-                else:
-                    n_pat = rebuild_three_horizon_patterns(three_horizon_results)
-                    if n_pat:
-                        print(f"  ✅ 三周期模式已按校准方向重算（{n_pat} 只变化）")
-            except Exception as e:
-                print(f"  ⚠️ 三周期模式重算失败（不影响预测）: {e}")
+            # D59：排序分数无概率语义，不做校准/置信度，也不按校准概率重判方向
+            print("  ⏭️ rank 模式：跳过概率校准/置信度（score 无概率语义）")
 
             # ========== 计算筹码分布（用于邮件表格）==========
             chip_data = {}
@@ -1340,60 +911,16 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 except (AttributeError, TypeError):
                     pass
 
-                # 根据市场情绪和概率判断方向
-                if RANK_MODE:
-                    # D59：rank 模式——无概率语义，用**当池横截面分位**给相对强弱标签
-                    _pct = float(rank_pct_map.get(stock_code, 0.5))
-                    if _pct >= 0.70:
-                        direction, probability_display = "偏强", f"{_pct*100:.0f}%分位"
-                    elif _pct <= 0.30:
-                        direction, probability_display = "偏弱", f"{_pct*100:.0f}%分位"
-                    else:
-                        direction, probability_display = "中性", f"{_pct*100:.0f}%分位"
-                    include_in_llm = True
-                elif market_layer == 'extreme_bear':
-                    # 极端熊市：暂停所有看涨信号
-                    direction = "暂停"
-                    probability_display = f"{probability:.2f} (暂停)"
-                    include_in_llm = False  # 不传给大模型
-                elif market_layer == 'bear':
-                    # 熊市：门槛=校准概率分位（前约8%，PIT动态计算），与 dynamic_threshold 同源
-                    if probability >= dynamic_threshold:
-                        direction = "上涨"
-                        probability_display = f"{probability:.2f} (高置信)"
-                        include_in_llm = True
-                    elif probability >= 0.50:
-                        direction = "观望"
-                        probability_display = f"{probability:.2f} (降级)"
-                        include_in_llm = True  # 传给大模型但标注降级
-                    else:
-                        direction = "下跌"
-                        probability_display = f"{probability:.2f}"
-                        include_in_llm = True
-                elif market_layer == 'weak':
-                    # 弱震荡：门槛=校准概率分位（前约10%，PIT动态计算）
-                    if probability >= dynamic_threshold:
-                        direction = "上涨"
-                        probability_display = f"{probability:.2f}"
-                        include_in_llm = True
-                    elif probability >= 0.50:
-                        direction = "观望"
-                        probability_display = f"{probability:.2f} (降级)"
-                        include_in_llm = True
-                    else:
-                        direction = "下跌"
-                        probability_display = f"{probability:.2f}"
-                        include_in_llm = True
+                # D59 rank-only：模型输出排序分数（横截面分位目标），无概率语义、无市场概率门槛
+                _pct = float(rank_pct_map.get(stock_code, 0.5))
+                if _pct >= 0.70:
+                    direction = "偏强"
+                elif _pct <= 0.30:
+                    direction = "偏弱"
                 else:
-                    # 正常市场：标准阈值 0.50
-                    if probability > 0.60:
-                        direction = "上涨"
-                    elif probability > 0.50:
-                        direction = "观望"
-                    else:
-                        direction = "下跌"
-                    probability_display = f"{probability:.2f}"
-                    include_in_llm = True
+                    direction = "中性"
+                rank_pct_display = f"{_pct*100:.0f}%分位"
+                include_in_llm = True
 
                 # 计算筹码阻力
                 resistance_level = 'N/A'
@@ -1415,13 +942,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         'sector': sector_name,
                         'sector_type': sector_type,
                         'prediction_20d': direction,
-                        'probability_20d': round(probability, 4),
-                        'probability_display': probability_display,  # 市场情绪调整后的显示
-                        'ml_conf_20d': round(confidence_20d, 4) if confidence_20d is not None else None,
+                        'score_20d': round(probability, 4),
+                        'rank_pct_display': rank_pct_display,
                         'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
                         'chip_resistance': resistance_level,
                         'market_layer': market_layer,
-                        'dynamic_threshold': dynamic_threshold
                     })
 
             # 构建JSON格式文本
@@ -1431,18 +956,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
-            if RANK_MODE:
-                catboost_text_llm += "- `probability_20d`: 20天**相对强弱分位**（rank 标签口径，0-1；越高=横截面越偏强，非相对强弱分）\n"
-                catboost_text_llm += "- `ml_conf_20d`: rank 模式下无方向判对概率，通常为 null\n"
-                catboost_text_llm += "- `probability_display`: rank 模式下不做市场概率调整（恒 '-'）\n"
-            else:
-                catboost_text_llm += "- `probability_20d`: 20天相对强弱分（已校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
-                catboost_text_llm += "- `ml_conf_20d`: 方向判对概率（置信度，0-1），与 probability_20d（相对强弱分）含义不同，可一并写进推荐理由\n"
-                catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
+            catboost_text_llm += "- `score_20d`: 20天**排序分数**（0-1 横截面分位目标；越高=池内越偏强；**不是概率/胜率/置信度**）\n"
+            catboost_text_llm += "- `rank_pct_display`: 该股在当池的横截面分位显示（如 82%分位），仅展示用\n"
+            catboost_text_llm += "- `prediction_20d`: 偏强/中性/偏弱（按当池横截面分位 ≥0.70 / ≤0.30 标注）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
-            catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal）\n"
-            catboost_text_llm += "- `dynamic_threshold`: 动态阈值（根据市场情绪调整）\n"
-            catboost_text_llm += "- **使用建议**：概率/分位高 + chip_resistance低 + market_layer=normal = 更可靠信号\n"
+            catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal），**仅作风险提示，不构成分数门槛**\n"
+            catboost_text_llm += "- **使用建议**：score_20d 高 + chip_resistance 低 = 更可靠信号；不得把 score_20d 写成概率/胜率/置信度\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
@@ -1452,51 +971,31 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 加载历史盈亏比数据（基于 Walk-forward 验证结果）
                 historical_pl_data = load_historical_profit_loss_ratio()
 
-                # 获取传导模式验证日期（取第一只股票的日期）
-                first_stock = df_catboost_sorted.iloc[0]['code'] if len(df_catboost_sorted) > 0 else None
-                transmission_date = None
-                if first_stock:
-                    first_transmission = check_transmission_mode(first_stock, date_str)
-                    transmission_date = first_transmission.get('prediction_date')
-
                 # 三周期预测表格（含筹码分布+风险回报率）
                 # 在邮件开头显示市场情绪
                 layer_names_email = {
-                    'extreme_bear': '🔴 极端熊市 - 暂停交易',
-                    'bear': f'🟠 熊市 - 需校准概率≥{dynamic_threshold:.2f}（历史前约8%最高值）',
-                    'weak': f'🟡 弱震荡 - 需校准概率≥{dynamic_threshold:.2f}（历史前约10%最高值）',
+                    'extreme_bear': '🔴 极端熊市 - 仅提示暂停/降仓（排序口径无概率门槛）',
+                    'bear': '🟠 熊市 - 仅提示严格止损/降仓（排序口径无概率门槛）',
+                    'weak': '🟡 弱震荡 - 谨慎，优先池内偏强档信号',
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = ("【机器学习三周期预测结果】（相对强弱分位）\n" if RANK_MODE
-                                       else "【机器学习三周期预测结果】（概率已校准）\n")
+                catboost_text_email = "【机器学习三周期预测结果】（排序分数：横截面分位×100）\n"
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
-                # 动态阈值说明按市场层分支：bear/weak 门槛优先级最高、压过分档，仅 normal 有完整分档语义
-                if market_layer == 'normal':
-                    threshold_note = "市场准入/方向判定基础线；≥0.55买入档、≥0.60+短中期一致=⭐强烈买入档，分层递进非冲突"
-                elif market_layer in ('bear', 'weak'):
-                    layer_cn = '熊市' if market_layer == 'bear' else '弱震荡'
-                    threshold_note = f"{layer_cn}准入门槛，优先级最高：未过此值一律观望（压过0.55/0.60档位映射）"
-                elif market_layer == 'extreme_bear':
-                    threshold_note = "极端熊市暂停交易，无票通过"
-                else:
-                    threshold_note = "市场准入/方向判定基础线"
-                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}（{threshold_note}）\n"
+                catboost_text_email += "**分数口径**: 0-100 排序分数（越高=池内越偏强）；0.50=中位、0.55=买入档、0.60=强档；不是概率/胜率/置信度，无市场概率门槛\n"
                 # 档位反事实记账（2026-10-11）：只记录不执行，供日后核对这套老规矩是否值得用
                 _cf_m = {'extreme_bear': 0.0, 'bear': 0.70, 'weak': 0.65, 'normal': 1.0}.get(market_layer, 1.0)
                 catboost_text_email += (f"**仓位备忘**: 按「行情差就少买」的老规矩，今天应拿 {_cf_m:.0%} 仓位"
                                         f"（仅供记录，不影响实际操作）\n")
-                if transmission_date:
-                    catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
-                catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
+                catboost_text_email += "\n全部股票预测结果（按20天排序分数排序）:\n\n"
                 if d2_topk_target:
                     catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（系统低配辅助信号，K={d2_topk_k}，"
                                             f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
                                             f"与回测/月度护栏同口径。\n\n")
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5天预测 | 10天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5天预测 | 10天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -1535,9 +1034,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred_10d = preds.get(10, {'direction': '-', 'probability': 0.5})
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
                         prob_20d = pred_20d.get('probability', 0.5)
-                        p5d_str = _format_hcell(pred_5d, RANK_MODE)
-                        p10d_str = _format_hcell(pred_10d, RANK_MODE)
-                        p20d_str = _format_hcell(pred_20d, RANK_MODE)
+                        p5d_str = _format_hcell(pred_5d)
+                        p10d_str = _format_hcell(pred_10d)
+                        p20d_str = _format_hcell(pred_20d)
 
                         # 模式和交易建议
                         pattern = pred.get('pattern', '-')
@@ -1563,10 +1062,6 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             else:
                                 resistance_icon = '🔴高'
 
-                        # 检查传导模式
-                        transmission_info = check_transmission_mode(stock_code, date_str)
-                        transmission_display = format_transmission_display(transmission_info)
-
                         # 获取风险回报率数据
                         rr_info = risk_reward_data.get(stock_code, {})
                         rr_comprehensive = rr_info.get('comprehensive_score', '-')
@@ -1589,31 +1084,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         # 获取网络洞察
                         network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
 
-                        # 计算市场调整显示（与"20天预测"列同口径：优先用校准概率，缺失时回退CSV原始概率）
-                        try:
-                            probability_20d = float(prob_20d)
-                        except (TypeError, ValueError):
-                            probability_20d = float(row['probability'])
-                        if RANK_MODE:
-                            market_adjust_display = '-'  # rank 分位无概率门槛语义
-                        elif market_layer == 'extreme_bear':
-                            market_adjust_display = '🔴暂停'
-                        elif market_layer == 'bear':
-                            if probability_20d >= dynamic_threshold:
-                                market_adjust_display = '🟠高置信'
-                            elif probability_20d >= 0.50:
-                                market_adjust_display = '🟠降级'
-                            else:
-                                market_adjust_display = '-'
-                        elif market_layer == 'weak':
-                            if probability_20d >= dynamic_threshold:
-                                market_adjust_display = '🟡通过'
-                            elif probability_20d >= 0.50:
-                                market_adjust_display = '🟡降级'
-                            else:
-                                market_adjust_display = '-'
-                        else:
-                            market_adjust_display = '🟢正常'
+                        # 市场调整列：排序口径无概率门槛，恒为 '-'
+                        market_adjust_display = '-'
 
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
                         _chart_url = _stock_chart_url(stock_code)
@@ -1621,7 +1093,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                                       else stock_code)
                         if stock_code in d2_topk_target:
                             _code_cell = f"🎯 {_code_cell}"
-                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p5d_str} | {p10d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p5d_str} | {p10d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -1638,27 +1110,20 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 catboost_text_email += "\n> *「模式/交易建议/历史胜率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
-                # 添加三色预测说明
-                catboost_text_email += f"\n**三周期预测颜色说明**：\n"
-                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，方向看涨（50-55%弱信号仅观望/≤2%；55-60%中等置信度可买入）\n"
-                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
-                catboost_text_email += "- 概率已经过校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
-                catboost_text_email += "- 方向箭头/模式标注同样按校准后概率判定（≥0.50 判涨），与概率数字同口径\n"
-                catboost_text_email += "- <span style=\"color: #9ca3af;\">(置信xx%)</span>：**模型方向判对概率**（由历史预测拟合），与相对强弱分是两回事\n"
+                # 添加三周期分数说明
+                catboost_text_email += f"\n**三周期分数说明**：\n"
+                catboost_text_email += "- 三周期显示为 0-100 排序分数（横截面分位×100），越高=池内越偏强\n"
+                catboost_text_email += "- ≥60 池内偏强档；50-60 中等；<50 偏弱（交叉参考，仓位≤2%）\n"
+                catboost_text_email += "- 排序分数不是概率/胜率/置信度；不做概率校准，不显示「(置信xx%)」\n"
 
                 # 添加市场调整说明
                 catboost_text_email += f"\n**市场调整说明**：\n"
-                catboost_text_email += "- 🟢正常：正常市场环境，使用标准阈值（≥0.55可买入，≥0.60强买入）\n"
-                catboost_text_email += "- 🟡通过/降级：弱震荡市场，概率位于历史最高前约10%以内才通过，否则降级为观望（无视买入档位）\n"
-                catboost_text_email += "- 🟠高置信/降级：熊市环境，概率位于历史最高前约8%以内才通过，否则降级为观望（无视买入档位）\n"
-                catboost_text_email += "- 🔴暂停：极端熊市，暂停所有看涨信号\n"
-                catboost_text_email += "- ⚙️ 优先级：市场调整列最高——未过门槛的股票无论概率落入哪档均按观望处理\n"
+                catboost_text_email += "- 排序口径不做概率门槛，市场调整列恒为 '-'\n"
+                catboost_text_email += "- 🔴极端熊市/🟠熊市/🟡弱震荡：仅作风险提示（收紧止损、降低总仓位），不改变分数分档\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
-                catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌，按校准后概率 ≥0.50 判定）\n"
-                catboost_text_email += f"- 个股传导模式（历史统计，仅供参考）：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
+                catboost_text_email += "- 模式标注 = 5天预测 + 10天预测 + 20天预测（1=偏强，0=偏弱，按排序分数 ≥0.50 判定）\n"
                 catboost_text_email += "- ⚠️ 注意：三周期模式胜率为历史统计，未经显著性验证——个股曾以\"反弹失败(010)\"最高、\"假突破(101)\"约随机水平\n"
                 catboost_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"
                 catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
@@ -1813,7 +1278,6 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             'ensemble': result['ensemble'],
             'ensemble_email': result['ensemble_email'],
             'market_layer': market_layer,
-            'dynamic_threshold': dynamic_threshold,
             'up_ratio': up_ratio,
             'three_horizon_results': three_horizon_results,
             'chip_data': chip_data,
@@ -1830,7 +1294,6 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             'ensemble': '',
             'ensemble_email': '',
             'market_layer': market_layer,
-            'dynamic_threshold': dynamic_threshold,
             'up_ratio': up_ratio,
             'three_horizon_results': {},
             'chip_data': {},
@@ -3887,16 +3350,15 @@ STOCK_ANALYSIS_PROMPT = """你是一个股票分析专家。请从以下综合�
 1. **stock_name**: 股票名称
 2. **current_price**: 当前价格（数值）
 3. **price_change**: 涨跌幅（百分比数值，如 -2.5）
-4. **ml_prob_20d**: 机器学习20天**相对强弱分**（rank 口径=横截面分位×100；绝对值口径=相对强弱分%，已校准）
-5. **ml_prob_10d**: 机器学习10天相对强弱分（口径同 ml_prob_20d）
-6. **ml_prob_5d**: 机器学习5天相对强弱分（口径同 ml_prob_20d）
+4. **ml_prob_20d**: 机器学习20天**排序分数**（横截面分位×100，0-100；越高=池内越偏强；**不是概率/胜率/置信度**）
+5. **ml_prob_10d**: 机器学习10天排序分数（口径同 ml_prob_20d）
+6. **ml_prob_5d**: 机器学习5天排序分数（口径同 ml_prob_20d）
 7. **three_period_pattern**: 三周期模式（如"下跌中继⭐(001)"）
-8. **transmission_mode**: 传导模式验证结果（如"✅传导(1天↓✓ 5天↓✓ 20天↑⏳)"）
-9. **chip_resistance**: 筹码阻力（低/中/高）
-10. **risk_score**: 风险得分（数值）
-11. **return_score**: 回报得分（数值）
-12. **total_score**: 综合得分（数值）
-13. **risk_advice**: 风险建议（推荐/观察/暂缓/优选）
+8. **chip_resistance**: 筹码阻力（低/中/高）
+9. **risk_score**: 风险得分（数值）
+10. **return_score**: 回报得分（数值）
+11. **total_score**: 综合得分（数值）
+12. **risk_advice**: 风险建议（推荐/观察/暂缓/优选）
 
 ## 网络洞察
 14. **community**: 网络社区归属（如"社区5"）
@@ -3967,51 +3429,53 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 
 请按以下步骤进行综合分析：
 
-## 第一步：硬约束检查
-- ML 20天分数（rank 口径=横截面分位×100；absolute 口径=校准相对强弱分%） ≤ 50 → **禁止买入**
-- ML 20天分数 ≥ 60 → 偏强/高置信，进入下一步
-- ML 20天分数 55-60 → 中等，需其他信号确认
-- ML 20天分数 50-55 → 弱信号，仅限观望/极小仓位（≤2%）
+## 第一步：主判据
+- 短期建议与中期建议方向是否一致
+- 技术面/基本面/风险收益是否支持
+- 方向冲突或证据不足 → 观望
 
-## 第二步：方向一致性检查（关键）
-- 短期建议 + 中期建议 + ML 三者方向一致 → **可买入**
-- 短期建议"观察" + 中期建议"买入" → **观望**（方向冲突）
-- 短期建议"买入" + 中期建议"观察" → **观望**（方向冲突）
-- 短期建议"卖出" + 中期建议任何 → **禁止买入**
+## 第二步：排序分数交叉参考（非硬约束）
+- ML 20天排序分数（横截面分位×100，0-100；**不是概率/胜率/置信度**）
+- ≥60 池内偏强；55-60 中等；50-55 中性；≤50 偏弱
+- 与主判据一致 → 可提高信心/仓位一档
+- 中性 → 维持主判据，仓位≤2%
+- 分歧 → 写明分歧，仓位≤2%并收紧止损，或列观察
+- **不是硬约束、不是否决项**：不得仅因分数排除标的
 
-**重要规则**：即使ML分数>60，如果短期/中期方向不一致，也应归入"观望"，而非"强烈买入"。
+## 第三步：方向一致性检查（关键）
+- 短期建议 + 中期建议方向一致 + 技术面支持 → **可买入**
+- 短期"观察" + 中期"买入" → **观望**（方向冲突）
+- 短期"买入" + 中期"观察" → **观望**（方向冲突）
+- 短期"卖出" + 中期任何 → **不买入**（方向明确看跌）
+- **分数不能替代方向判断**：即使分数>60，短期/中期冲突仍归"观望"
 
-## 第三步：市场环境检查
-- 市场状态为"熊市" → 提高阈值至0.70
-- 市场状态为"震荡市" → 提高阈值至0.65
+## 第四步：市场环境检查
+- 市场状态为"熊市"/"震荡市" → 仅作风险提示（收紧止损、降低总仓位），**不改变分数分档**（排序模型无概率门槛）
 - 市场状态稳定性<5天 → 仅**描述**"状态偏短、易变"（**不构成买卖建议**；HMM 无 alpha，见 D57）
 
-## 第四步：异常检测检查
+## 第五步：异常检测检查
 - 有超买异常（RSI>70）→ 提示短期回调风险
 - 有超卖异常（RSI<30）→ 提示可能存在反弹机会
 - 有成交量异常 → 提示资金异动
 
-## 第五步：网络洞察检查
+## 第六步：网络洞察检查
 - 模块度<0.20 → 市场同涨同跌，降低仓位30%
 - 为桥梁股 → 提示跨社区风险传导
 
 ## 分类标准
 
-| 分类 | ML分数 | 短期建议 | 中期建议 | 说明 |
-|------|-------------|---------|---------|------|
-| ⭐强烈买入 | ≥60% | 买入 | 买入 | 三重确认 |
-| 🟢买入 | 55-60% | 买入 | 买入 | 需其他信号确认 |
-| 🟡观望 | 50-55% | 买入 | 买入 | 弱信号，仅观望/≤2% |
-| 🟡观望 | ≥50% | 观察 | 买入 | 方向冲突，等待确认 |
-| 🟡观望 | ≥50% | 买入 | 观察 | 方向冲突，等待确认 |
-| 🔴禁止买入 | ≤50% | 任何 | 任何 | 硬约束 |
-| 🔴禁止买入 | 任何 | 卖出 | 任何 | 方向明确看跌 |
+| 分类 | 主判据 | 分数参考 |
+|------|--------|---------|
+| ⭐强烈买入 | 短中期买入 + 技术/基本面支持 | 偏强（≥60） |
+| 🟢买入 | 短中期买入 + 支持 | 中等/中性（50-60），或分歧但主判据强 |
+| 🟡观望 | 方向冲突 / 证据不足 | 任意 |
+| 🔴卖出/减仓 | 短中期看跌 + 支持 | 偏弱助力 |
 
 # 返回格式
 
 请以 JSON 格式返回以下字段：
 {{
-    "recommendation": "综合建议（如：⭐强烈买入 / 🟢买入 / 🟡观望 / 🔴禁止买入）",
+    "recommendation": "综合建议（如：⭐强烈买入 / 🟢买入 / 🟡观望 / 🔴卖出或减仓）",
     "recommendation_class": "CSS类名（rec-strong-buy / rec-buy / rec-hold / rec-sell）",
     "consistency": "方向一致性分析（如：一致 / 方向冲突，短期中期不一致）",
     "analysis_summary": "分析摘要（一句话说明判断依据）",
@@ -4033,11 +3497,12 @@ HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下
 
 # 分析框架
 
-## 第一步：趋势判断
-- ML 20天概率（校准后） > 60% 且短中期建议"买入" → 趋势向上，考虑持有或加仓
-- ML 20天概率（校准后） 55-60% → 趋势中性，谨慎持有
-- ML 20天概率（校准后） 50-55% → 信号弱，不加仓，观望
-- ML 20天概率（校准后） < 50% → 趋势向下，考虑减仓或止损
+## 第一步：趋势判断（主判据）
+- 短期/中期建议与均线、价格趋势是否一致
+- ML 20天排序分数（0-100，横截面分位×100；**不是概率/胜率/置信度**）只作交叉参考：
+  - ≥60 池内偏强；55-60 中性偏强；50-55 中性；≤50 偏弱
+  - 与趋势一致 → 支持持有/加仓；分歧 → 写明，降低仓位/收紧止损
+  - **分数不单独触发减仓或止损**
 
 ## 第二步：止盈止损判断
 - 当前价格接近目标价 → 考虑分批止盈
@@ -4051,7 +3516,7 @@ HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下
 - 市场状态不稳定（<5天）→ 降低仓位
 
 ## 第四步：综合建议
-基于以上分析，给出持货人的具体操作建议。
+基于趋势、技术面、风险收益形成主建议，并注明排序分数是一致、中性还是分歧。
 
 # 返回格式
 
@@ -4061,7 +3526,7 @@ HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下
     "holder_reason": "操作理由（1-2句话）",
     "key_level": "关键价位说明（如：跌破XX止损，突破XX加仓）",
     "risk_level": "低 / 中 / 高",
-    "time_horizon": "短期（1-5天）/ 中期（5-20天）"
+    "time_horizon": "短期（≤5天）/ 中期（5-20天）"
 }}
 
 **重要**：
@@ -4158,14 +3623,12 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         prob_5d = pred_5d.get('probability')
         prob_10d = pred_10d.get('probability')
         prob_20d = pred_20d.get('probability')
-        _mlbl = "相对强弱" if RANK_MODE else "预测"
+        _mlbl = "相对强弱"
+
         try:
-            lines.append(f"ML 5天{_mlbl}: {pred_5d.get('direction', '-')} {f'{prob_5d:.2f}' if prob_5d is not None else '-'}"
-                         + (f" (置信{float(pred_5d.get('confidence', 0)):.2f})" if pred_5d.get('confidence') else ""))
-            lines.append(f"ML 10天{_mlbl}: {pred_10d.get('direction', '-')} {f'{prob_10d:.2f}' if prob_10d is not None else '-'}"
-                         + (f" (置信{float(pred_10d.get('confidence', 0)):.2f})" if pred_10d.get('confidence') else ""))
-            lines.append(f"ML 20天{_mlbl}: {pred_20d.get('direction', '-')} {f'{prob_20d:.2f}' if prob_20d is not None else '-'}"
-                         + (f" (置信{float(pred_20d.get('confidence', 0)):.2f})" if pred_20d.get('confidence') else ""))
+            lines.append(f"ML 5天{_mlbl}: {pred_5d.get('direction', '-')} {f'{prob_5d:.2f}' if prob_5d is not None else '-'}")
+            lines.append(f"ML 10天{_mlbl}: {pred_10d.get('direction', '-')} {f'{prob_10d:.2f}' if prob_10d is not None else '-'}")
+            lines.append(f"ML 20天{_mlbl}: {pred_20d.get('direction', '-')} {f'{prob_20d:.2f}' if prob_20d is not None else '-'}")
         except (ValueError, TypeError):
             lines.append(f"ML 5天{_mlbl}: {pred_5d.get('direction', '-')} {prob_5d}")
             lines.append(f"ML 10天{_mlbl}: {pred_10d.get('direction', '-')} {prob_10d}")
@@ -4648,45 +4111,31 @@ def generate_stock_section_html(stock_data: dict) -> str:
     prob_10d = stock_data.get('ml_prob_10d', stock_data.get('catboost_prob_10d'))
     prob_5d = stock_data.get('ml_prob_5d', stock_data.get('catboost_prob_5d'))
 
-    # 样式（rank 口径=相对强弱分位；absolute 口径=校准相对强弱分）
+    # 样式（排序分位；无概率/置信度语义）
     if prob_20d is None:
         prob_class = "metric-neutral"
         prob_desc = "数据缺失（未取得当日预测）"
-    elif RANK_MODE:
-        prob_class = "metric-good" if prob_20d >= 70 else ("metric-bad" if prob_20d <= 30 else "metric-neutral")
-        prob_desc = "相对强弱分位（rank 口径；高=池内偏强，低=偏弱；非相对强弱分）"
-    elif prob_20d >= 60:
-        prob_class = "metric-good"
-        prob_desc = "高置信度，>60%"
-    elif prob_20d >= 50:
-        prob_class = "metric-neutral"
-        prob_desc = "中等置信度，50-60%（50-55弱信号仅观望，55-60中等）"
     else:
-        prob_class = "metric-bad"
-        prob_desc = "看跌，<50%硬约束禁止买入"
+        prob_class = "metric-good" if prob_20d >= 70 else ("metric-bad" if prob_20d <= 30 else "metric-neutral")
+        prob_desc = "相对强弱分位（高=池内偏强，低=偏弱）"
 
-    # 分数/方向显示（None → "-"；absolute 口径带 %，rank 口径为 0-100 分不带 %）
-    _sfx = "" if RANK_MODE else "%"
-    prob_5d_txt = f"{prob_5d:.0f}{_sfx}" if prob_5d is not None else "-"
-    prob_10d_txt = f"{prob_10d:.0f}{_sfx}" if prob_10d is not None else "-"
-    prob_20d_txt = f"{prob_20d:.0f}{_sfx}" if prob_20d is not None else "-"
+    # 分数显示（0-100 分，不带 %）
+    prob_5d_txt = f"{prob_5d:.0f}" if prob_5d is not None else "-"
+    prob_10d_txt = f"{prob_10d:.0f}" if prob_10d is not None else "-"
+    prob_20d_txt = f"{prob_20d:.0f}" if prob_20d is not None else "-"
 
     def _dir_text(p):
         if p is None:
             return "-", ""
-        if RANK_MODE:
-            return ("偏强", "arrow-up") if p >= 50 else ("偏弱", "arrow-down")
-        if p >= 50:
-            return "↑ 上涨", "arrow-up"
-        return "↓ 下跌", "arrow-down"
+        return ("偏强", "arrow-up") if p >= 50 else ("偏弱", "arrow-down")
 
     dir_5d, dir_5d_class = _dir_text(prob_5d)
     dir_10d, dir_10d_class = _dir_text(prob_10d)
     dir_20d, dir_20d_class = _dir_text(prob_20d)
 
-    # D59 展示标签（rank 口径切"相对强弱分位"，absolute 口径保留"相对强弱分"）
-    _ml_label_20d = "ML 20天相对强弱分位" if RANK_MODE else "ML 20天相对强弱分（校准后）"
-    _ml_col = "相对强弱" if RANK_MODE else "预测概率"
+    # D59 展示标签
+    _ml_label_20d = "ML 20天相对强弱分位"
+    _ml_col = "相对强弱"
 
     # 涨跌幅显示
     price_change = stock_data.get('price_change', 0) or 0
@@ -4870,7 +4319,6 @@ def generate_stock_section_html(stock_data: dict) -> str:
                 <tr><td>20天</td><td>{prob_20d_txt}</td><td class="{dir_20d_class}">{dir_20d}</td></tr>
             </table>
             <p><strong>三周期模式</strong>：{stock_data.get('three_period_pattern') or "-"}</p>
-            <p><strong>传导模式</strong>：{stock_data.get('transmission_mode') or "-"}</p>
 
             <h3>三、大模型建议</h3>
             <ul>
@@ -5175,14 +4623,8 @@ def run_detailed_stock_analysis(stock_codes: list, report_path: str, date_str: s
             if not stock_data.get('target_price'):
                 stock_data['target_price'] = round(current_p * 1.10, 2)
             if not stock_data.get('position_advice'):
-                # 基于ML分数计算建议仓位
-                prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 50)) or 50
-                if prob_20d >= 60:
-                    stock_data['position_advice'] = 5  # 高置信度 5%
-                elif prob_20d >= 55:
-                    stock_data['position_advice'] = 3  # 中等置信度 3%
-                else:
-                    stock_data['position_advice'] = 0  # 观望
+                # 无大模型仓位：不因单一排序分数建仓（分数只作交叉参考）
+                stock_data['position_advice'] = 0
 
         # 兜底：布林带位置和MACD状态
         if not stock_data.get('bb_position'):
@@ -5308,13 +4750,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
         # 市场情绪（供邮件顶部市场风险横幅使用，带兜底默认值）
         market_layer = ml_predictions.get('market_layer', 'normal')
-        dynamic_threshold = ml_predictions.get('dynamic_threshold', 0.50)
         up_ratio = ml_predictions.get('up_ratio', 0.50)
-
-        # 加载模型准确率
-        print("📝 加载模型准确率...")
-        model_accuracy = load_model_accuracy(horizon=20)
-        print(f"✅ 准确率加载完成\n")
 
         # 生成日期（使用最近港股交易日，而非当前日期）
         # 港股与A股假期不同（2026-09-25中秋A股休市但港股开市），须锚定港股
@@ -5328,13 +4764,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 === 信息来源 ===
 
-【主要信息源 - 决策依据】
+【主要信息源】
 
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_recommendations['medium_term']}
 
-【2. 机器学习20天预测结果（生产模型）】
-**重要：分数 = 20天相对强弱分（rank 口径=横截面分位×100；absolute 口径=Isotonic 校准后上涨概率×100，可读作预计胜率）**
+【2. 机器学习20天排序分数（交叉参考，非硬约束）】
+**重要：分数 = 20天排序分数（横截面分位×100，0-100；越高=池内越偏强）。它是排序分位，不是上涨概率、不是胜率、不是置信度；只作投资建议的交叉参考，不是买卖的唯一依据。**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -5342,135 +4778,90 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 【3. 大模型短期买卖建议（日内/数天）】
 {llm_recommendations['short_term']}
 
-**🔴 核心硬性约束（不可违反）**
+**🔎 排序分数的定位（交叉参考，非硬约束）**
+- 主判据：短期时机 + 中期方向 + 技术面/基本面 + 风险收益
+- `分数` 只作**交叉参考**：用于确认或质疑主判据，**不单独决定买卖**
+- 分数偏强（≥0.55）且短中期同向 → 可提高信心/仓位一档（仍受单票与总仓位上限约束）
+- 分数中性（0.50-0.55）→ 不改变主判据；若仍看多，仓位≤2%
+- 分数偏弱（≤0.50）→ **不是自动否决**：在理由中写明分歧，降低仓位/收紧止损，或列为观察
+- 分数仅表示**池内相对强弱**，跨日不可比；不是概率/胜率/置信度
+- **不得仅因分数排除一个短中期一致、且技术面/基本面支持的标的**
 
-⚠️ **ML分数约束（最高优先级，无例外）**：
-- ML分数 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
-- ML分数 < 0.40 → **绝对禁止推荐持有或观望**（对应卖出/减仓方向）
-- 0.50 < ML分数 < 0.55 → **仅限观望/极小仓位（≤2%），不得列入买入信号**
-- ML分数 ≥ 0.55 → 可以考虑买入
-- ML分数 ≥ 0.60 → 可以考虑强烈买入
-- **即使短期和中期方向一致，也绝对不允许违反此约束**
-- **违反此约束的建议将被视为错误**
-
-🔥 **决策顺序（严格遵守）**：
-第一步：检查ML分数 → 不满足则直接排除
-第二步：检查短期和中期一致性
-第三步：评估技术面和基本面
-第四步：生成综合建议
+🔥 **分析顺序**：
+第一步：短期与中期一致性
+第二步：技术面、基本面、风险收益
+第三步：ML 排序分数交叉参考（确认/分歧）
+第四步：生成建议
 
 === 综合分析规则 ===
 
 **规则1：时间维度匹配（业界最佳实践）**
 - **短期信号（触发器）**：负责"何时做"（Timing）
 - **中期信号（确认器）**：负责"是否做"（Direction）
-- **机器学习模型（验证器）**：负责提升置信度
+- **机器学习模型（交叉参考）**：提供池内相对强弱，不单独决定买卖
 - 只有短期和中期方向一致时，才采取行动
 - 短期和中期冲突时，选择观望（避免不确定性）
 
-**决策逻辑（短期触发 + 中期确认 + ML验证）**：
-- **第一步：检查ML分数（硬约束）**
-  - 分数 ≤ 0.50 → 排除买入或强烈买入
-  - 0.50 < 分数 < 0.55 → 观望（最多1-2%，不进入买入评估）
-  - 分数 ≥ 0.55 → 进入下一步
-- **第二步：检查短期和中期一致性**
-  - 短期看好，中期看好 → 进入下一步
-  - 方向不一致 → 观望
-- **第三步：生成建议**
-  - 强烈买入：短期看好，中期看好，ML 分数 ≥ 0.60
-  - 买入：短期看好，中期看好，0.55 ≤ ML 分数 < 0.60
-  - 持有/观望：ML 分数 < 0.55 或 方向不一致
-  - 卖出：短期看跌，中期看跌
+**决策逻辑（短中期为主，ML 交叉参考）**：
+- 第一步：短期看好+中期看好（或同向看空）→ 进入评估
+- 第二步：技术面/基本面/风险收益支持 → 形成主建议
+- 第三步：ML 分数交叉参考
+  - 一致（≥0.55）→ 基准仓位最多 +2 个百分点（不超单票上限）
+  - 中性（0.50-0.55）→ 维持主建议，仓位≤2%
+  - 分歧（≤0.50）→ 写明分歧；仓位≤2%并收紧止损，或列观察
+- 第四步：输出建议（理由同时包含短中期结论与分数交叉参考）
 
-**硬约束检查清单（必须逐项核对）**：
-- [ ] ML 分数 ≤ 0.50 → 绝对禁止推荐买入或强烈买入
-- [ ] ML 分数 < 0.40 → 绝对禁止推荐持有或观望
-- [ ] 0.50 < ML 分数 < 0.55 → 仅限观望/极小仓位，不列入买入信号
-- [ ] ML 分数 ≥ 0.55 → 可以考虑买入
-- [ ] ML 分数 ≥ 0.60 → 可以考虑强烈买入
-- [ ] 短期和中期方向是否一致？
-- [ ] 三重确认是否全部满足？
+**交叉参考检查清单**：
+- [ ] 短期与中期方向是否一致？
+- [ ] 技术面/基本面/风险收益是否支持？
+- [ ] ML 分数与主判据是一致、中性还是分歧？
+- [ ] 分歧时是否已写明并控制仓位/止损？
 
-**规则2：ML分数评估**
+**规则2：ML 分数评估（仅作交叉参考）**
+- **偏强**：>0.60
+- **中等**：0.55-0.60
+- **中性**：0.50-0.55
+- **偏弱**：≤0.50
+- 分数只表示池内相对强弱，跨日不可比；不是概率/胜率/置信度
+- 不得把分数写成"硬约束"或"第三重否决"；不得仅因分数排除标的
+- **0.60 不等于"校准分布前11%"**：排序口径没有"校准分布"概念
 
-**ML分数阈值（rank 口径=池内分位；absolute 口径=校准上涨概率）**：
-- **偏强/高置信**：分数 > 0.60
-- **中等**：0.55 ≤ 分数 ≤ 0.60
-- **弱信号（观望/极小仓位）**：0.50 < 分数 < 0.55
-- **偏弱（禁止买入）**：分数 ≤ 0.50（其中 0.40-0.50 观望，< 0.40 卖出/减仓方向）
+**规则3：仓位与风险（分数只微调）**
+- 主仓位由「短中期一致 + 风险收益 + 总仓位上限」决定
+- 分数与主判据一致 → 基准仓位最多 +2pp；分数分歧 → 单票≤2%
+- 单票上限 6%，总仓位 45%-55%
+- 单票止损：最大亏损 -8%
+- 市场情绪只收紧风控，不改变分数分档
 
-**重要说明 - ML 分数 定义**：
-- `分数` = 20天**相对强弱分**（rank 口径=横截面分位×100；absolute 口径=Isotonic 校准后上涨概率×100）
-- rank 口径下**无"下跌概率"概念**（分数=横截面相对位置，非事件概率）
-- absolute 口径下：下跌概率 = 1 - 分数；例如 分数=0.68 表示预计68%概率上涨、32%下跌
-- **不要再用"模型准确率±标准差"换算概率**：校准后概率本身即胜率估计，重复换算得出错误结论
+**规则3.1：模型口径**
+- 5/10/20 天均为训练与预测同源的单一排序模型
+- 输出池内排序分数，不输出概率/胜率/置信度；不引用准确率做换算
 
-**阈值说明（校准口径）**：
-- 20天准确率数据截至：{model_accuracy['ml_20d'].get('date') or '未知'}（学习器类型随版本可能为 CatBoost 或 LightGBM，以实际载入模型为准）
-- 强买入阈值0.60 = 要求校准后胜率>60%，位于校准分布前约11%（达标股票较少属正常）
-- 买入阈值0.50 = 要求校准后胜率>50%（优于随机）；其中0.50-0.55区间信号弱（占校准分布近一半），按观望/小仓位处理
-- 偏弱阈值0.50 = rank 口径池内后半区 / absolute 口径校准胜率≤50%（0.40-0.50 观望，<0.40 卖出/减仓方向）
-- 观望区间0.40-0.50避免低置信度决策
-- 市场调整列门槛按校准历史分布分位动态计算（PIT）：熊市=前约8%分位、弱震荡=前约10%分位；当日具体数值以邮件头部"动态阈值"/`dynamic_threshold` 字段为准，熊市达标票少属正常
-- **市场调整列优先级最高**：熊市/弱震荡未过门槛（dynamic_threshold）→ 无论 ML 分数落入哪档，一律按观望处理（压过仓位映射）；极端熊市暂停全部看涨信号
-- **阈值层级（分层递进，互不矛盾，禁止写成冲突）**：动态阈值（normal=0.50）= 市场情绪过滤器准入/方向判定基础线；0.55 = 买入档；0.60 + 短中期方向一致（三重确认）= ⭐强烈买入档——高阈值是低阈值的加严子集
-
-**重要说明 - 模型配置**：
-- 1天/5天/20天：均为流水线当日训练、训练与预测同源的单一学习器
-- 20天准确率：{model_accuracy['ml_20d']['accuracy']:.2%}（±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
-- 置信度：`(置信xx)` = P(模型方向判对)，与 分数（相对强弱分）含义不同，两者不可混用
-
-**重要说明 - 模型不确定性（风险提示）**：
-- 20天模型准确率标准差约±{model_accuracy['ml_20d']['std']:.2%}，实际表现可能波动
-- 但这**不能**作为降低ML分数标准的理由
-
-**重要说明 - 仓位映射（按校准概率分位，唯一口径，勿与其它条欢单独冲突使用）**：
-- ML分数 ≥0.60（校准分布前约11%）：强买入信号，建议仓位4-6%
-- 0.55 ≤ ML分数 < 0.60（前约18%内）：买入信号，建议仓位2-3%
-- 0.50 < ML分数 < 0.55（信号弱，占校准分布近一半）：观望为主，最多1-2%
-- ML分数 ≤0.50：禁止买入（硬约束），对应卖出/减仓方向
-- 总仓位控制在45%-55%（与短期/中期信号一致时才加仓，不因单一信号满仓）
-
-**重要说明 - 信号协同（必须同时满足）**：
-- **短期信号（触发器）**：负责"何时做"（Timing）→ 必须100%满足
-- **中期信号（确认器）**：负责"是否做"（Direction）→ 必须100%满足
-- **ML分数（硬性约束）**：负责验证方向性→ 必须100%满足
-- **三重确认：短期、中期、ML三者必须同时满足，缺一不可**
-
-**重要说明 - 时间维度标准化**：
-- 短期：1-5个交易日（日内到一周）
-- 中期：10-20个交易日（2-4周）
-- 长期：>20个交易日（超过1个月）
-- 当前映射：大模型短期建议 ↔ 机器学习20天预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
-
-**规则3：ML分数评估**
-- **高置信度上涨（分数 > 0.60）**：信号可靠性最高，优先级提升
-- **中等置信度（0.55 ≤ 分数 ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
-- **弱信号（0.50 < 分数 < 0.55）**：观望为主，最多1-2%仓位
-- **预测下跌（分数 ≤ 0.50）**：禁止买入，不进行交易（0.40-0.50 观望，<0.40 卖出/减仓方向）
-- 如果分数高（>0.60），综合置信度最高
-- 如果分数低（≤0.50），综合置信度低，禁止买入
+**规则3.2：时间维度**
+- 短期：≤5 个交易日；中期：5-20 个交易日；长期：>20 个交易日
+- 短期建议 ↔ 5/10/20 天排序分数；中期建议 ↔ 基本面（数周-数月）
 
 **规则4：推荐理由格式**
-- 必须说明：短期建议+中期建议+机器学习20天预测（分数，已校准）
-- 例如："短期建议买入（触发器），中期建议买入（确认器），机器学习20天预测（校准后）相对强弱分0.62（高置信度，置信0.58），综合置信度高"
-- absolute 口径已 Isotonic 校准、直接引用；rank 口径为分位无需校准；**不要**在理由里再做"模型准确率±标准差"换算
+- 必须说明：短期建议+中期建议+ML 排序分数（交叉参考）
+- 一致示例："短期建议买入（时机），中期建议买入（方向），ML 20天排序分数0.62（池内偏强），与主判据一致，作为交叉参考"
+- 分歧示例："短期/中期看多，但 ML 分数0.48（池内偏弱），交叉参考分歧，建议轻仓≤2%并收紧止损"
+- 分数直接引用（排序分位，无需校准）；**不要**在理由里做"模型准确率±标准差"换算，也不要写"概率/胜率/置信度"
 
 请基于上述规则，完成以下任务：
 
-1. **一致性分析**（方案A核心：短期触发 + 中期确认 + ML验证）：
-   - **第一步（核心）**：分析短期建议与中期建议的一致性
-     - 短期买入 + 中期买入 → 方向一致，考虑ML验证
+1. **一致性分析 + 交叉参考**：
+   - **第一步（主判据）**：分析短期建议与中期建议的一致性
+     - 短期买入 + 中期买入 → 方向一致，进入评估
      - 短期买入 + 中期观望 → 等待中期确认
      - 短期买入 + 中期卖出 → 冲突，观望
-     - 短期卖出 + 中期卖出 → 方向一致，考虑ML验证
+     - 短期卖出 + 中期卖出 → 方向一致，进入评估
      - 短期卖出 + 中期观望 → 等待中期确认
      - 短期卖出 + 中期买入 → 冲突，观望
-    - **第二步（验证）**：对短期中期一致的股票，分析机器学习20天预测验证
-      - 如果ML高置信度支持（分数>0.60），提升为强信号
-      - 如果ML中等置信度支持（0.55≤分数≤0.60），提升为中等信号
-      - 如果ML弱信号（0.50<分数<0.55），维持观望（最多1-2%）
-      - 如果ML低置信度（分数≤0.50），降低为弱信号或观望
+   - **第二步（交叉参考）**：对方向一致的股票，把 ML 分数作为参考项
+     - 一致（≥0.55）：理由写"分数偏强，与主判据一致"，可上调一档信心/仓位
+     - 中性（0.50-0.55）：理由写"分数中性"，维持主判据，仓位≤2%
+     - 分歧（≤0.50）：理由写"分数与主判据分歧"，仓位≤2%并收紧止损，或列观察
+   - **不得把分数当作第三重否决，也不得仅因分数排除标的**
    - 标注符合"强买入信号"、"买入信号"、"观望信号"、"卖出信号"的股票
 
 2. **个股建议排序**：
@@ -5479,36 +4870,33 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - 对每个股票给出明确的操作建议：强烈买入、买入、持有、卖出、强烈卖出
 
 3. **综合推荐清单**：
-   - 强烈买入信号（2-3只）：最高优先级，建议仓位4-6%
-   - 买入信号（3-5只）：次优先级，建议仓位2-3%
+   - 强烈买入信号（2-3只）：主判据强且分数一致 → 仓位4-6%
+   - 买入信号（3-5只）：主判据支持 → 仓位2-3%；若分数分歧则≤2%
    - 持有/观望（如有）：第三优先级
    - 卖出信号（如有）：最低优先级
 
-3.1. **特殊处理（ML 分数 ≤ 0.50的股票）**：
-   - **绝对禁止**： 分数 ≤ 0.50 的股票不能出现在"强烈买入信号"或"买入信号"中
-   - **正确处理**： 分数 ≤ 0.50 的股票应该出现在"持有/观望"或"卖出信号"中
-   - **理由说明**：在"推荐理由"中必须明确说明"ML 分数 ≤ 0.50，违反硬约束，建议观望"
-   - **示例**："短期建议买入，中期建议买入，但机器学习20天预测相对强弱分0.48（≤0.50），违反硬约束，建议观望"
+3.1. **分数分歧处理（≤0.50）**：
+   - **不禁止**出现在买入清单；但必须标注"分数分歧"，仓位≤2%，止损更严
+   - 若短期/中期/技术面/基本面均强，可保留建议并写明分歧
+   - **示例**："短期/中期均看多，但机器学习20天排序分数0.48（池内偏弱），交叉参考分歧，建议轻仓≤2%并收紧止损"
 
 4. **风险提示**：
    - 分析当前市场整体风险
    - 给出仓位控制建议（建议仓位百分比，总仓位45%-55%）
    - 给出止损位建议（单只股票最大亏损不超过-8%）
    
-   **特别要求 - 考虑机器学习模型不确定性**：
-   - 20天生产模型准确率约{model_accuracy['ml_20d']['accuracy']:.2%}（标准差约±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
-   - 仓位按统一映射执行：≥0.60（前约11%）→4-6%；0.55-0.60→2-3%；0.50-0.55→观望或最多1-2%；≤0.50禁止买入
-   - 短期/中期方向一致且ML分数达标才可加至4-6%，不得因单一信号满仓
-   - 总仓位控制在45%-55%
+   **特别要求 - 排序模型口径**：
+   - 本模型输出池内排序分数，**不含概率/胜率/置信度**，不要引用模型准确率数字
+   - 仓位由主判据（短中期一致 + 风险收益）决定；分数只微调：一致可上调一档，分歧则≤2%
+   - 单票上限 6%，总仓位 45%-55%；不得因单一信号满仓
    - **必须设置止损位，单只股票最大亏损不超过-8%**
-   - **严格遵循"短期触发 + 中期确认 + ML验证"原则**：只有短期和中期方向一致且ML验证时才行动
-   - 如果短期和中期建议冲突，优先选择观望，不进行交易
-   - 采用"三重确认"策略：短期、中期、ML三者一致时才重仓操作
+   - 短期和中期冲突 → 观望，不进行交易
+   - 分数仅作交叉参考，不构成第三重否决
 
 **空节处理与统计断言规则（必须严格遵守）**：
-- 若某信号节无股票满足该档条件，只写："当前无股票同时满足'短期买入+中期买入+ML分数≥X'的三重确认条件，本期不出具该档信号。"
-- **严禁生成可证伪的统计断言**（如"所有ML分数≥0.60的股票不存在"）——"不存在同时满足三重条件的股票"不等于"不存在≥0.60的股票"，两者不可混写
-- 阈值分层是递进关系（动态阈值0.50=准入线，0.60+三重确认=⭐档），不得表述为互相矛盾或冲突
+- 若某信号节无股票满足条件，只写："当前无股票同时满足'短期买入+中期买入+风险收益支持'的条件，本期不出具该档信号（ML 分数仅作交叉参考）。"
+- **严禁生成可证伪的统计断言**（如"所有ML分数≥0.60的股票不存在"）——"不存在符合主判据的股票"不等于"不存在≥0.60的股票"，两者不可混写
+- 不得把分数写成硬门槛；分数一致与否只影响理由和仓位微调
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -5516,7 +4904,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[简短理由，例如：短期买入，中期买入，机器学习20天预测相对强弱分0.72（高置信度），方向一致]
+   - 推荐理由：[简短理由，例如：短期买入，中期买入，机器学习20天排序分数0.72（池内偏强档），方向一致]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -5885,11 +5273,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 # 市场风险横幅（置顶）：按市场情绪给出当日操作指引
                 banner_map = {
                     'extreme_bear': '🔴 极端熊市：暂停买入，等待市场企稳',
-                    'bear': f'🟠 熊市：仅考虑高置信（≥{dynamic_threshold:.2f}，历史前约8%最高值）买入，严格止损',
-                    'weak': f'🟡 弱震荡：谨慎，优先高置信（≥{dynamic_threshold:.2f}，历史前约10%最高值）信号',
+                    'bear': '🟠 熊市：收紧止损、降低总仓位（排序口径无概率门槛）',
+                    'weak': '🟡 弱震荡：谨慎，优先池内偏强档信号',
                     'normal': '🟢 正常市场：常规操作',
                 }
-                banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}，动态阈值 {dynamic_threshold:.2f}）\n\n"
+                banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}）\n\n"
                 # 20d 行业中性 TopK 护栏状态（DECISIONS D2 / DEPLOYMENT T2），
                 # 与三周期准确率同属"预测可信度"语境，插在第二节末尾；无 20d 报告则不显示
                 try:
@@ -5909,17 +5297,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 二、机器学习预测结果（20天）
 
-### 机器学习模型（三周期准确率）
+### 机器学习模型（排序口径）
 
-**模型准确率**：
-
-| 周期 | 准确率 | 标准差 |
-|------|--------|--------|
-| 1天 | **{model_accuracy['1d']['accuracy']:.2%}** | ±{model_accuracy['1d']['std']:.2%} |
-| 5天 | **{model_accuracy['5d']['accuracy']:.2%}** | ±{model_accuracy['5d']['std']:.2%} |
-| 20天 | **{model_accuracy['20d']['accuracy']:.2%}** | ±{model_accuracy['20d']['std']:.2%} |
-
-> 三周期均为流水线当日训练、训练与预测同源的生产模型（滚动回测验证口径，20天数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）。下表分数：rank 口径=横截面分位，absolute 口径=校准后概率；`置信xx%` 为模型方向判对概率。
+> 5/10/20 天均为流水线当日训练、训练与预测同源的**排序模型**：输出 0-100 排序分数（横截面分位×100），**不输出概率/胜率/置信度**。分数越高=池内越偏强；0.50=中位、0.55=买入档、0.60=强档。
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
@@ -5988,84 +5368,32 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 
 
-### ✦ 买入策略
+### ✦ 主判据（先看）
 
-- **ML 分数 ≥ 0.60** + **短期看好** + **中期看好** → 强烈买入
+- **短期看好 + 中期看好** + 技术面/基本面支持 → 买入评估
+- **短期看跌 + 中期看跌** + 技术面/基本面支持 → 卖出评估
+- 短期与中期冲突 → 观望
+- 主仓位由「短中期一致 + 风险收益 + 总仓位上限」决定，单票上限 6%，总仓位 45%-55%
 
-- **0.55 ≤ ML 分数 < 0.60** + **短期看好** + **中期看好** → 买入
+### ✦ 排序分数（交叉参考，非硬约束）
 
-- **0.50 < ML 分数 < 0.55** → 观望（最多1-2%，不列入买入信号）
+| 分数 | 含义 | 对建议的影响 |
+|------|------|------|
+| ≥0.60 | 池内偏强 | 与主判据一致 → 基准仓位 +1~2pp（不超6%） |
+| 0.55-0.60 | 中等 | 与主判据一致 → 维持或小幅上调 |
+| 0.50-0.55 | 中性 | 维持主判据；若看多，仓位≤2% |
+| ≤0.50 | 偏弱 | **不是否决**：写明分歧，仓位≤2%并收紧止损，或列观察 |
 
-- **ML 分数 ≤ 0.50** → 禁止买入（硬约束）
-
-
-
-### ✦ 持有策略
-
-- **ML 分数 > 0.60** + **大模型建议买入** → 强烈持有
-
-- **0.55 ≤ ML 分数 ≤ 0.60** + **大模型建议买入** → 观望持有
-
-- **0.50 < ML 分数 < 0.55** + **大模型建议买入** → 不加仓，观望
-
-- **ML 分数 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
-
-
-
-### ✦ 卖出策略
-
-- **ML 分数 ≤ 0.50** + **短期看跌** + **中期看跌** → 卖出
-
-- **ML 分数 < 0.40** → 禁止持有或观望（硬约束）
-
-
-
-### ✦ 决策顺序（严格遵守）
-
-1. **第一步：检查 ML 分数（硬约束）**
-
-   - ML 分数 ≤ 0.50 → 排除买入或强烈买入
-
-   - 0.50 < ML 分数 < 0.55 → 观望（最多1-2%，不进入买入评估）
-
-   - ML 分数 ≥ 0.55 → 进入下一步
-
-2. **第二步：检查短期和中期一致性**
-
-   - 短期看好 + 中期看好 → 进入下一步
-
-   - 方向不一致 → 观望
-
-3. **第三步：生成建议**
-
-   - 强烈买入：短期看好 + 中期看好 + ML 分数 ≥ 0.60
-
-   - 买入：短期看好 + 中期看好 + 0.55 ≤ ML 分数 < 0.60
-
-   - 持有/观望：ML 分数 < 0.55 或 方向不一致
-
-   - 卖出：短期看跌 + 中期看跌 + ML 分数 ≤ 0.50
-
-### ✦ 动态置信度阈值策略（根据市场环境调整）
-
-门槛按历史表现动态计算，与邮件"市场调整"列判定完全一致。当日具体数值见邮件头部"动态阈值"：
-
-| 市场环境 | 门槛 | 说明 |
-|---------|------|------|
-| 正常/牛市 | 无市场门槛 | 按买入分档执行：≥0.55可买入（历史前约18%），≥0.60强买入（历史前约11%） |
-| 弱震荡 (weak) | 历史前约10%最高值 | 未达门槛 → 市场调整列"降级"，一律观望 |
-| 熊市 (bear) | 历史前约8%最高值 | 未达门槛 → 市场调整列"降级"，一律观望 |
-| 极端熊市 | 暂停 | 暂停全部看涨信号 |
-
-**使用建议**：
-- 市场调整列优先级最高：未过所在市场门槛 → 无视仓位映射，按观望处理
-- 熊市达标票少（历史前约8%）属正常，不要自行放宽阈值
-- 门槛随历史数据自动调整，避免固定值失效
+**使用规则**：
+- 分数只表示池内相对强弱，**不是概率/胜率/置信度**，跨日不可比
+- 不得仅因分数排除一个短中期一致、技术面/基本面支持的标的
+- 市场情绪仅收紧风险控制（止损/总仓位），不改变主判据
+- **必须设置止损位，单只股票最大亏损不超过-8%**
 
 ### ✦ 强烈买入信号
 **强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
 - **股票代码和名称**：如"0700.HK 腾讯控股"
-- **推荐理由**：详细的分析，说明短期建议+中期建议+机器学习20天预测（校准后）
+- **推荐理由**：详细的分析，说明短期建议+中期建议+机器学习20天排序分数
 - **操作建议**：明确的买入/持有/卖出建议
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
@@ -6074,10 +5402,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 十一、风险提示
 
-1. **模型不确定性**：
-   - 20天生产模型准确率{model_accuracy['ml_20d']['accuracy']:.2%}（标准差±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
-   - 融合预测概率>0.60为高置信度上涨，0.55-0.60为中等置信度，0.50-0.55为弱信号观望，≤0.50为预测下跌
-   - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
+1. **模型口径**：
+   - 本系统为**排序模型**（D59）：输出 0-100 排序分数（横截面分位×100），不输出概率/胜率/置信度
+   - 分数定位：**交叉参考**（偏强≥0.55 / 中性0.50-0.55 / 偏弱≤0.50），不是硬性门槛
+   - 建议：短期和中期一致是主判据；分数用于确认或质疑，不单独决定买卖
 
 2. **市场风险**：
    - 当前市场整体风险：[高/中/低]（需根据恒生指数技术指标判断）
@@ -6085,16 +5413,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - **必须设置止损位，单只股票最大亏损不超过-8%**
 
 3. **投资原则**：
-   - 短期触发 + 中期确认 + ML验证 = 高置信度信号
+   - 短期时机 + 中期方向 + 风险收益 = 主判据
    - 短期和中期冲突 = 观望（避免不确定性）
-   - ML分数0.50-0.55 = 信号弱（历史中占近一半），建议观望或轻仓（≤2%）
-   - ML分数0.55-0.60 = 买入区间（建议2-3%）；≥0.60（前约11%）才对应4-6%强买入仓位
+   - 分数与主判据一致 → 基准仓位 +1~2pp；分数分歧 → 仓位≤2%并收紧止损
+   - 分数偏弱不构成自动否决，但必须写明分歧
    - 总仓位控制在45%-55%，分散风险
 
 ## 十二、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：三周期生产模型（rank 口径=横截面分位 / absolute 口径=概率已校准）
+- ML预测：三周期排序模型（横截面分位×100，无概率语义）
 - 特征工程：2991个原始特征，500个精选特征（按相关性+信息量筛选）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
@@ -6105,8 +5433,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
-- 模型策略：单学习器（训练与预测同源，5/10/20天各一个模型；D59 起 rank 口径）
-- 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）；`(置信xx)` = P(模型方向判对)
+- 模型策略：单学习器（训练与预测同源，5/10/20天各一个模型；D59 起仅排序口径）
 
 """
 
@@ -6173,14 +5500,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                 if not stock_data.get('target_price'):
                                     stock_data['target_price'] = round(current_p * 1.10, 2)
                                 if not stock_data.get('position_advice'):
-                                    # 基于ML分数计算建议仓位
-                                    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 50)) or 50
-                                    if prob_20d >= 60:
-                                        stock_data['position_advice'] = 5  # 高置信度 5%
-                                    elif prob_20d >= 55:
-                                        stock_data['position_advice'] = 3  # 中等置信度 3%
-                                    else:
-                                        stock_data['position_advice'] = 0  # 观望
+                                    # 无大模型仓位：不因单一排序分数建仓（分数只作交叉参考）
+                                    stock_data['position_advice'] = 0
 
                             # 兜底：布林带位置
                             if not stock_data.get('bb_position') and stock_realtime:
