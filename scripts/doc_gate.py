@@ -90,6 +90,10 @@ CNH_HIBOR_CSV = re.compile(r"^data/cnh_hibor/(hibor_hkd\.csv|usdcny\.csv|manifes
 # 历史仅免费源可得、入库供 M1/M1b 复现——不入库=换机不可复现，lessons 三.51 同理）
 AH_PREMIUM_CSV = re.compile(
     r"^data/ah_premium/(ah_\d{6}_\d{5}\.csv|fx_hkdcny\.csv|manifest\.json)$")
+# 例外：PIT 恒指成分表（D34 §三 明确「类比 SFC/A-H 溢价例外入库」；原表来自
+# yfiua/index-constituents 的逐月快照，上游会滚掉旧月 ⇒ 不入库 = 历史成分永久丢失，
+# 与 lessons 三.51「被 gitignore 的生产依赖 = 生产端不存在」同理）
+HSI_PIT_CSV = re.compile(r"^data/hsi_constituents_pit(_manifest)?\.(csv|json)$")
 # 例外：HSI 风险覆盖层滚动验证 ledger（D35 §十一；由 HSI 发信流程/工作流按月写回，
 # **必须跨次运行累积**——不入库 = 每次 checkout 从零 ⇒ 永远"样本不足"）
 RISK_LEDGER_CSV = re.compile(r"^data/hsi_risk_overlay_ledger\.csv$")
@@ -99,6 +103,12 @@ RISK_PANEL_LEDGER_CSV = re.compile(r"^data/risk_panel_ledger\.csv$")
 # 例外：A股生产模型 pkl（`data/a_stock_models/*.pkl`；D59 起 5/10/20 rank 三周期——
 # 既有跟踪资产，CI 定期更新；10d 为新周期槽，与 5d/20d 同类，属既有实践）
 A_STOCK_MODEL_PKL = re.compile(r"^data/a_stock_models/trading_model_catboost_\d+d\.pkl$")
+
+# 新增数据文件的放行清单（集中一处，避免条件链继续变长）
+DATA_EXCEPTIONS = [
+    HK20D_CSV, SFC_CSV, SOUTHBOUND_CSV, CNH_HIBOR_CSV, AH_PREMIUM_CSV,
+    HSI_PIT_CSV, RISK_LEDGER_CSV, RISK_PANEL_LEDGER_CSV, A_STOCK_MODEL_PKL,
+]
 
 
 def _files() -> list[Path]:
@@ -273,7 +283,8 @@ def check_staged() -> list[str]:
         suf = Path(f).suffix.lower()
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
-        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f) and not AH_PREMIUM_CSV.search(f) and not RISK_LEDGER_CSV.search(f) and not RISK_PANEL_LEDGER_CSV.search(f) and not A_STOCK_MODEL_PKL.search(f):
+        elif suf in {".pkl", ".csv"} and f in added and not any(
+                p.search(f) for p in DATA_EXCEPTIONS):
             fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 
