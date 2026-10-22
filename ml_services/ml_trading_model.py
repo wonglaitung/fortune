@@ -2085,7 +2085,7 @@ class FeatureEngineer:
         return stock_df
 
     def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0,
-                     label_mode='absolute', hsi_df=None):
+                     label_mode='rank', hsi_df=None):
         """创建标签：未来涨跌（考虑交易成本）
 
         根据业界最佳实践，标签定义应考虑交易成本，避免"纸上盈利"变成实际亏损。
@@ -2098,7 +2098,7 @@ class FeatureEngineer:
             min_return_threshold: 最小收益阈值（默认0%），用于过滤小额波动
                                   推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
                                   注意：当前设为0%以保持标签分布均衡，后续可调整
-            label_mode: 'absolute'（默认，标签=股票未来收益方向）或
+            label_mode: 'rank'（默认，横截面百分位回归，D59）或 'absolute'（标签=股票未来收益方向）或
                         'relative_hsi'（标签=股票未来收益 − HSI 未来收益 > 阈值，
                         剥离市场 Beta、只留特异 alpha；见 lessons 十 (a)）
             hsi_df: 恒生指数 qfq 数据（label_mode='relative_hsi' 时使用）
@@ -4046,7 +4046,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None, mode='backtest', label_mode='absolute'):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None, mode='backtest', label_mode='rank'):
         """准备训练/验证数据
 
         Args:
@@ -4426,7 +4426,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None, label_mode='absolute'):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None, label_mode='rank'):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -6366,10 +6366,10 @@ def main():
                        help='预测日期：基于该日期的数据预测下一个交易日 (YYYY-MM-DD)，默认使用最新交易日')
     parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 10, 20],
                        help='预测周期: 1=次日（默认）, 5=一周, 10=两周, 20=一个月')
-    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'absolute'),
+    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'rank'),
                        choices=['absolute', 'relative_hsi', 'rank'],
-                       help='标签口径: absolute=涨跌二分类（默认）, relative_hsi=相对恒指, '
-                            'rank=V4 横截面百分位（回归，D59）')
+                       help='标签口径: rank=横截面百分位回归（默认，D59）, absolute=涨跌二分类, '
+                            'relative_hsi=相对恒指')
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（只使用500个选择的特征，而不是全部2426个）')
     parser.add_argument('--skip-feature-selection', action='store_true',

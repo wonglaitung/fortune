@@ -902,6 +902,8 @@ class AStockTradingModel(CatBoostModel):
         # 调用父类初始化
         super().__init__()
         self.horizon = horizon
+        # D59：分析/训练默认排序口径（rank），不再默认 absolute
+        self.label_mode = 'rank'
         # P4.1 学习器 A/B（决策点3：三周期全做）：'catboost' | 'lightgbm'
         self.learner = learner
         self.market = 'a_stock'
@@ -1558,7 +1560,7 @@ class AStockTradingModel(CatBoostModel):
         except Exception as e:
             logger.warning(f"保存准确率失败: {e}")
 
-    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False, prepared_df=None, label_mode=None):
+    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False, prepared_df=None, label_mode='rank'):
         """
         训练A股模型
 
@@ -2008,9 +2010,9 @@ def main():
                        help='运行模式: train=训练, predict=预测')
     parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 10, 20],
                        help='预测周期: 1=次日, 5=一周, 10=两周, 20=一个月（默认）')
-    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'absolute'),
+    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'rank'),
                        choices=['absolute', 'rank'],
-                       help='标签口径: absolute=涨跌二分类（默认）, rank=V4 横截面百分位（回归，D59）')
+                       help='标签口径: rank=横截面百分位回归（默认，D59）, absolute=涨跌二分类')
     parser.add_argument('--model-dir', type=str, default=A_STOCK_MODEL_DIR,
                        help='模型输出目录（默认 data/a_stock_models；切换重训可用独立目录）')
     parser.add_argument('--use-feature-selection', action='store_true',

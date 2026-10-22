@@ -89,3 +89,23 @@ def test_predict_proba_rank_returns_clipped_score():
     assert np.allclose(p[:, 0] + p[:, 1], 1.0)
     assert p[:, 1].min() >= 0.0 and p[:, 1].max() <= 1.0
 
+
+def test_cli_defaults_to_rank():
+    """2026-10-22：训练/验证 CLI 默认口径必须是 rank；旧 absolute 须显式指定。"""
+    import inspect
+    import a_stock_ml_model
+    import ml_services.ml_trading_model as hk
+    import ml_services.walk_forward_validation as wf
+
+    hk_src = inspect.getsource(hk)
+    a_src = inspect.getsource(a_stock_ml_model)
+    wf_src = inspect.getsource(wf)
+
+    assert "default=os.environ.get('LABEL_MODE', 'rank')" in hk_src
+    assert "default=os.environ.get('LABEL_MODE', 'rank')" in a_src
+    assert "default='rank'" in wf_src
+
+    from a_stock_ml_model import AStockTradingModel
+    from ml_services.walk_forward_validation import WalkForwardValidator
+    assert AStockTradingModel(horizon=5).label_mode == 'rank'
+    assert WalkForwardValidator(horizon=5).label_mode == 'rank'

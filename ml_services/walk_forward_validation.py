@@ -116,7 +116,7 @@ class WalkForwardValidator:
         top_k: int = 500,                  # 每折特征选择保留的特征数
         loss_function: str = None,          # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
         learner: str = None,               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
-        label_mode: str = 'absolute'       # 标签口径：'absolute' / 'relative_hsi' / 'rank'（V4 横截面百分位，D60）
+        label_mode: str = 'rank'           # 标签口径：'absolute' / 'relative_hsi' / 'rank'（V4 横截面百分位，D60）
     ):
         """
         初始化 Walk-forward 验证器
@@ -389,7 +389,7 @@ class WalkForwardValidator:
 
         return report
 
-    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, label_mode='absolute', full_df=None):
+    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, label_mode='rank', full_df=None):
         """
         验证单个fold
 
@@ -1776,9 +1776,9 @@ def main():
                        help='目标函数（默认 Logloss；YetiRank 为管线级排序目标 A/B）')
     parser.add_argument('--learner', type=str, default=None,
                         help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
-    parser.add_argument('--label-mode', type=str, default='absolute',
+    parser.add_argument('--label-mode', type=str, default='rank',
                         choices=['absolute', 'relative_hsi', 'rank'],
-                        help='标签口径：absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）；rank=当日横截面百分位回归（V4，D59/D60）')
+                        help='标签口径：rank=当日横截面百分位回归（默认，D59/D60）；absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）')
 
     parser.add_argument('--no-commit', action='store_true',
                        help='跳过回测产物自动 git 入库（prediction_analysis.csv + GATE_SNAPSHOT 同步）')
