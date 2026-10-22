@@ -4827,3 +4827,15 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 10d：仅 dropout=3 一格正（+0.12%），左右均负 = 单点噪声
 - 5d：四档全负、非单调；三周期单调性全失败
 - 更正 D69：成本不是主要矛盾（20d 成本仅 0.34pp，毛超额 +1.11%）；降换手会砍掉有效信号
+
+2026-10-22 模型训练/验证 CLI 默认口径改为 rank
+- `ml_services/ml_trading_model.py` / `a_stock_ml_model.py` / `ml_services/walk_forward_validation.py` 的 `--label-mode` 默认由 `absolute` 改为 `rank`
+- 同步方法默认：HK `create_label/prepare_data/train`、A股 `__init__/train`、WF 构造器与 `_validate_fold` 均默认 rank
+- 回退旧 absolute 基线须显式 `--label-mode absolute` 或 `LABEL_MODE=absolute`；pin_baseline 脚本已显式传 absolute
+- 验证: pytest 347 passed；doc_gate 通过
+2026-10-21 D71：缓冲带正确参数化（B=备选池宽度）复验 → 🔴
+- 起因：D70 的 dropout 语义非单调（0=全换；N≥1 保留 k−N，N 越大换手越高），D70 §一 已标注更正
+- 主窗：机制 ρ(换手)=−1.00 ✓；单调 10d +0.83 / 5d −0.03 / 20d −0.60；同号失败；CI 全含 0
+- 独立窗（10d，29 折）：机制 −1.00、单调 +1.00，但净额 −0.41→−0.07 全部为负 ⇒ K4 不复现
+- 20d 唯一正净额周期必须全换（B=10 净 +0.78%，B=30 净 −0.28%）
+- 结论：缓冲带只"少亏"不"转正"；lessons 三.87「参数语义没验证，扫描等于瞎扫」
