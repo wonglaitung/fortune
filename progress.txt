@@ -4839,3 +4839,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 独立窗（10d，29 折）：机制 −1.00、单调 +1.00，但净额 −0.41→−0.07 全部为负 ⇒ K4 不复现
 - 20d 唯一正净额周期必须全换（B=10 净 +0.78%，B=30 净 −0.28%）
 - 结论：缓冲带只"少亏"不"转正"；lessons 三.87「参数语义没验证，扫描等于瞎扫」
+2026-10-22 CI 修复：恒指工作流连续失败（风险面板步骤）
+- 症状：hsi-prediction.yml 自 10-16 起 schedule 运行失败（207/208/205），失败步骤=「风险面板滚动校准对账」
+- 根因：risk_horizon_signals.load_returns() 读 data/hk_market_snapshot/，该目录 gitignore、CI 检出为空 ⇒ FileNotFoundError
+- 连带：失败后「提交预测历史 + 两个 ledger」步骤被跳过 ⇒ 10-16 起 hsi_prediction_history.json / 两个 ledger 均未更新
+- 修复：workflow 前置 pin_hk_snapshot.py；风险面板与冻结步骤 continue-on-error；提交步骤 if: always() 并加未更新 ::warning::
+- 脚本：快照缺失时输出可执行指令（SystemExit），不再抛原始栈
+- 验证：空快照 exit=1 且信息明确；pin(56 只有数据)→monitor OK 全链路 6s

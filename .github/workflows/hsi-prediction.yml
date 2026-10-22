@@ -46,12 +46,24 @@ jobs:
       run: |
         python3 scripts/hsi_risk_overlay_monitor.py --update --report
 
+    - name: 冻结港股行情快照（风险面板数据源，目录不入库）
+      continue-on-error: true
+      timeout-minutes: 10
+      run: |
+        python3 scripts/pin_hk_snapshot.py
+
     - name: 风险面板滚动校准对账（D55/D56）
+      continue-on-error: true
+      timeout-minutes: 10
       run: |
         python3 scripts/risk_panel_monitor.py --update --report
 
     - name: 提交预测历史记录 + 刹车对账本 + 风险面板对账本
+      if: always()
       run: |
+        TODAY=$(date +%F)
+        grep -q "^$TODAY," data/risk_panel_ledger.csv 2>/dev/null \
+          || echo "::warning::风险面板 ledger 未更新（$TODAY）——检查上两步日志"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add data/hsi_prediction_history.json || echo "无历史记录更新"

@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from ml_services.risk_horizon_signals import (  # noqa: E402
-    HORIZONS, VOL_HORIZONS, build_dataset, load_returns, walk_forward)
+    HORIZONS, SNAP, VOL_HORIZONS, build_dataset, load_returns, walk_forward)
 
 LEDGER = ROOT / "data" / "risk_panel_ledger.csv"
 RECENT = 250
@@ -59,7 +59,17 @@ def _verdict(recent_auc):
     return "FAIL"
 
 
+def _require_snapshot():
+    """快照缺失时给出可执行指令，而不是抛 FileNotFoundError 原始栈。"""
+    if not os.path.isdir(SNAP) or not any(f.endswith(".pkl") for f in os.listdir(SNAP)):
+        raise SystemExit(
+            f"❌ 缺港股行情快照：{SNAP}\n"
+            "   先运行 python3 scripts/pin_hk_snapshot.py（该目录不入库，CI 必须先生成）"
+        )
+
+
 def evaluate(recent=RECENT):
+    _require_snapshot()
     rets = load_returns()
     df, _ = build_dataset(rets)
     out = []
