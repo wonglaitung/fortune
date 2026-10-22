@@ -1,6 +1,6 @@
 # <img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产智能分析与交易系统
 
-**⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
+**⭐ 如果您觉得这个项目有用，请先给项目 Star 再 Fork，以支持项目发展！⭐**
 
 实践**人机混合智能**理念的**金融量化研究框架**：整合**大模型分析**与**机器学习预测**，覆盖**港股 / A股 两大市场**。
 
@@ -13,7 +13,7 @@
 > 系统的价值在 **① 工程化  ② 展示 / 报告  ③ 风控 / 研究框架**；其中**最可信的资产是"假设验证框架（尺子 + 技能）"**——
 > 它才是本项目"经得起检验"的部分。
 
-### 📌 最新验证状态（2026-10-21）
+## 📌 最新验证状态（2026-10-21）
 
 | 项 | 最新结论 | 出处 |
 |---|---|---|
@@ -29,14 +29,29 @@
 
 > 结论不变：**alpha null**。以上均为 **Walk-forward 内部比较**，不外推为生产收益。
 
+## 🗺 目录
+
+| 部分 | 章节 | 回答什么问题 |
+|---|---|---|
+| **一 · 能不能信** | [1 证伪机器](#1-证伪机器本项目最可信的资产) · [2 三大功能](#2-三大功能与诚实定性) | 这些负结果凭什么可信？项目到底有什么？ |
+| **二 · 怎么用** | [3 快速开始](#3-快速开始) · [4 系统构成](#4-系统构成) | 如何 10 分钟跑起来？两个市场差在哪？ |
+| **三 · 怎么运转** | [5 技术架构](#5-技术架构) · [6 项目结构](#6-项目结构) · [7 自动化调度](#7-自动化调度) · [8 命令参考](#8-命令参考) · [9 配置](#9-配置与环境变量) | 数据从哪来、到哪去、如何自动跑？ |
+| **四 · 边界与参考** | [10 核心警告](#10-核心警告) · [11 文档索引](#11-文档索引) · [12 依赖与许可](#12-依赖--许可--联系) | 哪些坑不能踩？想深入看哪份？ |
+
+> **按身份选入口**：只想跑起来 → 直接看 [3 快速开始](#3-快速开始)；
+> 想判断"能不能用"→ 先看 [1 证伪机器](#1-证伪机器本项目最可信的资产) 与 [10 核心警告](#10-核心警告)；
+> 要改模型 / 加特征 → 必读 [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) 与技能 `hypothesis-validation`。
+
 ---
 
-## 🧾 证伪机器（本项目最可信的资产）
+## 第一部分 · 能不能信
+
+## 1. 证伪机器（本项目最可信的资产）
 
 > **本项目真正的产出不是"预测"，而是一台能可靠回答"这个策略行不行"的装置。**
 > 它不生产 alpha；它保证**不自欺**。
 
-### 它解决什么问题
+### 1.1 它解决什么问题
 
 个人 / 小团队量化最常见的死法不是"没有策略"，而是**分不清策略是真是假**：
 回测漂亮 → 加仓 → 亏钱。四个典型失真，每一个都会单独制造"假 alpha"：
@@ -48,7 +63,7 @@
 | **多重检验** | 扫 12 格总有一格好 | 预注册判据 + 相邻参数一致性 + 独立窗口 |
 | **成本忽略** | 毛超额正、净超额负 | C 闸：超额净 IR 的 95%CI 下界 > 0 |
 
-### 工作流（8 步，缺一步即不出结论）
+### 1.2 工作流（8 步，缺一步即不出结论）
 
 ```
 ① 命题预登记 ──► ② ⓪同一性闸 ──► ③ 数据卫生 ──► ④ 口径对齐
@@ -63,7 +78,7 @@
 触发词：**验证 / 行不行 / 有没有 alpha / 可不可信 / 换池 · 换周期 · 加特征 · 择时**
 ⇒ 走技能 [.opencode/skills/hypothesis-validation/SKILL.md](.opencode/skills/hypothesis-validation/SKILL.md)（G1–G9 硬规则）。
 
-### 它实际抓到过什么（全部有编号、有数字、可复算）
+### 1.3 它实际抓到过什么（全部有编号、有数字、可复算）
 
 | 案例 | 表面看起来 | 实际是什么 | 出处 |
 |---|---|---|---|
@@ -76,7 +91,7 @@
 
 **共同点**：这些不是"运气差"，而是**在没有任何人怀疑的时候，被自己的判据拦下来的**。
 
-### 制度化产出（可审计）
+### 1.4 制度化产出（可审计）
 
 - **决策台账**：[docs/DECISIONS.md](docs/DECISIONS.md) —— 70+ 条（D1–D71），每条含
   **命题 / 预注册判据 / 数据窗口 / 结果 / 适用范围**；结论一旦判死，不因"再试一次"复活。
@@ -85,7 +100,7 @@
 - **规程**：[docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) —— ⓪ 同一性四问 + A/B/C 三闸 9 项清单。
 - **门禁**：[scripts/doc_gate.py](scripts/doc_gate.py) —— 断链 / 表格完整性 / 结论条件化 / 入库规范，不过即拒绝提交。
 
-### 结论可被第三方复核
+### 1.5 结论可被第三方复核
 
 | 机制 | 做法 |
 |---|---|
@@ -94,14 +109,14 @@
 | **同一性** | 函数 / 时点 / 概率 / 社区集合四问，任一为"否"即停止 |
 | **口径留痕** | 每个数字标注：WF 内部比较 ✓ / 外推生产 ✗ |
 
-### 边界（同样诚实）
+### 1.6 边界（同样诚实）
 
 - **不产生 alpha**：当前所有层（大市 / 板块 / 个股 / 风格 / 关联 / 多周期 / 多目标）均未发现。
 - **功效有限**：MDE ≈ 1.5 IR ⇒ **"不显著" ≠ "没有"**，只代表"本宇宙测不出"。
 - **只在本宇宙成立**：港股 ~56 只池 / 20d / 净成本；换市场换周期须重跑全部闸门。
 - **它防的是自欺，不是市场风险**：不能替代止损、仓位管理与资金约束。
 
-### 30 秒上手
+### 1.7 30 秒上手
 
 ```bash
 # 1) 泄漏与绝对值异常（非零退出即阻断）
@@ -117,92 +132,125 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred output/<
 python3 scripts/doc_gate.py
 ```
 
-### 为什么它对别人也有用
+### 1.8 为什么它对别人也有用
 
 它不绑定本项目的模型：任何**"日频横截面 + 固定持有期"**的假设（A股 / 美股 / 期货截面）都能直接套用——
 只需替换数据源与成本口径，闸门判据与 SOP 不变。**它检验的是"你的证据链"，不是"你的模型"。**
 
 ---
 
-## 🧩 三大功能
+## 2. 三大功能与诚实定性
+
+### 2.1 功能总览
 
 | # | 功能 | 是什么 | 诚实定性 |
 |---|---|---|---|
 | ① | 🇭🇰 **港股预测系统** | 恒指三周期 + 个股预测 + 异常检测 | 能跑的系统；**alpha 未发现**（不显著） |
 | ② | 🇨🇳 **A股预测系统** | 三周期 + 综合买卖建议 + 板块分析 | 能跑的系统；**alpha 未发现 + 数据硬顶 640 行 ⇒ 不予升配**（D13） |
-| ③ | 🧾 **假设验证框架**（+ 技能 `hypothesis-validation`） | `REVIEW_GATES` / 三道闸 / `strategy_eval` | **项目最可信的资产**（见下文「证伪机器」） |
+| ③ | 🧾 **假设验证框架** | `REVIEW_GATES` / 三道闸 / `strategy_eval` / 技能 | **项目最可信的资产**（见 [1 证伪机器](#1-证伪机器本项目最可信的资产)） |
 
 **外围辅助**（非核心预测）：crypto / 黄金监控、性能监控、新闻抓取、SFC / 南向取数。
 
-**支持市场**：
-- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（32只自选股；2026-10-06 剔除 2 只 ETF 后）
-- 🇨🇳 **A股** - 三周期预测、综合买卖建议、板块分析（53只股票池）
+### 2.2 支持市场
 
----
+- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（32 只自选股；2026-10-06 剔除 2 只 ETF 后）
+- 🇨🇳 **A股** - 三周期预测、综合买卖建议、板块分析（53 只股票池）
 
-## 📄 效果文档
-
-- 📊 [港股综合分析报告](output/comprehensive_reports) - 每日港股买卖建议
-- 📊 [A股综合分析报告](output/comprehensive_reports) - 每日A股买卖建议
-
----
-
-## 一、核心功能
-
-### 1.1 项目优势
+### 2.3 设计理念
 
 **人机混合**：大模型负责"**理解上下文 / 解释**"，ML 负责"**出数 / 回测**"；两者定位不同、不互相替代。
 
-**工程化验证（本项目核心价值）**：所有信号均经 **Walk-forward（PIT/embargo）+ 三道闸（A 泄漏 / B 过拟合 / C 净IR）+ 折聚类显著性 + 逐日 mark + 静态对照**；评估以 lift / 方向技能 / 超额为准。**至今未发现任何可交易 edge**，负结果已制度化记录（[DECISIONS](docs/DECISIONS.md) D1 / D33–D44）。
+**工程化验证（核心价值）**：所有信号均经 **Walk-forward（PIT/embargo）+ 三道闸（A 泄漏 / B 过拟合 / C 净IR）+ 折聚类显著性 + 逐日 mark + 静态对照**；评估以 lift / 方向技能 / 超额为准。**至今未发现任何可交易 edge**，负结果已制度化记录（[DECISIONS](docs/DECISIONS.md) D1 / D33–D44）。
 
-**全流程自动化**：从数据采集、特征计算、模型预测到邮件推送，全流程自动化运行。GitHub Actions 定时调度，无需人工干预，确保报告按时产出（不对交易时点作承诺）。
+**全流程自动化**：从数据采集、特征计算、模型预测到邮件推送，全流程自动化运行。GitHub Actions 定时调度，无需人工干预（不对交易时点作承诺）。
 
 **双市场**：港股（南向资金）/ A股（北向资金、涨跌停）各自优化数据与特征。
 
-**多维度参考**：系统整合三周期预测、异常检测、大模型分析、板块轮动，作**交叉参考**。⚠️ 但**实测未发现这些维度组合能带来可交易 edge**——**勿把"多信号一致"当成"可靠"**（三层总账：大市/板块/个股**皆未发现，不显著**）。
+**多维度参考**：整合三周期预测、异常检测、大模型分析、板块轮动，作**交叉参考**。⚠️ 但**实测未发现这些维度组合能带来可交易 edge**——**勿把"多信号一致"当成"可靠"**（三层总账：大市/板块/个股**皆未发现，不显著**）。
 
-**透明的性能监控**：每日自动评估预测，报告**基准扣除后的诚实指标**（方向技能=准确率−永远看涨、
-超额 lift=信号净胜率−无条件买入基准、逐年分解）与 `20d 中性 TopK` 护栏判定，真实反映系统表现。
-不隐藏失败预测，持续迭代改进。
+**透明的性能监控**：每日自动评估预测，报告**基准扣除后的诚实指标**（方向技能 = 准确率 − 永远看涨、超额 lift = 信号净胜率 − 无条件买入基准、逐年分解）与 `20d 中性 TopK` 护栏判定。不隐藏失败预测。
 
-### 1.2 双市场概览
+### 2.4 效果报告
+
+- 📊 [港股综合分析报告](output/comprehensive_reports) - 每日港股分析
+- 📊 [A股综合分析报告](output/comprehensive_reports) - 每日 A股分析
+
+> ⚠️ 报告中的"分数 / 强弱 / 建议"是**研究输出**，不是买卖信号；请按"研究 / 展示 / 风控"使用。
+
+---
+
+## 第二部分 · 怎么用
+
+## 3. 快速开始
+
+### 3.1 安装
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/wonglaitung/fortune.git
+cd fortune
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置环境变量
+cp set_key.sh.sample set_key.sh
+# 编辑 set_key.sh，填写邮箱和 API 密钥
+source set_key.sh
+```
+
+### 3.2 验证安装
+
+```bash
+python hsi_email.py --no-email
+```
+
+### 3.3 跑一次
+
+```bash
+# 港股：恒指三周期预测（不发邮件）
+python3 hsi_prediction.py --no-email
+
+# 港股：综合分析（三周期预测 + 风险回报率）
+./scripts/run_comprehensive_analysis.sh
+
+# A股：完整流程（训练 → 预测 → 大模型建议 → 综合分析）
+./scripts/run_a_stock_analysis.sh
+```
+
+> 全部命令（含 Walk-forward、护栏、缓存清理）见 [8 命令参考](#8-命令参考)。
+
+---
+
+## 4. 系统构成
+
+> 详细模型 / 特征 / 字段见各专项文档（[11 文档索引](#11-文档索引)）。此处只留"**是什么 + 诚实定性**"。
+
+### 4.1 双市场一览
 
 | | 🇭🇰 港股 | 🇨🇳 A股 |
 |---|---|---|
 | 股票池 | 32 只自选股 | 53 只（4 核心 + 49 扩展） |
-| 指数预测 | ✅ 恒指三周期 5/10/20d（57.3%/58.5%/52.4%，**折聚类后均不显著**） | ❌ |
-| 自动化时间 | 工作日 **16:30 HKT** | 本地 15:15 CST；CI 周日 11:00 |
-| 模型准确率 | 20d **52.8%** / 5d 52.4% / 10d 53.4%（**接近随机**） | 方向技能不显著（**640 行硬顶 ⇒ 样本不足**） |
-
-> 模型 / 特征 / 字段细节 → 见 [二、系统构成（简）](#二系统构成简) 与各专项文档。
-
----
-
-## 二、系统构成（简）
-
-> 港股 / A股 的**详细模型、特征、字段**见各专项文档（见文末「文档」节）。此处只留"**是什么 + 诚实定性**"。
-
-### 2.1 两个市场一览
-
-| | 🇭🇰 港股 | 🇨🇳 A股 |
-|---|---|---|
-| 预测内容 | 恒指三周期（**5/10/20d**）+ 个股三周期（**5/10/20d**）+ 异常检测（5/10/20d） | 个股三周期（**5/10/20d**）+ 综合买卖建议 + 板块 |
+| 预测内容 | 恒指三周期 + 个股三周期 + 异常检测（均 5/10/20d） | 个股三周期（5/10/20d）+ 综合买卖建议 + 板块 |
+| 指数预测 | ✅ 恒指 5/10/20d（57.3% / 58.5% / 52.4%，**折聚类后均不显著**） | ❌ |
 | 市场特有 | 南向资金 | 北向资金、涨跌停特征 |
 | 模型 | CatBoost（按周期选型）· Walk-forward（PIT/embargo） | CatBoost · Walk-forward |
 | 特征量 | ~1023 | ~1077 |
 | 数据硬限 | — | **腾讯源恒返回 640 行（≈2.5 年）⇒ 测试期不足 2 年** |
+| 模型准确率 | 20d **52.8%** / 5d 52.4% / 10d 53.4%（**接近随机**） | 方向技能不显著（**样本不足**） |
+| 自动化时间 | 工作日 **16:30 HKT** | 本地 15:15 CST；CI 周日 11:00 |
 | **诚实定性** | **alpha 未发现**（不显著；[三层总账](AGENTS.md)） | **alpha 未发现 + 样本不足 ⇒ 不予升配**（[D13](docs/DECISIONS.md)） |
 
 > **标签口径（D59，2026-10-16）**：个股（港股 + A股）标签由「绝对二分类（涨/跌）」改为 **横截面百分位 rank 回归**，周期 `{1,5,20} → {5,10,20}`（**1d 已停用**）；输出语义由「上涨概率」改为「**池内相对强弱分位**」（0–100），展示层不再给「置信度」。**恒指 / 异常检测未变**（非横截面任务）。
 > ⚠️ 该改动是**口径 / 架构变更，不是 alpha 提升**——生产口径 C 闸三周期**全部不过**（D60：超额 IR 5d −0.24 / 10d −0.49 / 20d +1.03，20d 的 95%CI 下界 ≤0；DSR 0.700/0.989/0.917）。
 
-### 2.2 双市场共同机制（简）
+### 4.2 双市场共同机制
 
-- **市场情绪过滤器**：按滞后 1 天的上涨比例分层调阈值（extreme_bear<20% 暂停 / bear / weak / normal）；熊市 / 弱震荡用**绝对门槛 0.70 / 0.65**（分位门槛在"模型无 edge"时退化，见 D8）。
-- **市场状态稳定性**：HMM `Regime_Duration`（<5 天不稳定 → 降仓；5–15 中等；>15 稳定）。
+- **市场情绪过滤器**：按滞后 1 天的上涨比例分层调阈值（extreme_bear <20% 暂停 / bear / weak / normal）；熊市 / 弱震荡用**绝对门槛 0.70 / 0.65**（分位门槛在"模型无 edge"时退化，见 D8）。
+- **市场状态稳定性**：HMM `Regime_Duration`（<5 天不稳定 → 降仓；5–15 中等；>15 稳定）。⚠️ 该指标**不可预测**（D67：AUC 0.4798），只能当描述，**不得据此调仓**。
 - **评估口径**：一律**基准扣除后的诚实指标**——方向技能 / 超额 lift / 逐年分解 / **折聚类**显著 / **逐日 mark** / **静态对照**。
 
-### 2.3 其它模块（简）
+### 4.3 其它模块
 
 - **异常检测**：Z-Score + Isolation Forest 双层；"异常 + 当日下跌 → 抄底"（z≤−3，375 信号）净IR **5d 1.73 / 10d 1.60 / 20d 1.23**（CI>0），但**仅限大盘上行期（恒指 > MA200）战术**——逐年 2025 独大、2024/2026 转负，**非稳健 edge**（2026-10-20 重跑）。
 - **大模型分析**：经 OpenAI 兼容端点（opencode zen，`deepseek-v4-flash`）做"**解释 / 上下文**"，**不作 alpha**；长 prompt 需 `x-opencode-session` 头（见 [DECISIONS](docs/DECISIONS.md)）。
@@ -210,57 +258,13 @@ python3 scripts/doc_gate.py
 
 > ⚠️ 以上所有"预测 / 信号"经严格验证**均未发现可交易 edge**——请按"**研究 / 展示 / 风控**"使用，**勿当买卖依据**。
 
-## 三、快速开始
-
-```bash
-# ============ 🇭🇰 港股系统 ============
-# 恒生指数预测
-python3 hsi_prediction.py --no-email
-
-# 综合分析（含三周期预测和风险回报率分析）
-./scripts/run_comprehensive_analysis.sh
-
-# 港股异常检测
-python3 detect_stock_anomalies.py --mode standalone --mode-type deep
-
-# 模型训练
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
-
-# Walk-forward验证（成功后自动入库 CSV+快照，--no-commit 关闭）
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
-
-# 风险回报率分析
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
-
-# ============ 🇨🇳 A股系统 ============
-# A股完整分析流程（训练→预测→大模型建议→综合分析）
-./scripts/run_a_stock_analysis.sh
-
-# A股模型训练
-python3 a_stock_ml_model.py --mode train --horizon 20
-
-# A股模型预测（仅核心股）
-python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
-
-# A股Walk-forward验证
-python3 a_stock_walk_forward.py --horizon 20
-
-# ============ 缓存管理 ============
-# 清除港股特征缓存
-rm -rf data/feature_cache/*.pkl
-
-# 清除A股特征缓存
-rm -rf data/a_stock_feature_cache/*.pkl
-
-# 清除原始数据缓存
-rm -rf data/stock_cache/*.pkl data/a_stock_cache/*.pkl
-```
-
 ---
 
-## 四、技术架构
+## 第三部分 · 怎么运转
 
-### 9.1 数据流架构
+## 5. 技术架构
+
+### 5.1 数据流总览
 
 ```mermaid
 flowchart TD
@@ -313,13 +317,13 @@ flowchart TD
 |------|------|-----|
 | 数据获取 | yfinance + 腾讯财经 | AKShare + 腾讯财经 |
 | 市场资金 | 南向资金 | 北向资金 |
-| 价格限制 | 无涨跌停 | 主板10% / 创业板20% |
+| 价格限制 | 无涨跌停 | 主板 10% / 创业板 20% |
 | 核心模型 | `ml_trading_model.py` | `a_stock_ml_model.py` |
 | 综合分析 | `comprehensive_analysis.py` | `a_stock_comprehensive_analysis.py` |
 | 大模型建议 | `comprehensive_analysis.py` 集成 | `a_stock_email.py` |
 | 运行时间 | 16:30 HKT | 15:15 CST |
 
-### 9.2 数据流图
+### 5.2 数据流（详细）
 
 ```mermaid
 flowchart TD
@@ -387,18 +391,20 @@ flowchart TD
     L5 --> L6
 ```
 
-**缓存机制**：
+### 5.3 缓存机制
 
 | 市场 | 缓存类型 | 位置 | 有效期 | 加速效果 |
 |------|---------|------|--------|---------|
-| 🇭🇰 港股 | 原始数据 | `data/stock_cache/` | 7天 | - |
-| 🇭🇰 港股 | 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
-| 🇨🇳 A股 | 原始数据 | `data/a_stock_cache/` | 7天 | - |
-| 🇨🇳 A股 | 特征缓存 | `data/a_stock_feature_cache/` | 7天 | **170x** |
+| 🇭🇰 港股 | 原始数据 | `data/stock_cache/` | 7 天 | - |
+| 🇭🇰 港股 | 特征缓存 | `data/feature_cache/` | 7 天 | **170x** |
+| 🇨🇳 A股 | 原始数据 | `data/a_stock_cache/` | 7 天 | - |
+| 🇨🇳 A股 | 特征缓存 | `data/a_stock_feature_cache/` | 7 天 | **170x** |
+
+> 改特征后必须清缓存（否则旧特征静默复用）；命令见 [8 命令参考](#8-命令参考)。
 
 ---
 
-## 五、项目结构
+## 6. 项目结构
 
 ```mermaid
 flowchart LR
@@ -489,156 +495,151 @@ flowchart LR
 
 ---
 
-## 六、自动化调度
+## 7. 自动化调度
 
 | 时间 | 工作流 | 功能 | 市场 |
 |------|--------|------|------|
-| **06:00** (工作日) | `hsi-prediction.yml` | 恒生指数预测 | 🇭🇰 |
-| **06:00** (工作日) | `batch-stock-news-fetcher.yml` | 批量个股新闻抓取 | 🇭🇰 |
+| **06:00**（工作日） | `hsi-prediction.yml` | 恒生指数预测 | 🇭🇰 |
+| **06:00**（工作日） | `batch-stock-news-fetcher.yml` | 批量个股新闻抓取 | 🇭🇰 |
 | 每小时 | `hourly-crypto-monitor.yml` | 加密货币监控 | 🌐 |
 | 每小时 | `hourly-gold-monitor.yml` | 黄金监控 | 🌐 |
-| **16:30 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
-| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（仅港股，含 lift/方向技能/护栏状态） | 🇭🇰 |
+| **16:30 HKT**（工作日） | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
+| **00:00 HKT**（工作日） | `performance-monitor.yml` | 性能报告（仅港股，含 lift / 方向技能 / 护栏状态） | 🇭🇰 |
 | 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
 | 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
 | 周一 08:00 HKT | `test-llm-api.yml` | LLM API 连通性测试 | - |
 
-> 说明：`performance-monitor.yml` 报告**带基准扣除的诚实指标**与护栏状态；严格护栏
+> `performance-monitor.yml` 报告**带基准扣除的诚实指标**与护栏状态；严格护栏
 > （`monthly_guardrail.py`，需本地 `prediction_analysis.csv`）在**本地每月**执行，见
 > [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
-### 命令汇总
+---
+
+## 8. 命令参考
 
 ```bash
-# ============ 🇭🇰 港股核心 ============
-python3 hsi_prediction.py --no-email                        # 恒指预测
-python3 comprehensive_analysis.py                            # 综合分析
-python3 detect_stock_anomalies.py --mode standalone         # 异常检测
-python3 simulation_trader.py                                 # 模拟交易
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost  # 模型训练
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20        # Walk-forward
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate          # 风险分析
+# ============ 🇭🇰 港股 ============
+python3 hsi_prediction.py --no-email                          # 恒指三周期预测
+python3 comprehensive_analysis.py                             # 综合分析
+./scripts/run_comprehensive_analysis.sh                       # 综合分析 + SFC 前置 + 报告
+python3 detect_stock_anomalies.py --mode standalone --mode-type deep   # 异常检测（深度）
+python3 simulation_trader.py                                  # 模拟交易
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost  # 训练
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost  # 预测
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20          # Walk-forward
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate            # 风险回报
 
-# ============ 🇨🇳 A股核心 ============
-./scripts/run_a_stock_analysis.sh                            # 完整流程
-python3 a_stock_ml_model.py --mode train --horizon 20       # 模型训练
-python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only  # 模型预测
-python3 a_stock_walk_forward.py --horizon 20                # Walk-forward
+# ============ 🇨🇳 A股 ============
+./scripts/run_a_stock_analysis.sh                             # 完整流程（训练→预测→建议→分析）
+python3 a_stock_ml_model.py --mode train --horizon 20         # 模型训练
+python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only   # 模型预测（仅核心股）
+python3 a_stock_walk_forward.py --horizon 20                  # Walk-forward（成功自动入库）
+python3 a_stock_email.py --force --no-email                   # 大模型建议
+
+# ============ 验证与护栏 ============
+python3 scripts/presentation_gate.py --input output/<run>/prediction_analysis.csv --horizon 20  # A 闸
+python3 ml_services/monthly_guardrail.py --horizon 20                                          # PBO / DSR
+python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred output/<run>/prediction_analysis.csv
+python3 ml_services/backtest_eval.py --input output/<run>/prediction_analysis.csv --horizon 20
 
 # ============ 共用工具 ============
 python3 ml_services/performance_monitor.py --mode all --no-email
 python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30
 python3 ml_services/stock_network_analysis.py --skip-pmfg
+python3 scripts/doc_gate.py
 
-# ============ 缓存清理 ============
-rm -rf data/feature_cache/*.pkl                              # 港股特征缓存
-rm -rf data/a_stock_feature_cache/*.pkl                      # A股特征缓存
-rm -rf data/stock_cache/*.pkl                                # 港股原始数据
-rm -rf data/a_stock_cache/*.pkl                              # A股原始数据
+# ============ 缓存清理（改特征后必做） ============
+rm -rf data/feature_cache/*.pkl              # 港股特征缓存
+rm -rf data/stock_cache/*.pkl                # 港股原始数据
+rm -rf data/a_stock_feature_cache/*.pkl      # A股特征缓存
+rm -rf data/a_stock_cache/*.pkl              # A股原始数据
 ```
+
+> **要复现历史基线？** 必须先做**三冻结**（宏观快照 / 个股行情快照 / 门槛基准 CSV）并验收双跑 md5 一致；
+> 完整口径与环境变量见 [AGENTS.md](AGENTS.md)「常用命令」与 [docs/BASELINES.md](docs/BASELINES.md)。
 
 ---
 
-## 七、安装部署
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/wonglaitung/fortune.git
-cd fortune
-
-# 2. 安装依赖
-pip install -r requirements.txt
-
-# 3. 配置环境变量
-cp set_key.sh.sample set_key.sh
-# 编辑 set_key.sh，填写邮箱和API密钥
-source set_key.sh
-
-# 4. 验证安装
-python hsi_email.py --no-email
-```
+## 9. 配置与环境变量
 
 **必填环境变量**：
 
 | 变量名 | 说明 |
 |--------|------|
-| `SMTP_SERVER` | SMTP服务器地址 |
+| `SMTP_SERVER` | SMTP 服务器地址 |
 | `EMAIL_SENDER` | 发件人邮箱 |
 | `EMAIL_PASSWORD` | 邮箱授权码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱 |
 | `QWEN_API_KEY` | LLM 密钥（opencode zen；配合 `QWEN_CHAT_URL` / `QWEN_CHAT_MODEL`） |
 
+> 完整环境变量、特征开关（`F1_FEATURES` / `HIBOR_FEATURES` 等）与调度细节见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
 ---
 
-## 八、核心警告
+## 第四部分 · 边界与参考
+
+## 10. 核心警告
 
 | 警告 | 说明 |
 |------|------|
-| **数据泄漏** | Walk-forward 准确率 >65%（个股/A股）或 >80%（恒指）通常有数据泄漏 |
-| **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
-| ~~CatBoost 1天模型~~ | ❌ **已停用（D59 重写）**：周期改为 5/10/20，1d 不再生产 |
-| **深度学习** | LSTM/Transformer F1≈0，不推荐 |
+| **数据泄漏** | Walk-forward 准确率 >65%（个股 / A股）或 >80%（恒指）通常有数据泄漏；个股正常区间 50–60% |
+| **预测阈值** | 方向判断用 **0.5**，不是 0.65（rank 口径下 0.50 = 池内中位数） |
+| ~~CatBoost 1 天模型~~ | ❌ **已停用（D59 重写）**：周期改为 5/10/20，1d 不再生产 |
+| **深度学习** | LSTM / Transformer F1≈0，不推荐 |
 | **加密货币** | 股票策略不适用 |
-| **恒指 vs 个股** | 恒指 5/10/20d 57.3%/58.5%/52.4%（折聚类后均不显著）vs 个股 20d 52.8%（rank 口径；超额 IR 0 附近，不显著）；三周期八大模式折聚类后均不显著，**均不可交易** |
-| **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
+| **恒指 vs 个股** | 恒指 5/10/20d 57.3% / 58.5% / 52.4%（折聚类后均不显著）vs 个股 20d 52.8%（rank 口径；超额 IR 0 附近，不显著）；三周期八大模式折聚类后均不显著，**均不可交易** |
+| **高置信度风险** | 高置信度预测错误时损失可达 −73%，必须设置止损 |
 | **时点口径** | 全链路统一 `mode='production'`（**T 收盘**，T+1 成交）；WF 与生产同一 mode，不再有 T-1/T 双口径（D25） |
 | **特征缓存版本** | 缓存失效时需清除（`rm -rf data/*feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 训练和预测时需一致处理分类特征 NaN |
-| **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练需标签标准化 |
-| **A股股票代码** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失 |
-| **A股样本权重** | 核心股权重3.0倍，扩展股1.0倍，训练时需传入 |
-| **A股数据泄漏阈值** | 个股准确率正常范围50-60%，>65%为数据泄漏信号 |
-| **IC 不等于收益** | IC 高不代表收益高，需结合损失分布分析 |
-| **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
+| **A股涨跌停差异** | 主板 10% 涨跌停，创业板 20% 涨跌停，混合训练需标签标准化 |
+| **A股股票代码** | 保存 CSV 时必须用字符串格式 `zfill(6)`，否则前导零丢失 |
+| **A股样本权重** | 核心股权重 3.0 倍，扩展股 1.0 倍，训练时需传入 |
+| **IC 不等于收益** | IC 高不代表收益高，需结合损失分布分析；能力 IC 只认部署口径（逐日 + 行业中性，D64） |
+| **多信号一致 ≠ 可靠** | 三周期一致虽提升命中率（+4pp），但净超额为负（D68） |
+| **状态持续时间不可预测** | HMM `Regime_Duration` 因果重训 AUC 0.4798 ⇒ 只能当描述（D67） |
+| **绝对值特征** | 跨股票训练时，绝对价格 / 成交量特征必须标准化或排除 |
 
 ---
 
-## 九、文档
+## 11. 文档索引
 
-- **[AGENTS.md](AGENTS.md)** - 快速参考指南
-- **[lessons.md](lessons.md)** - 经验教训
-- **[progress.txt](progress.txt)** - 项目进展
-- **[docs/](docs/)** - 详细文档
-  - [README.md](docs/README.md) - 文档索引（该看哪份）⭐
-  - [QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md) - **量化系统建设方法论** ⭐
-    回答"一个量化系统该怎么从零建、已有的该怎么补"这一方法级问题（区别于 DECISIONS 的项目级结论，方法长期有效）。主线内容：
-    - **五层结构**（数据 → 信号 → 统计 → 组合 → 决策），每层有自己的反模式与失效方式
-    - **七条元原则**：基准比模型更难定义、从决策倒推证据链、n_eff 先行、负结果制度化、口径即宪法、统计过关 ≠ 可交易、结论必须条件化
-    - **七阶段建设步骤**：立规矩 → 立时点 → 最小验证器 → 组合闸门 → 流程自动化 → 防腐 → 才开始建模型（每阶段含做什么 / 验收 DoD / 跳步代价 / **本项目怎么做**）
-    - **三道闸门**（是不是假的 → 是不是真的 → 值多少）、假设生命周期、反模式清单、上线前自检、人机边界
-    - 文首有"一分钟看懂"与按身份分流的三条阅读路径；文末附 **37 条术语表**（正文术语均带跳转链接）与一句话速查
-  - [A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统设计
-  - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
-  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程
-  - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
-  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法
-  - [REVIEW_GATES.md](docs/REVIEW_GATES.md) - **⓪ 同一性闸 + A/B/C 三闸 9 项清单** ⭐（证伪机器的规程正文）
-  - [量化交易误解-正式文档.md](docs/量化交易误解-正式文档.md) - 量化交易常见误区（方法论注脚）
-  - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
-  - [BANK_AND_ETF_TRADING_GUIDE.md](docs/BANK_AND_ETF_TRADING_GUIDE.md) - 银行股与盈富基金买卖指引
-  - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
+| 想知道什么 | 看哪份 |
+|---|---|
+| **所有 Walk-forward 实测数字** | [docs/BASELINES.md](docs/BASELINES.md)（唯一真相源） |
+| **⓪ 同一性闸 / 三道闸 / 硬约束** | [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) ⭐ |
+| **决策与负结果台账** | [docs/DECISIONS.md](docs/DECISIONS.md) |
+| **经验教训（因果链）** | [lessons.md](lessons.md) |
+| **进度** | [progress.txt](progress.txt) |
+| **会话规则 / 常用命令** | [AGENTS.md](AGENTS.md) |
+| **文档导航** | [docs/README.md](docs/README.md) |
+| **建设方法论** | [docs/QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md) |
+| **实盘部署与护栏** | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| **A股设计** | [docs/A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) |
+| **三周期分析** | [docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) |
+| **特征工程** | [docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) |
+| **特征重要性** | [docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) |
+| **验证方法** | [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) |
+| **量化常见误区** | [docs/量化交易误解-正式文档.md](docs/量化交易误解-正式文档.md) |
+| **板块轮动规则** | [docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) |
+| **银行股与盈富基金** | [docs/BANK_AND_ETF_TRADING_GUIDE.md](docs/BANK_AND_ETF_TRADING_GUIDE.md) |
+| **编程规范** | [docs/programmer_skill.md](docs/programmer_skill.md) |
 
----
-
-## 十、依赖项
-
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `networkx`
+> **方法论主线**（[docs/QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md)）：
+> 五层结构（数据 → 信号 → 统计 → 组合 → 决策）/ 七条元原则 / 七阶段建设步骤 / 三道闸门 / 37 条术语表。
 
 ---
 
-## 十一、许可证
+## 12. 依赖 · 许可 · 联系
 
-MIT License
+**依赖项**：`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `networkx`
 
----
+**许可证**：MIT License
 
-## 十二、联系方式
-
+**联系方式**：
 - Issues: https://github.com/wonglaitung/fortune/issues
 - Email: wonglaitung@gmail.com
 
----
-
-## 十三、Star History
+## Star History
 
 ![Star History Chart](https://api.star-history.com/svg?repos=wonglaitung/fortune&type=Date)
