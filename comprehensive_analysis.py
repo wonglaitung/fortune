@@ -132,14 +132,16 @@ SECTOR_TYPES = {
 #    8模式 Bonferroni(α=0.00625) 后 101(+2.7pp)/001(-2.3pp) 名义过线但效应极小，
 #    且 D1 已判定个股横截面 alpha 停止投入 → 一律不作为交易指令。
 THREE_HORIZON_PATTERNS = {
-    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '50.60%', 'avg_return': '-0.35%', 'confidence': '低'},
-    '001': {'name': '下跌中继', 'action': '观望', 'win_rate': '50.00%', 'avg_return': '-0.21%', 'confidence': '低'},
-    '111': {'name': '一致看涨', 'action': '观望', 'win_rate': '53.20%', 'avg_return': '+0.07%', 'confidence': '低'},
-    '011': {'name': '探底回升', 'action': '观望', 'win_rate': '51.70%', 'avg_return': '-0.35%', 'confidence': '低'},
-    '000': {'name': '一致看跌', 'action': '观望', 'win_rate': '51.90%', 'avg_return': '-0.03%', 'confidence': '低'},
-    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '49.20%', 'avg_return': '+0.72%', 'confidence': '低'},
-    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '50.10%', 'avg_return': '-0.38%', 'confidence': '低'},
-    '101': {'name': '假突破', 'action': '观望', 'win_rate': '55.00%', 'avg_return': '+0.88%', 'confidence': '低'},
+    # 名称只描述「相对强弱」（D68）：1 = 当日排序分数 ≥ 池内中位数，0 = 低于中位数。
+    # 禁止使用「看涨/看跌/反弹/冲高」等方向词——rank 模型不预测涨跌方向。
+    '010': {'name': '仅中期偏强', 'action': '观望', 'win_rate': '50.60%', 'avg_return': '-0.35%', 'confidence': '低'},
+    '001': {'name': '仅长期偏强', 'action': '观望', 'win_rate': '50.00%', 'avg_return': '-0.21%', 'confidence': '低'},
+    '111': {'name': '三周期皆偏强', 'action': '观望', 'win_rate': '53.20%', 'avg_return': '+0.07%', 'confidence': '低'},
+    '011': {'name': '中长偏强', 'action': '观望', 'win_rate': '51.70%', 'avg_return': '-0.35%', 'confidence': '低'},
+    '000': {'name': '三周期皆偏弱', 'action': '观望', 'win_rate': '51.90%', 'avg_return': '-0.03%', 'confidence': '低'},
+    '100': {'name': '仅短期偏强', 'action': '观望', 'win_rate': '49.20%', 'avg_return': '+0.72%', 'confidence': '低'},
+    '110': {'name': '短中偏强', 'action': '观望', 'win_rate': '50.10%', 'avg_return': '-0.38%', 'confidence': '低'},
+    '101': {'name': '短长偏强', 'action': '观望', 'win_rate': '55.00%', 'avg_return': '+0.88%', 'confidence': '低'},
 }
 
 # 恒指三周期预测模式配置（PIT/embargo 口径）
@@ -994,7 +996,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（系统低配辅助信号，K={d2_topk_k}，"
                                             f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
                                             f"与回测/月度护栏同口径。\n\n")
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5天预测 | 10天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5日强弱分 | 10日强弱分 | 20日强弱分 | 市场调整 | 模式* | 交易建议* | 历史相对命中率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
@@ -1108,7 +1110,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pattern_name = pattern_info.get('name', '未知')
                     catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
 
-                catboost_text_email += "\n> *「模式/交易建议/历史胜率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
+                catboost_text_email += "\n> *「模式/交易建议/历史相对命中率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
                 # 添加三周期分数说明
                 catboost_text_email += f"\n**三周期分数说明**：\n"
@@ -1123,8 +1125,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
-                catboost_text_email += "- 模式标注 = 5天预测 + 10天预测 + 20天预测（1=偏强，0=偏弱，按排序分数 ≥0.50 判定）\n"
-                catboost_text_email += "- ⚠️ 注意：三周期模式胜率为历史统计，未经显著性验证——个股曾以\"反弹失败(010)\"最高、\"假突破(101)\"约随机水平\n"
+                catboost_text_email += "- 模式标注 = 5日 + 10日 + 20日强弱分（1 = 分数≥当日池内中位数，0 = 低于中位数；0.50 只是分位映射后的中位点，不是涨跌分界）\n"
+                catboost_text_email += "- ⚠️ 模式名只表示「哪几个周期在池内偏强」，**不表示未来会涨**；历史相对命中率为历史统计，未经显著性验证\n"
+                catboost_text_email += "- ⚠️ D68 实测：三周期皆偏强只提高方向命中率（+3~4pp，折 t≈4.5），**不提高净超额**（毛 +0.4%/期，扣 0.5% 成本为负）⇒ 一致 ≠ 更赚钱，只作不确定性标记\n"
                 catboost_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"
                 catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
 
@@ -3353,7 +3356,7 @@ STOCK_ANALYSIS_PROMPT = """你是一个股票分析专家。请从以下综合�
 4. **ml_prob_20d**: 机器学习20天**排序分数**（横截面分位×100，0-100；越高=池内越偏强；**不是概率/胜率/置信度**）
 5. **ml_prob_10d**: 机器学习10天排序分数（口径同 ml_prob_20d）
 6. **ml_prob_5d**: 机器学习5天排序分数（口径同 ml_prob_20d）
-7. **three_period_pattern**: 三周期模式（如"下跌中继⭐(001)"）
+7. **three_period_pattern**: 三周期相对强弱模式（如"仅长期偏强⭐(001)"）
 8. **chip_resistance**: 筹码阻力（低/中/高）
 9. **risk_score**: 风险得分（数值）
 10. **return_score**: 回报得分（数值）
@@ -3646,9 +3649,9 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         win_rate = pattern_info.get('win_rate', 0)
         lines.append(f"交易建议: {action}")
         try:
-            lines.append(f"历史胜率: {float(win_rate):.1f}%（三周期模式历史统计，未经显著性验证，仅作背景参考，不作决策依据）")
+            lines.append(f"历史相对命中率: {float(win_rate):.1f}%（三周期模式历史统计，未经显著性验证，仅作背景参考，不作决策依据）")
         except (ValueError, TypeError):
-            lines.append(f"历史胜率: {win_rate}（三周期模式历史统计，仅供参考，不作决策依据）")
+            lines.append(f"历史相对命中率: {win_rate}（三周期模式历史统计，仅供参考，不作决策依据）")
     else:
         lines.append("ML预测: 数据缺失")
 

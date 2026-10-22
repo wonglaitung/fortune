@@ -389,8 +389,8 @@ def print_summary(results):
     print("\n【一致信号分析】")
     bull = results['consensus_analysis']['bull']
     bear = results['consensus_analysis']['bear']
-    print(f"  一致看涨(111): {bull['count']}次, 20天实际上涨率: {bull['20d_actual_up_rate']:.2f}%")
-    print(f"  一致看跌(000): {bear['count']}次, 20天实际下跌率: {bear['20d_actual_down_rate']:.2f}%")
+    print(f"  三周期皆偏强(111): {bull['count']}次, 20天实际上涨率: {bull['20d_actual_up_rate']:.2f}%")
+    print(f"  三周期皆偏弱(000): {bear['count']}次, 20天实际下跌率: {bear['20d_actual_down_rate']:.2f}%")
 
 
 def main():

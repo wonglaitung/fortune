@@ -112,28 +112,30 @@ def _code_link_html(code):
 SECTOR_STOCK_LIST = list(A_STOCK_TRAINING_LIST.keys())
 
 # 三周期模式定义（参考港股）
+# 名称只描述相对强弱（D68）：A = 当日排序分数 ≥ 池内中位数，B = 低于中位数。
+# 禁止「上涨/反弹/买入」等方向与指令词——rank 模型不预测方向，A股 alpha 亦为 null。
 THREE_HORIZON_PATTERNS = {
-    'AAA': {'name': '强势上涨', 'action': '积极买入', 'color': '#16a34a'},
-    'AAB': {'name': '短期调整', 'action': '逢低买入', 'color': '#16a34a'},
-    'ABA': {'name': '震荡上行', 'action': '适度买入', 'color': '#ea580c'},
-    'ABB': {'name': '趋势转弱', 'action': '观望', 'color': '#ea580c'},
-    'BAA': {'name': '底部反弹', 'action': '试探买入', 'color': '#ea580c'},
-    'BAB': {'name': '震荡下行', 'action': '谨慎观望', 'color': '#dc2626'},
-    'BBA': {'name': '下跌反弹', 'action': '观望', 'color': '#dc2626'},
-    'BBB': {'name': '持续下跌', 'action': '回避', 'color': '#dc2626'},
+    'AAA': {'name': '三周期皆偏强', 'action': '观望', 'color': '#16a34a'},
+    'AAB': {'name': '短中偏强', 'action': '观望', 'color': '#16a34a'},
+    'ABA': {'name': '短长偏强', 'action': '观望', 'color': '#ea580c'},
+    'ABB': {'name': '仅短期偏强', 'action': '观望', 'color': '#ea580c'},
+    'BAA': {'name': '中长偏强', 'action': '观望', 'color': '#ea580c'},
+    'BAB': {'name': '仅中期偏强', 'action': '观望', 'color': '#dc2626'},
+    'BBA': {'name': '仅长期偏强', 'action': '观望', 'color': '#dc2626'},
+    'BBB': {'name': '三周期皆偏弱', 'action': '观望', 'color': '#dc2626'},
 }
 
 # A股传导模式胜率（⚠️未验证：参考港股套用，A股未做净贡献/Bonferroni 复核，仅作参考，
 # 展示处均带"未验证"标注 —— A_STOCK_REFORM_PLAN P0.3）
 A_STOCK_TRANSMISSION_ACCURACY = {
-    'AAA': {'win_rate': 58.0, 'description': '一致看涨', 'verified': False},
-    'AAB': {'win_rate': 56.0, 'description': '短期调整', 'verified': False},
-    'ABA': {'win_rate': 55.0, 'description': '震荡上行', 'verified': False},
-    'ABB': {'win_rate': 54.0, 'description': '趋势转弱', 'verified': False},
-    'BAA': {'win_rate': 56.0, 'description': '底部反弹', 'verified': False},
-    'BAB': {'win_rate': 54.0, 'description': '震荡下行', 'verified': False},
-    'BBA': {'win_rate': 53.0, 'description': '下跌反弹', 'verified': False},
-    'BBB': {'win_rate': 52.0, 'description': '持续下跌', 'verified': False},
+    'AAA': {'win_rate': 58.0, 'description': '三周期皆偏强', 'verified': False},
+    'AAB': {'win_rate': 56.0, 'description': '短中偏强', 'verified': False},
+    'ABA': {'win_rate': 55.0, 'description': '短长偏强', 'verified': False},
+    'ABB': {'win_rate': 54.0, 'description': '仅短期偏强', 'verified': False},
+    'BAA': {'win_rate': 56.0, 'description': '中长偏强', 'verified': False},
+    'BAB': {'win_rate': 54.0, 'description': '仅中期偏强', 'verified': False},
+    'BBA': {'win_rate': 53.0, 'description': '仅长期偏强', 'verified': False},
+    'BBB': {'win_rate': 52.0, 'description': '三周期皆偏弱', 'verified': False},
 }
 
 
