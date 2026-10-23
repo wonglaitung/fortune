@@ -3,7 +3,7 @@
 """
 港股题材小宇宙 —— 题材内横截面 alpha 测试（D51 §六，先登记后跑）
 
-口径与部署一致（20d、行业中性=关闭因同题材、COST 与 WF 一致）。
+口径与部署一致（20d、raw 打分、COST 与 WF 一致）。
 分三层，**诚实标注功效**：
 
   A. 合并题材池（3 题材并集 ∩ 有预测）      —— 标准 `backtest`（≥20 只）
@@ -52,7 +52,7 @@ def add_theme(panel):
 
 
 def relaxed_backtest(df_theme, horizon=HORIZON, topk=5, cost=COST):
-    """逐题材放宽版回测（无『每期≥20只』硬门槛；同题材 ⇒ 无行业中性）。
+    """逐题材放宽版回测（无『每期≥20只』硬门槛）。
 
     与 `portfolio_backtest.backtest` 同净口径：top_net = 毛 − 换手×成本；
     基准 = 当日该题材等权（bench）。
@@ -122,7 +122,7 @@ def run(pred_csv, topk_combined=5, topk_theme=3, out_dir=ROOT / "data" / "hk_the
     df_th = panel[panel["code"].isin(theme_universe)].copy()
     combined = None
     if len(df_th["code"].unique()) >= 20:
-        bt = backtest(df_th, HORIZON, topk_combined, False, cost=COST)
+        bt = backtest(df_th, HORIZON, topk_combined, cost=COST)
         if len(bt) >= 5:
             st = _stats(bt["top_net"].values, HORIZON)
             sb = _stats(bt["bench"].values, HORIZON)

@@ -757,18 +757,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 rank_pct_map = dict(zip(df_catboost['code'], df_catboost['probability'].rank(pct=True)))
                 print(f"  🔢 rank 模式：展示层用横截面分位（{len(rank_pct_map)} 只），不走概率门槛")
 
-            # D2 行业中性 TopK 目标集（低配辅助信号，DECISIONS D2 / DEPLOYMENT T2）：
-            # 行业内 z-score 后再取前 K，K = min(topk, n//4) 与回测/护栏口径一致；
+            # D2 TopK 目标集（低配辅助信号，DECISIONS D2 / DEPLOYMENT T2）：
+            # 按 raw prob 取前 K（D73），K = min(topk, n//4) 与回测/护栏口径一致；
             # 仅用于邮件表格内联 🎯 标记（统计口径，不给指令，lessons 三.11）
             d2_topk_target = set()
             d2_topk_k = 0
             try:
                 from ml_services.live_topk import select_from_df
-                _topk_target, _topk_ranked, d2_topk_k = select_from_df(df_catboost, topk=10, sector_neutral=True)
+                _topk_target, _topk_ranked, d2_topk_k = select_from_df(df_catboost, topk=10)
                 d2_topk_target = set(_topk_target['code'])
-                print(f"  ✅ D2 行业中性 TopK: K={d2_topk_k} -> {sorted(d2_topk_target)}")
+                print(f"  ✅ D2 TopK（raw）: K={d2_topk_k} -> {sorted(d2_topk_target)}")
             except Exception as e:
-                print(f"  ⚠️ D2 行业中性 TopK 计算失败（表格不标 🎯）: {e}")
+                print(f"  ⚠️ D2 TopK 计算失败（表格不标 🎯）: {e}")
 
             # 三周期预测结果
             three_horizon_results = {}
@@ -993,8 +993,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                                         f"（仅供记录，不影响实际操作）\n")
                 catboost_text_email += "\n全部股票预测结果（按20天排序分数排序）:\n\n"
                 if d2_topk_target:
-                    catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（系统低配辅助信号，K={d2_topk_k}，"
-                                            f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
+                    catboost_text_email += (f"> 🎯 = 20d TopK（系统低配辅助信号，K={d2_topk_k}，"
+                                            f"基于当前 {len(df_catboost)} 只自选池）；按 raw prob 取前 K（D73），"
                                             f"与回测/月度护栏同口径。\n\n")
                 catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5日强弱分 | 10日强弱分 | 20日强弱分 | 市场调整 | 模式* | 交易建议* | 历史相对命中率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
@@ -5281,7 +5281,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     'normal': '🟢 正常市场：常规操作',
                 }
                 banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}）\n\n"
-                # 20d 行业中性 TopK 护栏状态（DECISIONS D2 / DEPLOYMENT T2），
+                # 20d TopK 护栏状态（DECISIONS D2 / DEPLOYMENT T2），
                 # 与三周期准确率同属"预测可信度"语境，插在第二节末尾；无 20d 报告则不显示
                 try:
                     from ml_services.performance_monitor import _guardrail_block

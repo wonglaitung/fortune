@@ -780,7 +780,7 @@ class WalkForwardValidator:
 
         # ========== 计算 IC 和 Rank IC ==========
         # ⚠️ 下面两个是**全表跨日池化**口径（含日间共同层 ⇒ 天然偏高，lessons 三.68）。
-        #    **禁用于能力评估**；能力口径 = 行业中性 + 逐日（见 ic_deploy，复用
+        #    **禁用于能力评估**；能力口径 = raw + 逐日（D73，见 ic_deploy，复用
         #    `portfolio_backtest.selection_ic`，唯一实现）。保留是为了向后兼容。
         if 'actual_return' in df.columns:
             valid_mask = df['actual_return'].notna() & df['probability'].notna()
@@ -794,7 +794,7 @@ class WalkForwardValidator:
             ic = 0.0
             rank_ic = 0.0
 
-        # ========== 能力 IC（部署口径：行业中性 + 逐日）==========
+        # ========== 能力 IC（部署口径：raw + 逐日）==========
         # D64：池化 IC 不能当能力；这里直接复用 guardrail 的同一实现，避免双实现。
         ic_deploy = float('nan')
         ic_raw_daily = float('nan')
@@ -811,7 +811,7 @@ class WalkForwardValidator:
                 })
                 _panel['sector'] = _panel['code'].map(
                     lambda c: (STOCK_SECTOR_MAPPING.get(c) or {}).get('sector', 'unknown'))
-                _cap = selection_ic(_panel, use_sector_neutral=True)
+                _cap = selection_ic(_panel)
                 ic_deploy = _cap['ic']
                 ic_raw_daily = _cap['ic_raw']
                 ic_deploy_days = _cap['n_days']
@@ -1031,7 +1031,7 @@ class WalkForwardValidator:
             'rank_ic': rank_ic if not np.isnan(rank_ic) else 0.0,
             'ic_pooled': ic if not np.isnan(ic) else 0.0,
             'rank_ic_pooled': rank_ic if not np.isnan(rank_ic) else 0.0,
-            # 能力口径（行业中性 + 逐日）——唯一可信的能力度量
+            # 能力口径（raw + 逐日，D73）——唯一可信的能力度量
             'ic_deploy': ic_deploy if not np.isnan(ic_deploy) else 0.0,
             'ic_raw_daily': ic_raw_daily if not np.isnan(ic_raw_daily) else 0.0,
             'ic_deploy_days': ic_deploy_days,
@@ -1287,7 +1287,7 @@ class WalkForwardValidator:
         # 2. IC指标评分（25分）：IC >0.05 表示有效预测能力
         avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
         avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
-        # 能力口径（D64）：行业中性 + 逐日；非零折才平均
+        # 能力口径（D64/D73）：raw + 逐日；非零折才平均
         _d = [r.get('ic_deploy') for r in fold_results if r.get('ic_deploy_days')]
         avg_ic_deploy = float(np.mean(_d)) if _d else 0.0
         if avg_ic >= 0.20:
@@ -1400,7 +1400,7 @@ class WalkForwardValidator:
                 'avg_ic': report['overall_metrics'].get('avg_ic', 0),
                 'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0),
                 'avg_ic_deploy': report['overall_metrics'].get('avg_ic_deploy', 0),
-                '_ic_caliber': 'ic/rank_ic = 全表池化（禁用于能力评估）；能力读 avg_ic_deploy（行业中性+逐日，D64）'
+                '_ic_caliber': 'ic/rank_ic = 全表池化（禁用于能力评估）；能力读 avg_ic_deploy（raw+逐日，D73）'
             },
             'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'prediction_analysis', 'confidence_return_breakdown', 'percentile_performance']
         }
@@ -1642,7 +1642,7 @@ class WalkForwardValidator:
                 f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
                 f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n")
                 # 新增 IC 和 Rank IC
-                f.write(f"- **能力 IC（部署口径：行业中性+逐日）**: {overall.get('avg_ic_deploy', 0):+.4f}\n")
+                f.write(f"- **能力 IC（部署口径：raw+逐日）**: {overall.get('avg_ic_deploy', 0):+.4f}\n")
                 f.write(f"- **池化 IC（含日间共同层，禁用于能力评估，D64）**: "
                         f"{overall.get('avg_ic', 0):+.4f}（rank {overall.get('avg_rank_ic', 0):+.4f}）\n\n")
 

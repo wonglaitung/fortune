@@ -4,7 +4,11 @@
 全局配置文件
 """
 
-# 股票板块映射（56只股票，覆盖17个板块）
+# 股票板块映射（49只股票，覆盖15个板块）
+# ⚠️ 2026-10-23 按流动性剔除 6 只（20 日均成交额 < 20 百万 HKD）：
+#    1257 光大绿色环保(0)、1600 天伦燃气(2)、1053 重庆钢铁(5)、
+#    2866 中远海发(6)、1330 绿色动力(7)、1798 大唐新能源(11)。
+#    1919 中远海控（ADV 236 百万，但不在 300 池内 ⇒ 为「训练池 ⊆ 300 池」一致而剔除）。
 # ⚠️ 2026-10-14 据腾讯行情逐只核对公司名（lessons 三.74）：修正多只错名 +
 #    0960 龙湖集团（地产，原误标 new_energy）、2282 美高梅中国（消费，原误标 new_energy）、
 #    2228 晶泰控股（生物医药，原误标 consumer）、1053 重庆钢铁股份（材料，原误标 auto）；
@@ -50,14 +54,11 @@ STOCK_SECTOR_MAPPING = {
 
     # 新能源股 (new_energy)
     '1211.HK': {'sector': 'new_energy', 'name': '比亚迪股份', 'type': 'new_energy', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
-    '1798.HK': {'sector': 'new_energy', 'name': '大唐新能源', 'type': 'new_energy', 'defensive': 20, 'growth': 90, 'cyclical': 70, 'liquidity': 65, 'risk': 80},
     '3800.HK': {'sector': 'new_energy', 'name': '协鑫科技', 'type': 'new_energy', 'defensive': 15, 'growth': 85, 'cyclical': 75, 'liquidity': 60, 'risk': 85},
     '2282.HK': {'sector': 'consumer', 'name': '美高梅中国', 'type': 'consumer', 'defensive': 30, 'growth': 50, 'cyclical': 80, 'liquidity': 65, 'risk': 75},
     '0960.HK': {'sector': 'real_estate', 'name': '龙湖集团', 'type': 'real_estate', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 90},
 
     # 环保股 (environmental)
-    '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保', 'type': 'environmental', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
-    '1257.HK': {'sector': 'environmental', 'name': '中国光大绿色环保', 'type': 'environmental', 'defensive': 30, 'growth': 70, 'cyclical': 75, 'liquidity': 65, 'risk': 75},
 
     # 能源股 (energy)
     '0883.HK': {'sector': 'energy', 'name': '中国海洋石油', 'type': 'energy', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
@@ -67,11 +68,8 @@ STOCK_SECTOR_MAPPING = {
 
     # 航运股 (shipping)
     '1138.HK': {'sector': 'shipping', 'name': '中远海能', 'type': 'shipping', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
-    '1919.HK': {'sector': 'shipping', 'name': '中远海控', 'type': 'shipping', 'defensive': 20, 'growth': 50, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
-    '2866.HK': {'sector': 'shipping', 'name': '中远海发', 'type': 'shipping', 'defensive': 30, 'growth': 40, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
 
     # 燃气股 (gas)
-    '1600.HK': {'sector': 'gas', 'name': '天伦燃气', 'type': 'gas', 'defensive': 70, 'growth': 45, 'cyclical': 30, 'liquidity': 55, 'risk': 40},
 
     # 交易所 (exchange)
     '0388.HK': {'sector': 'exchange', 'name': '香港交易所', 'type': 'exchange', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
@@ -108,7 +106,6 @@ STOCK_SECTOR_MAPPING = {
 
     # 汽车股 (auto)
     '2333.HK': {'sector': 'auto', 'name': '长城汽车', 'type': 'auto', 'defensive': 25, 'growth': 75, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
-    '1053.HK': {'sector': 'materials', 'name': '重庆钢铁股份', 'type': 'materials', 'defensive': 15, 'growth': 40, 'cyclical': 95, 'liquidity': 60, 'risk': 90},
 }
 
 # 板块名称映射（统一中文名称）
@@ -133,7 +130,7 @@ SECTOR_NAME_MAPPING = {
     'materials': '材料股',
 }
 
-# 自选股列表（核心32只，用于预测和日常监控；2026-10-06 剔除 ETF 2800.HK 后）
+# 自选股列表（核心30只，用于预测和日常监控；2026-10-06 剔除 ETF 2800.HK、2026-10-23 剔除 2 只低流动性）
 # ⚠️ 名称已于 2026-10-14 据腾讯行情核对（lessons 三.74），与 STOCK_SECTOR_MAPPING 同步
 WATCHLIST = {
     "0005.HK": "汇丰控股",
@@ -150,10 +147,8 @@ WATCHLIST = {
     "1109.HK": "华润置地",
     "1138.HK": "中远海能",
     "1288.HK": "农业银行",
-    "1330.HK": "绿色动力环保",
     "1347.HK": "华虹半导体",
     "1398.HK": "工商银行",
-    "1600.HK": "天伦燃气",
     "1810.HK": "小米集团-W",
     "2269.HK": "药明生物",
     "2388.HK": "中银香港",
@@ -171,32 +166,27 @@ WATCHLIST = {
     "2318.HK": "中国平安",
 }
 
-# 训练用股票列表（扩展56只，用于模型训练以增加样本量）
-# 包含WATCHLIST全部32只 + 24只额外股票（2026-10-14 删 1387.HK 幽灵条目）
+# 训练用股票列表（扩展49只，用于模型训练以增加样本量）
+# 包含WATCHLIST全部30只 + 19只额外股票（2026-10-14 删 1387.HK；2026-10-23 剔 6 只低流动性）
 TRAINING_STOCKS = {
-    **WATCHLIST,  # 继承核心32只
+    **WATCHLIST,  # 继承核心30只
     # 额外24只股票（从STOCK_SECTOR_MAPPING补充）
     "0002.HK": "中电控股",
     "0006.HK": "电能实业",
     "0151.HK": "中国旺旺",
     "0020.HK": "商汤-W",
     "1177.HK": "中国生物制药",
-    "1257.HK": "中国光大绿色环保",
-    "1919.HK": "中远海控",
     "2186.HK": "绿叶制药",
     "2228.HK": "晶泰控股",
     "2269.HK": "药明生物",
     "2333.HK": "长城汽车",
     "2382.HK": "舜宇光学科技",
-    "2866.HK": "中远海发",
     "2883.HK": "中海油田服务",
     # "2828.HK": "恒生中国企业" —— 2026-10-06 剔除（ETF，见 D14）
     "0960.HK": "龙湖集团",
     "0966.HK": "中国太平",
     "1024.HK": "快手-W",
-    "1053.HK": "重庆钢铁股份",
     "1171.HK": "兖矿能源",
-    "1798.HK": "大唐新能源",
     "2282.HK": "美高梅中国",
     "2388.HK": "中银香港",
     "2601.HK": "中国太保",
@@ -214,7 +204,7 @@ PREDICTION_HORIZONS = (5, 10, 20)
 
 # ========== 扩池实验（B′）：训练池覆盖（默认关闭） ==========
 # 设 HK_UNIVERSE_FILE=<json> 时，用该文件的 {code.HK: {sector,type,name,...}} 整体替换
-# 训练池与板块映射；不设则完全保持原 56 只行为（生产/基线不受影响）。
+# 训练池与板块映射；不设则完全保持原 49 只行为（生产/基线不受影响）。
 # 用途：56 → 300 宽基池 A/B。sector 进中性化，type/profile 进 Stock_Type 特征。
 import json as _json
 import os as _os

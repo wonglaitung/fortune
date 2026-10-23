@@ -4861,3 +4861,14 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 事故：全窗口版 1.07M 行 × 2119 列 OOM（峰值 57GB），收窄为未见段跑完；已记入预注册文件。
 - 文档：`docs/DECISIONS.md` D72、`docs/BASELINES.md` 新增扩池节、`lessons.md` 三.88（预注册必须含安慰剂）。
 - 未提交：本轮所有脚本与 config 改动仍在工作区。
+
+## 2026-10-23 生产打分口径切换为 raw（D73，口径变更非提升）
+
+- **行业中性整体删除**（无开关、无兼容分支）：`sector_neutral_score` 删除，
+  `selection_score(g)` 只返回 raw prob；`backtest` / `selection_ic` / `eval_overfit` /
+  `monthly_guardrail` / `live_topk` / 生产调用点全部去掉口径参数。
+- 契约测试 `tests/test_selection_mode_single_source.py`（4 条，含仓库级源码扫描：
+  出现 `use_sector_neutral` / `SECTOR_NEUTRAL` 即失败）；全量 pytest **348 passed**。
+- 证据：30 只 Top10，56 模型 −0.44→−0.28pp，310 模型 −0.04→+0.05pp；CI 全跨 0 ⇒ 不称提升。
+- 连带：D64 能力 IC 口径改为「逐日 + raw」；PBO 配置族 6→3 列，零假设带须同报；
+  历史护栏数字均为中性口径，不可直接比。

@@ -6,7 +6,7 @@ Phase 3 最小版：把 OOS 预测分数转成组合，评估**扣成本后**的
 输入：Walk-forward 的 prediction_analysis.csv（逐日逐股 Predict_Prob + Actual_Return）
 方法：
   - 非重叠调仓（每 horizon 天一次）
-  - TopK 组合（等权）；可选行业中性（行业内 z-score 后再选）
+  - TopK 组合（等权），按 raw prob 排序（D73；行业中性已删除）
   - 成本 = 单边换手率 × 双边成本(TOTAL_COST)
   - 多空 Q5-Q1
 输出：净均收益 / 净IR / 胜率 / 换手 / 累计，并与等权基准对比；
@@ -31,7 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 选股打分**唯一实现**在 ml_services.selection（lessons 三.73/三.74）。
 # 本模块与 live_topk（生产侧）都从这里导入，禁止各自再写一份。
 from ml_services.selection import (          # noqa: E402
-    sector_neutral_score as _sector_neutral_score,
     selection_score,
 )
 
@@ -69,11 +68,11 @@ def load_panel(pred_csv, market='hk'):
     return df
 
 
-def selection_ic(df, use_sector_neutral=True, min_per_day=20, min_sector=2):
+def selection_ic(df, min_per_day=20, min_sector=2):
     """**部署口径**的选股能力度量（lessons 三.73）。
 
     口径 = 逐日 Spearman(selection_score, ret) 再取均值/中位。
-    `use_sector_neutral` **必须与 `backtest` 传的是同一个值**，否则量错对象。
+    打分只有一个实现（raw prob），与 `backtest` 必然同源。
 
     同时返回三个对照（它们**不是同一个量**，报告必须分开写，禁互相替代）：
       - `ic` / `ic_med` 部署口径（逐日、用部署打分）
@@ -93,7 +92,7 @@ def selection_ic(df, use_sector_neutral=True, min_per_day=20, min_sector=2):
         if len(g) < min_per_day:
             continue
         if g['sector'].nunique() >= min_sector:
-            sc = selection_score(g, use_sector_neutral)
+            sc = selection_score(g)
             v = sc.corr(g['ret'], method='spearman')
             if np.isfinite(v):
                 s_ic.append(v)
@@ -112,13 +111,12 @@ def selection_ic(df, use_sector_neutral=True, min_per_day=20, min_sector=2):
         'ic_raw': float(r_ic.mean()) if r_ic.size else float('nan'),
         'ic_lin': float(l_ic.mean()) if l_ic.size else float('nan'),
         'ic_pooled': float(d['prob'].corr(d['ret'], method='spearman')),
-        'use_sector_neutral': bool(use_sector_neutral),
         'ic_series': s_ic,
     }
     return out
 
 
-def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_target=None):
+def backtest(df, horizon, topk, cost=COST, dropout=0, vol_target=None):
     dates = sorted(df['date'].unique())
     rb = dates[::horizon]  # 非重叠调仓
     rows = []
@@ -128,7 +126,7 @@ def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_ta
         g = df[df['date'] == d].copy()
         if len(g) < 20:
             continue
-        g['score'] = selection_score(g, use_sector_neutral)
+        g['score'] = selection_score(g)
         g = g.sort_values('score', ascending=False, kind='mergesort')  # mergesort：score 并列时顺序稳定（去噪声）
         k = min(topk, len(g) // 4)
         bench = g['ret'].mean()
@@ -206,40 +204,33 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None, 
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
 
-    res = {}
-    for name, neutral in [("TopK-raw", False), ("TopK-行业中性", True)]:
-        res[name] = backtest(df, horizon, topk, neutral, cost=cost, dropout=dropout, vol_target=vol_target)
+    res = {"TopK": backtest(df, horizon, topk, cost=cost, dropout=dropout, vol_target=vol_target)}
 
     # 汇总
     rows = []
-    bench = _stats(res["TopK-raw"]['bench'].values, horizon)
+    bench = _stats(res["TopK"]['bench'].values, horizon)
     rows.append(("等权基准（全池）", bench, np.nan))
-    for name in ("TopK-raw", "TopK-行业中性"):
-        bt = res[name]
-        st = _stats(bt['top_net'].values, horizon)
-        rows.append((f"{name}（净）", st, float(bt['turnover'].mean())))
-    st_ls = _stats(res["TopK-行业中性"]['ls_net'].values, horizon)
-    rows.append(("多空 Q5-Q1（行业中性，净）", st_ls,
-                 float(res["TopK-行业中性"]['turnover'].mean() * 2)))
+    bt = res["TopK"]
+    rows.append((f"TopK（净）", _stats(bt['top_net'].values, horizon),
+                 float(bt['turnover'].mean())))
+    rows.append(("多空 Q5-Q1（净）", _stats(bt['ls_net'].values, horizon),
+                 float(bt['turnover'].mean() * 2)))
 
     L = []
     L.append(f"# Phase 3 最小组合回测（{horizon}d，TopK={topk}）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 数据: `{pred_csv}`")
-    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {cost:.3f}　Dropout={dropout}　波动率目标={vol_target}\n")
+    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {cost:.3f}　Dropout={dropout}　波动率目标={vol_target}")
+    L.append(f"- 打分: raw prob（D73）\n")
     # bootstrap CI（对每个组合的净收益序列）
-    series = {'等权基准（全池）': res["TopK-raw"]['bench'].values}
-    series['TopK-raw（净）'] = res["TopK-raw"]['top_net'].values
-    series['TopK-行业中性（净）'] = res["TopK-行业中性"]['top_net'].values
-    series['多空 Q5-Q1（行业中性，净）'] = res["TopK-行业中性"]['ls_net'].values
+    series = {'等权基准（全池）': bt['bench'].values,
+              'TopK（净）': bt['top_net'].values,
+              '多空 Q5-Q1（净）': bt['ls_net'].values}
     ci = {k: bootstrap(v, horizon) for k, v in series.items()}
 
     # 超额序列（TopK净 − 等权基准，逐期）
-    excess = {
-        'TopK-raw（净）': res["TopK-raw"]['top_net'].values - res["TopK-raw"]['bench'].values,
-        'TopK-行业中性（净）': res["TopK-行业中性"]['top_net'].values - res["TopK-行业中性"]['bench'].values,
-        '多空 Q5-Q1（行业中性，净）': res["TopK-行业中性"]['ls_net'].values - res["TopK-行业中性"]['bench'].values,
-    }
+    excess = {'TopK（净）': bt['top_net'].values - bt['bench'].values,
+              '多空 Q5-Q1（净）': bt['ls_net'].values - bt['bench'].values}
     ex_stats = {k: _stats(v, horizon) for k, v in excess.items()}
     ex_ci = {k: bootstrap(v, horizon) for k, v in excess.items()}
 
@@ -268,7 +259,7 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None, 
     L.append("")
 
     L.append("## 结论\n")
-    best = "TopK-行业中性（净）" if res["TopK-行业中性"]['top_net'].mean() >= res["TopK-raw"]['top_net'].mean() else "TopK-raw（净）"
+    best = "TopK（净）"
     bst = _stats(series[best], horizon)
     c = ci[best]
     ec = ex_ci[best]
@@ -291,9 +282,9 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None, 
     L.append("")
 
     # 逐年分解（最佳组合 vs 基准）
-    bt = res["TopK-行业中性"].copy()
+    bt = res["TopK"].copy()
     bt['year'] = pd.to_datetime(bt['date']).dt.year
-    L.append("## 逐年分解（行业中性 TopK vs 等权基准）\n")
+    L.append("## 逐年分解（TopK vs 等权基准）\n")
     L.append("| 年份 | 期数 | 基准均收益/期 | TopK净均收益/期 | 超额/期 | 超额IR |")
     L.append("|------|------|--------------|----------------|---------|--------|")
     for y, g in bt.groupby('year'):

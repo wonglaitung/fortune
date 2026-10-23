@@ -6,7 +6,7 @@
   - 合并准确率 + 95%CI + vs 随机 p
   - 超额 lift（胜率 − 无条件基准）+ p
   - 月度护栏：净IR [95%CI] / PBO / DSR → D2 判定
-  - 组合层：TopK 行业中性 超额IR [95%CI]
+  - 组合层：TopK（raw 打分，D73）超额IR [95%CI]
 
 判定原则（D3/D10）：只比 lift / 净IR / PBO / DSR 等决策指标，不比绝对准确率。
 
@@ -87,7 +87,7 @@ def metrics_for(csv, horizon, market='a', with_guardrail=True):
         return out
 
     panel = load_panel(csv, market=market)
-    bt = backtest(panel, horizon, TOPK, True, cost=COST)
+    bt = backtest(panel, horizon, TOPK, cost=COST)
     st = _stats(bt['top_net'].values, horizon)
     ci = bootstrap(bt['top_net'].values, horizon)
     _, base, lift = signal_lift(df)
@@ -123,7 +123,7 @@ def render(horizon, rows):
     """rows: {learner: metrics dict}"""
     L = [f"# A股学习器 A/B 对照（{horizon}d）\n",
          f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}",
-         f"- TopK={TOPK} 行业中性，成本 {COST:.3f}，判定看 lift/净IR/PBO/DSR（D3/D10），不看绝对准确率\n"]
+         f"- TopK={TOPK}（raw 打分），成本 {COST:.3f}，判定看 lift/净IR/PBO/DSR（D3/D10），不看绝对准确率\n"]
 
     has_g = all('ir' in r for r in rows.values())
     cols = [l for l in LEARNERS if l in rows]

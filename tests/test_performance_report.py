@@ -106,7 +106,7 @@ def test_guardrail_block_renders(monkeypatch, tmp_path):
     p = _fake_guardrail_md(tmp_path)
     monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: p)
     b = pm._guardrail_block()
-    assert '20d 辅助策略（行业中性 TopK）护栏' in b
+    assert '20d 辅助策略（TopK，raw 打分）护栏' in b
     assert '🟢 通过 → 可升级' in b and '15–20%' in b
     assert '1.06' in b and '0.47' in b and '0.981' in b
     assert '2026-09-25' in b and b.count('✅') == 3

@@ -10,7 +10,7 @@
   不是 6。假设独立做多重比较是**口径错误**（见 lessons 三.76 同类：基准选错 ⇒ 结论反向）。
 
 本脚本做三件事（互相印证，不替代）：
-  ① 每周期「逐期超额 = TopK行业中性净 − 等权基准」→ bootstrap 95%CI（block=horizon）。
+  ① 每周期「逐期超额 = TopK净 − 等权基准」→ bootstrap 95%CI（block=horizon）。
   ② **max 统计量**：取六周期超额 IR 最大者，看其 CI 下界是否 >0（max 天然含多重比较校正）。
   ③ 补充 **Stouffer** 合并各周期 t（**假设独立 ⇒ 反保守**）：若它都不显著，null 更稳。
 
@@ -49,7 +49,7 @@ def main():
             print(f"[H={h}] 无 CSV，跳过")
             continue
         df = load_panel(csv, market='hk')
-        bt = backtest(df, h, TOPK, True, cost=COST)
+        bt = backtest(df, h, TOPK, cost=COST)
         ex = (bt['top_net'] - bt['bench']).values
         ex = ex[np.isfinite(ex)]
         st = _stats(ex, h)
@@ -64,7 +64,7 @@ def main():
         pooled_ex.append(pd.DataFrame({'date': bt['date'].values, 'h': h, 'ex': ex}))
 
     print("=" * 104)
-    print("六周期逐期超额（TopK行业中性净 − 等权基准，成本 0.5%）")
+    print("六周期逐期超额（TopK净 − 等权基准，成本 0.5%）")
     print(f"{'周期':>4} {'期数':>5} {'超额均/期':>10} {'超额IR':>8} {'超额IR 95%CI':>18} {'t':>7} {'P(IR>0)':>8}")
     print("-" * 104)
     for r in rows:

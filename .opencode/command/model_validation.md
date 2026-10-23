@@ -651,7 +651,7 @@ python3 ml_services/backtest_eval.py \
 
 ### 阶段 5.6：月度护栏判定（monthly_guardrail.py，必须执行）⭐
 
-**目的**：对 `20d 行业中性 TopK` 辅助信号做**决策判定**（升级/保留/停用），
+**目的**：对 `20d TopK`（raw 打分，D73）辅助信号做**决策判定**（升级/保留/停用），
 按 `docs/DECISIONS.md` D2 收口。
 
 **⚠️ 适用边界**：仅针对 **20d 中性 TopK 辅助信号**。个股横截面 alpha 已按 D1 停止投入；
@@ -688,7 +688,7 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
 
 ### 阶段 5.7：组合层复核（portfolio_backtest.py，必须执行）⭐
 
-**目的**：对 `20d 行业中性 TopK` 辅助信号做**组合层复核**——超额 bootstrap CI + 逐年稳健，
+**目的**：对 `20d TopK`（raw 打分，D73）辅助信号做**组合层复核**——超额 bootstrap CI + 逐年稳健，
 与 `docs/DEPLOYMENT.md`"每次 walk-forward 后另跑"对齐（判定参考 `docs/VALIDATION_GUIDE.md` 月度护栏章）。
 
 **⚠️ 适用边界**：仅当本次 walk-forward 为 **20d** 时执行（与 5.6 同边界；1d/5d 无 TopK 辅助信号不跑）。

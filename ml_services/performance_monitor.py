@@ -610,7 +610,7 @@ def _guardrail_block() -> str:
     else:
         alloc = ''
 
-    return f"""### 20d 辅助策略（行业中性 TopK）护栏
+    return f"""### 20d 辅助策略（TopK，raw 打分）护栏
 
 > **{verdict}**{(' — ' + alloc) if alloc else ''}（复核于 {date}，`{os.path.basename(path)}`）
 >
@@ -620,7 +620,7 @@ def _guardrail_block() -> str:
 > | PBO | <0.5 | **{pbo}** {pbo_ok} |
 > | DSR | ≥0.95 | **{dsr}** {dsr_ok} |
 >
-> 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
+> 规格：TopK=10 按 raw prob 排序（D73）、20 日非重叠调仓、成本 0.5%；
 > 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（系统低配辅助信号）
 > —— 净IR=风险调整后收益（越高越好）；PBO=过拟合概率（越低越好）；DSR=统计显著性（越高越好）。
 > 复核计算由系统自动完成，本报告仅转贴不重算"""

@@ -2,30 +2,21 @@
 # -*- coding: utf-8 -*-
 """选股打分的**唯一实现**（lessons 三.73 / 三.74）。
 
-背景：行业中性打分此前有**两份逐字相同**的实现——
-  - 生产侧：`ml_services/live_topk.py::_sector_neutral`（`comprehensive_analysis.py` 调用）
-  - 回测侧：`ml_services/portfolio_backtest.py::_sector_neutral_score`
-两份并存 = 谁"优化"一份就会静默分叉（正是 D25/D30 修过的那类口径漂移）。
-本模块把它们收敛成一份，两边都从这里导入。
+历史：行业中性打分曾有两份逐字相同的实现（生产侧 / 回测侧），已收敛到本模块。
+2026-10-23（D73）起行业中性**整体删除**，口径固定为 raw prob：它抹掉占分数方差
+约 2/3 的板块间信息，在 30 只池上实测更差。不保留开关、不保留向后兼容分支。
 """
 
-import numpy as np
+# 部署打分口径（2026-10-23 / D73）：**raw prob**，保留板块间信息。
+# 生产选股 / live_topk / 月度护栏一律走 `select_from_df` 与 `selection_score`；
+# 无开关、无兼容分支：口径只有 raw（D73）。
 
 
-def sector_neutral_score(g):
-    """行业内 z-score（对 prob）。样本内 z 均值 = 0；单只行业 z 记 0。
+def selection_score(g):
+    """单日横截面的选股打分（部署口径 = raw prob）。
 
-    ⚠️ 该 z 对**逐日常数缩放不变**：`λ·z` 是单调变换 ⇒ 不改排序、不改 TopK。
-    因此"把分数往行业均值收缩"这类改法是空操作；要动只能动**基准估计**
-    （行业均值/方差的 partial pooling），见三.74。
+    `backtest`、能力度量、生产选股必须共用本函数。改口径只改这里。
+    行业中性（行业内 z-score）已于 2026-10-23 移除（D73）：它抹掉占分数方差
+    约 2/3 的板块间信息，且在 30 只池上实测更差。
     """
-    s = g.groupby('sector')['prob']
-    z = (g['prob'] - s.transform('mean')) / s.transform('std').replace(0, np.nan)
-    return z.fillna(0.0)
-
-
-def selection_score(g, use_sector_neutral):
-    """单日横截面的选股打分。`backtest` 与能力度量必须共用本函数。"""
-    if use_sector_neutral:
-        return sector_neutral_score(g)
     return g['prob']

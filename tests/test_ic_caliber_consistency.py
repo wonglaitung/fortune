@@ -9,17 +9,20 @@
 | WF 报告 `avg_rank_ic` | 原始 prob | 每折内池化再平均 | +0.0442 |
 | 全池逐日 | 原始 prob | 逐日再平均 | +0.0136 |
 | Top10 内 | 原始 prob | 逐日、仅选中 | +0.0430 |
-| **部署口径** | **行业内中性分** | **逐日** | **−0.0026** |
+| **部署口径（2026-10-23 前）** | 行业内中性分 | 逐日 | −0.0026 |
 
-部署规则是「行业内 z 后取 TopK」，所以**只有最后一行是「被评估的量 = 生产用的量」**。
-把第三行（0.0136）当能力，等于量了别的量——这正是 ⓪ 闸要拦的错。
+部署规则 2026-10-23 起改为「raw prob 后取 TopK」（D73），故部署口径 = 第三行的逐日口径。
+教训不变：**被评估的量必须是生产用的量**——这正是 ⓪ 闸要拦的错。
 
 本文件的测试必须能**变红**（变异测试思路，lessons 三.72）：
-若有人把护栏的能力指标换回原始 prob，`test_deployed_caliber_ic_ignores_raw_prob` 会失败。
+若有人重新引入中性/raw 开关或绕开 `selection_score`，`test_no_neutral_switch_remains`
+与 `test_backtest_ranks_by_selection_score` 会失败。
 """
 
 import ast
 from pathlib import Path
+
+ML = Path(__file__).resolve().parents[1] / 'ml_services'
 
 import numpy as np
 import pandas as pd
@@ -55,26 +58,13 @@ def _synthetic_panel(n_days=30, per_sector=20, seed=0, sec_gap=0.05, day_common=
     return pd.DataFrame(rows)
 
 
-def test_deployed_caliber_ic_ignores_raw_prob():
-    """★变异检测★：部署口径（中性）≈0，原始 prob 口径显著>0。
-
-    若把 selection_score 的 neutral 分支换成 g['prob']，本测试转红。
-    """
-    df = _synthetic_panel()
-    neu = pb.selection_ic(df, use_sector_neutral=True)
-    raw = pb.selection_ic(df, use_sector_neutral=False)
-    assert abs(neu['ic']) < 0.05, f"中性口径应 ≈0，实际 {neu['ic']}"
-    assert raw['ic'] > 0.20, f"原始口径应明显>0，实际 {raw['ic']}"
-    assert abs(raw['ic'] - neu['ic']) > 0.15, "两个口径必须可区分"
-
-
 def test_pooled_ic_is_inflated_by_day_level_component():
     """对照③：全表跨日池化含日间共同层 ⇒ 天然高于逐日口径（三.68）。
 
     构造：板块内无信号（sec_gap=0）、只有日间共同因子 ⇒ 逐日 IC≈0，池化 IC>0。
     """
     df = _synthetic_panel(sec_gap=0.0, day_common=1.0, n_days=40)
-    r = pb.selection_ic(df, use_sector_neutral=False)
+    r = pb.selection_ic(df)
     assert abs(r['ic']) < 0.05, f"逐日口径（去掉日间层）应 ≈0，实际 {r['ic']}"
     assert r['ic_pooled'] > 0.1, f"池化口径应明显偏高，实际 {r['ic_pooled']}"
 
@@ -84,35 +74,19 @@ def test_backtest_ranks_by_selection_score(monkeypatch):
     calls = []
     orig = pb.selection_score
 
-    def spy(g, use_sector_neutral):
-        calls.append(use_sector_neutral)
-        return orig(g, use_sector_neutral)
+    def spy(g):
+        calls.append(1)
+        return orig(g)
 
     monkeypatch.setattr(pb, 'selection_score', spy)
     df = _synthetic_panel()
-    pb.backtest(df, horizon=5, topk=5, use_sector_neutral=True)
+    pb.backtest(df, horizon=5, topk=5)
     assert calls, "backtest 未经过 selection_score ⇒ 打分口径已绕开契约"
-    assert all(c is True for c in calls)
 
 
-def test_guardrail_uses_single_neutral_flag_for_judgement_and_capability():
-    """护栏的「判定」与「能力指标」必须读同一个常量，禁止调用点各写一遍。"""
-    src = GUARDRAIL_SRC.read_text(encoding='utf-8')
-    tree = ast.parse(src)
-    found = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-            if node.func.id == 'backtest' and len(node.args) >= 4:
-                found['backtest'] = ast.dump(node.args[3])
-            if node.func.id == 'selection_ic':
-                for kw in node.keywords:
-                    if kw.arg == 'use_sector_neutral':
-                        found['selection_ic'] = ast.dump(kw.value)
-    assert set(found) == {'backtest', 'selection_ic'}, f"未找到两处调用：{found.keys()}"
-    assert found['backtest'] == found['selection_ic'], \
-        f"护栏判定与能力指标口径不一致：{found}"
-    assert 'SECTOR_NEUTRAL' in src, "口径须来自单一常量 SECTOR_NEUTRAL"
-
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+def test_no_neutral_switch_remains():
+    """D73 之后不得再有任何中性/raw 开关（用户要求：不做向后兼容）。"""
+    for name in ('monthly_guardrail.py', 'portfolio_backtest.py', 'selection.py', 'live_topk.py'):
+        src = (ML / name).read_text(encoding='utf-8')
+        assert 'use_sector_neutral' not in src, f"{name} 仍保留中性开关"
+        assert 'SECTOR_NEUTRAL' not in src, f"{name} 仍保留 SECTOR_NEUTRAL"

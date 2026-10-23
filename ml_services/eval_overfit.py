@@ -75,15 +75,13 @@ def deflated_sharpe(sr, T, n_trials, var_sr, skewness, kurt):
 
 
 def build_matrix(horizon, pred_csv=None, market='hk'):
-    """构建配置族 (topk × 中性) 的逐期收益矩阵"""
+    """构建配置族（topk）的逐期收益矩阵（D73：口径只有 raw，无中性变体）"""
     df = load_panel(pred_csv or DEFAULT_PRED[horizon], market=market)
     cols = {}
     dates = None
     for topk in (5, 10, 20):
-        for neutral in (False, True):
-            bt = backtest(df, horizon, topk, neutral)
-            name = f"top{topk}-{'neutral' if neutral else 'raw'}"
-            cols[name] = bt.set_index('date')['top_net']
+        bt = backtest(df, horizon, topk)
+        cols[f"top{topk}"] = bt.set_index('date')['top_net']
     M = pd.DataFrame(cols).dropna()
     return M
 
@@ -105,7 +103,7 @@ def run(horizon, out_md, pred_csv=None, market='hk'):
     L = []
     L.append(f"# 过拟合护栏（{horizon}d）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
-    L.append(f"- 配置矩阵: T={T} 期 × N={N} 配置（topk∈{{5,10,20}} × raw/行业中性）\n")
+    L.append(f"- 配置矩阵: T={T} 期 × N={N} 配置（topk∈{{5,10,20}}，raw 打分，D73）\n")
     L.append("## 各配置（净，未年化 Sharpe）\n")
     L.append("| 配置 | 均收益/期 | Sharpe/期 | 年化IR |")
     L.append("|------|----------|-----------|--------|")

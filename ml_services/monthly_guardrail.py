@@ -4,7 +4,7 @@
 月度护栏：对最新 Walk-forward 预测一键复核（DECISIONS D2）
 
 对给定/最新 prediction_analysis.csv 输出：
-  - 20d 行业中性 TopK 组合：净IR / 95%CI / P(IR>0.5) / 累计 / 换手
+  - 20d TopK 组合（raw 打分，D73）：净IR / 95%CI / P(IR>0.5) / 累计 / 换手
   - PBO（CSCV）与 DSR（Deflated Sharpe）
   - 信号超额 lift（胜率 − 无条件买入基准）
 判定（docs/DECISIONS.md D2）：
@@ -31,11 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats, COST, selection_ic
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
-
-# 护栏判定与能力度量**必须同一口径**（⓪ 同一性闸第⑤问 / lessons 三.73）。
-# 唯一定义点：backtest 与 selection_ic 都读这一个常量，禁止在调用点各写一遍。
-SECTOR_NEUTRAL = True
-
 
 def min_detectable_ir(n, horizon):
     """本窗口（n 个非重叠期）最小可探测「超额 IR」(α=0.05, 功率80% ⇒ z≈2.8)。
@@ -202,9 +197,9 @@ def config_spread(M):
 
 def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropout=0):
     df = load_panel(pred_csv, market=market)
-    bt = backtest(df, horizon, topk, SECTOR_NEUTRAL, cost=cost, dropout=dropout)  # 行业中性
-    # ⓪ 同一性闸第⑤问：能力指标必须用**部署打分口径**（同一 SECTOR_NEUTRAL）
-    cap = selection_ic(df, use_sector_neutral=SECTOR_NEUTRAL)
+    bt = backtest(df, horizon, topk, cost=cost, dropout=dropout)
+    # ⓪ 同一性闸第⑤问：能力指标必须用**部署打分口径**（raw prob，D73）
+    cap = selection_ic(df)
     st = _stats(bt['top_net'].values, horizon)
     # ⛔ 「净IR」是组合**绝对**收益（含 beta），不是超额。三.68：必须同时报超额口径。
     st_bench = _stats(bt['bench'].values, horizon)
@@ -304,7 +299,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropo
     L.append(f"# 月度护栏复核（{horizon}d）\n")
     L.append(f"- 日期: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 数据: `{pred_csv}`")
-    L.append(f"- TopK={topk} 行业中性，成本 {cost:.3f}\n")
+    L.append(f"- TopK={topk}（raw 打分），成本 {cost:.3f}\n")
     L.append("| 指标 | 值 | 门槛 |")
     L.append("|------|----|------|")
     L.append(f"| 净IR（**绝对口径，含 beta**） | {st['ir']:.2f} [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | — 见超额行 |")
@@ -358,7 +353,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropo
     L.append("")
     from ml_services.overlap_stats import hac_t as _hac_t
     _m, _n, _se, _t = _hac_t(cap['ic_series'], lags=horizon - 1)
-    L.append(f"- 部署打分 = **行业内 z-score**（`selection_score(..., {SECTOR_NEUTRAL})`）；"
+    L.append("- 部署打分 = **raw prob**（`selection_score`，D73）；"
              f"下列 IC 全部用**同一**打分逐日计算")
     L.append(f"- **部署口径 IC（逐日 Spearman，n={cap['n_days']} 日）**："
              f"均值 **{cap['ic']:+.4f}** / 中位 {cap['ic_med']:+.4f}　"
@@ -428,7 +423,7 @@ def main():
         print(f"{'dropout':>7} | {'换手':>6} | {'净IR':>7} | {'毛IR':>7} | {'超额IR':>7} | {'成本拖累/期':>10}")
         print("-" * 60)
         for d in (0, 2, 4, 6, 8):
-            bt = backtest(df, args.horizon, args.topk, SECTOR_NEUTRAL,
+            bt = backtest(df, args.horizon, args.topk,
                           cost=args.cost, dropout=d)
             tn = float(bt['turnover'].mean())
             st_net = _stats(bt['top_net'].values, args.horizon)
@@ -449,7 +444,7 @@ def main():
         signs = []
         for tk in sorted({max(3, args.topk - 5), args.topk, args.topk + 5}):
             for dp in (0, 2):
-                bt = backtest(df, args.horizon, tk, SECTOR_NEUTRAL, cost=args.cost, dropout=dp)
+                bt = backtest(df, args.horizon, tk, cost=args.cost, dropout=dp)
                 st_net = _stats(bt['top_net'].values, args.horizon)
                 st_exc = _stats(bt['top_net'].values - bt['bench'].values, args.horizon)
                 signs.append(np.sign(st_exc['ir']))

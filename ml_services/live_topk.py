@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-实盘 20d 行业中性 TopK 选股器
+实盘 20d TopK 选股器（raw 打分，D73）
 
 把日频模型预测（概率）转成**可执行的调仓指令**：
   1. 读最新预测（code/probability）
-  2. 行业内 z-score（行业中性）
+  2. 按 raw prob 排序（保留板块间信息，D73）
   3. 排序取 TopK（k = min(topk, n//4)，与回测一致）
   4. 与当前持仓对比 → 生成买入/卖出清单 + 换手 + 成本估算
   5. --commit 时更新持仓状态、记录交易并提示下次调仓日
@@ -30,12 +30,6 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 选股打分唯一实现（lessons 三.73/三.74）：生产侧与回测侧共用，禁止各写一份。
-# `_sector_neutral` 是兼容旧名的**同一函数对象**（身份可断言）
-from ml_services.selection import sector_neutral_score  # noqa: E402
-
-_sector_neutral = sector_neutral_score
-
 COST = 0.005  # 双边成本（与 walk_forward / portfolio_backtest 一致）
 STATE_FILE = 'data/live_portfolio/topk_state.json'
 
@@ -54,8 +48,11 @@ def _save_state(st):
         json.dump(st, f, ensure_ascii=False, indent=2)
 
 
-def select_from_df(df, topk, sector_neutral=True):
-    """从预测 DataFrame 返回目标持仓（含 score）——供 select() 与邮件/综合分析复用"""
+def select_from_df(df, topk):
+    """从预测 DataFrame 返回目标持仓（含 score）——供 select() 与邮件/综合分析复用
+
+    打分 = raw prob（D73：保留板块间信息；行业中性仅历史对照用）。
+    """
     df = df.copy()
     df = df.rename(columns={'Stock_Code': 'code'})
     if 'prob' not in df.columns:
@@ -74,21 +71,21 @@ def select_from_df(df, topk, sector_neutral=True):
     except Exception:
         df['sector'] = 'unknown'
 
-    df['score'] = _sector_neutral(df) if sector_neutral else df['prob']
+    df['score'] = df['prob']
     df = df.sort_values('score', ascending=False).reset_index(drop=True)
     k = min(topk, len(df) // 4)
     target = df.head(k).copy()
     return target, df, k
 
 
-def select(pred_csv, topk, sector_neutral=True):
+def select(pred_csv, topk):
     """读预测 CSV 并返回目标持仓（含 score）"""
     df = pd.read_csv(pred_csv)
-    return select_from_df(df, topk, sector_neutral)
+    return select_from_df(df, topk)
 
 
-def run(pred_csv, topk, horizon, sector_neutral=True, commit=False):
-    target, ranked, k = select(pred_csv, topk, sector_neutral)
+def run(pred_csv, topk, horizon, commit=False):
+    target, ranked, k = select(pred_csv, topk)
     st = _load_state()
     cur = set(st.get('holdings', []))
     tgt = list(target['code'])
@@ -108,10 +105,10 @@ def run(pred_csv, topk, horizon, sector_neutral=True, commit=False):
         pass
 
     print("=" * 72)
-    print(f"实盘 20d 行业中性 TopK   target_date={data_date}   K={k}（预算 topk={topk}）")
+    print(f"实盘 20d TopK（raw）   target_date={data_date}   K={k}（预算 topk={topk}）")
     print("=" * 72)
     print(f"预测池: {len(ranked)} 只　当前持仓: {len(cur)} 只　上次调仓: {st.get('last_rebalance_date')}")
-    print(f"\n目标持仓（行业中性 TopK）：")
+    print(f"\n目标持仓（TopK，raw 打分）：")
     for _, r in target.iterrows():
         print(f"  {r['code']:<10} {str(r.get('name','')):<8} score={r['score']:+.3f} prob={r['prob']:.3f} [{r.get('sector')}]")
     print(f"\n买入 {len(buys)}: {buys}")
@@ -138,13 +135,12 @@ def run(pred_csv, topk, horizon, sector_neutral=True, commit=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='实盘 20d 行业中性 TopK 选股器')
+    ap = argparse.ArgumentParser(description='实盘 20d TopK 选股器（raw 打分）')
     ap.add_argument('--pred', type=str,
                     default='data/ml_trading_model_catboost_predictions_20d.csv',
                     help='预测 CSV（code, probability, ...）')
     ap.add_argument('--topk', type=int, default=10)
     ap.add_argument('--horizon', type=int, default=20)
-    ap.add_argument('--raw', action='store_true', help='不做行业中性（对照）')
     ap.add_argument('--commit', action='store_true', help='确认调仓并更新持仓状态')
     ap.add_argument('--show', action='store_true', help='仅显示当前持仓')
     args = ap.parse_args()
@@ -154,8 +150,7 @@ def main():
         print(json.dumps(st, ensure_ascii=False, indent=2))
         return
 
-    run(args.pred, args.topk, args.horizon,
-        sector_neutral=not args.raw, commit=args.commit)
+    run(args.pred, args.topk, args.horizon, commit=args.commit)
 
 
 if __name__ == '__main__':
