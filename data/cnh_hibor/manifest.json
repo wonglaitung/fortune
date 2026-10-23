@@ -1,16 +1,16 @@
 {
-  "hibor_rows": 7464,
+  "hibor_rows": 7465,
   "hibor_span": [
     "1996-07-01",
-    "2026-10-22"
+    "2026-10-23"
   ],
-  "fx_rows": 6342,
+  "fx_rows": 6343,
   "fx_span": [
     "2001-06-25",
-    "2026-10-22"
+    "2026-10-23"
   ],
   "fx_source": "yfinance USDCNY=X (inshore fallback)",
   "source_hibor": "eastmoney datacenter via akshare rate_interbank (market=香港银行同业拆借市场, symbol=Hibor港币)",
   "pit_note": "T-day fixing; feature integration must use T-1; NOT wired into production model",
-  "updated": "2026-10-23 00:08"
+  "updated": "2026-10-24 00:03"
 }
