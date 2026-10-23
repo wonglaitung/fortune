@@ -4846,3 +4846,18 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 修复：workflow 前置 pin_hk_snapshot.py；风险面板与冻结步骤 continue-on-error；提交步骤 if: always() 并加未更新 ::warning::
 - 脚本：快照缺失时输出可执行指令（SystemExit），不再抛原始栈
 - 验证：空快照 exit=1 且信息明确；pin(56 只有数据)→monitor OK 全链路 6s
+
+## 2026-10-23 扩池 300 只 A/B（D72）：IC 真提升，净超额仍 null
+
+- 数据层：`scripts/build_hk_broad_universe.py`（HKEX 主板 2480 → yfinance 2443 有数据，月度 PIT top300）、
+  `build_hk_broad_meta.py`（300 只行业元数据，0 缺失）、`build_hk_broad_snapshot.py`（317 pkl）、
+  `config.py` 尾部 `HK_UNIVERSE_FILE`（不设时 56 只行为不变）。产物全部 gitignored（`data/hk_broad/`）。
+- 预热：300 只 536,367 行 × 2,119 列，1045s。
+- 两个 WF：56 池 `output/20261022_225405`（A 闸 PASS）、300 池 `output/20261023_003751`（A 闸 PASS，243,892 行）。
+- **M1 ✅**：逐日行业中性 IC 0.0239→**0.0677**（HAC t 2.15→**4.34**，正日 60%→72%），逐年 0.103/0.116/0.134/0.095。
+- **组合层 ❌**：最优 cap 组 +1.41 CI[+0.60,+1.81]，但**同约束随机零模型自己 +1.11±0.48（p=0.245）**
+  ⇒ cap 的「超额」是板块等权 vs 只数等权的口径差。
+- **独立窗 ❌**（2021-06→2023-05，24 折，TopK=20/cap=∞/dropout=2）：净 IR −0.42、超额 +0.21 [−0.79,+1.50]、p=0.393。
+- 事故：全窗口版 1.07M 行 × 2119 列 OOM（峰值 57GB），收窄为未见段跑完；已记入预注册文件。
+- 文档：`docs/DECISIONS.md` D72、`docs/BASELINES.md` 新增扩池节、`lessons.md` 三.88（预注册必须含安慰剂）。
+- 未提交：本轮所有脚本与 config 改动仍在工作区。

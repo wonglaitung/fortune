@@ -210,3 +210,19 @@ TRAINING_STOCKS = {
 # ⚠️ 只用于「预测/评估/展示」周期。板块/网络等**特征工程**周期（如 sector_avg_change_1d/5d/20d）
 #    是特征列名，改动等于改特征集，须重训 —— 不引用本常量。
 PREDICTION_HORIZONS = (5, 10, 20)
+
+
+# ========== 扩池实验（B′）：训练池覆盖（默认关闭） ==========
+# 设 HK_UNIVERSE_FILE=<json> 时，用该文件的 {code.HK: {sector,type,name,...}} 整体替换
+# 训练池与板块映射；不设则完全保持原 56 只行为（生产/基线不受影响）。
+# 用途：56 → 300 宽基池 A/B。sector 进中性化，type/profile 进 Stock_Type 特征。
+import json as _json
+import os as _os
+
+HK_UNIVERSE_FILE = _os.environ.get('HK_UNIVERSE_FILE', '').strip()
+if HK_UNIVERSE_FILE:
+    with open(HK_UNIVERSE_FILE, encoding='utf-8') as _f:
+        _uni = _json.load(_f)
+    STOCK_SECTOR_MAPPING = dict(_uni)
+    TRAINING_STOCKS = {_k: _v.get('name', _k) for _k, _v in _uni.items()}
+    print(f'[config] 训练池覆盖: {len(TRAINING_STOCKS)} 只（{HK_UNIVERSE_FILE}）')

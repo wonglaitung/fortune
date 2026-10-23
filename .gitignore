@@ -163,3 +163,5 @@ data/hsi_prediction_features_*.csv
 # D59 rank 模型实验产物（独立目录，不替换生产 pkl）
 data/rank_models/
 data/a_stock_rank_models/
+
+data/hk_broad/
