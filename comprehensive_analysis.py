@@ -987,10 +987,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
                 catboost_text_email += "**分数口径**: 0-100 排序分数（越高=池内越偏强）；0.50=中位、0.55=买入档、0.60=强档；不是概率/胜率/置信度，无市场概率门槛\n"
-                # 档位反事实记账（2026-10-11）：只记录不执行，供日后核对这套老规矩是否值得用
-                _cf_m = {'extreme_bear': 0.0, 'bear': 0.70, 'weak': 0.65, 'normal': 1.0}.get(market_layer, 1.0)
-                catboost_text_email += (f"**仓位备忘**: 按「行情差就少买」的老规矩，今天应拿 {_cf_m:.0%} 仓位"
-                                        f"（仅供记录，不影响实际操作）\n")
+                # 档位反事实记账（2026-10-11）：只记录不执行，供日后核对这套老规矩是否值得用。
+                # D73 后生产为 rank 排序分数（无方向概率语义），方向概率 0.70/0.65 门槛已不适用；
+                # 「行情差就少买」翻译为 rank-native：只采纳池内偏强档（rank ≥0.70 分位，与 L918 同源），
+                # 具体仓位由人工按 DEPLOYMENT T2 低配纪律定——不输出错配的方向概率式数字。
+                _layer_memo = {
+                    'extreme_bear': '极端熊市：仅提示暂停/降仓，不建议新开仓',
+                    'bear': '熊市：只采纳池内偏强档（rank ≥0.70 分位）信号，严格止损',
+                    'weak': '弱震荡：优先池内偏强档信号，谨慎',
+                    'normal': '正常市场：按排序分数择优',
+                }.get(market_layer, '正常市场：按排序分数择优')
+                catboost_text_email += (f"**仓位备忘**: {_layer_memo}"
+                                        f"（仅供记录；实际仓位按 DEPLOYMENT T2 低配纪律由人工定）\n")
                 catboost_text_email += "\n全部股票预测结果（按20天排序分数排序）:\n\n"
                 if d2_topk_target:
                     catboost_text_email += (f"> 🎯 = 20d TopK（系统低配辅助信号，K={d2_topk_k}，"

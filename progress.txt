@@ -4864,6 +4864,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 
 ## 2026-10-23 生产打分口径切换为 raw（D73，口径变更非提升）
 
+- **#3 门槛尺度修复（同夜）**：港股 rank 排序分数无方向概率语义，删除 `comprehensive_analysis.py:991`
+  的方向概率 0.70/0.65 仓位备忘（错配），改 rank-native 文案；`market_regime` 方向概率门槛标注不适用于 rank 路径。
+
+
 - **行业中性整体删除**（无开关、无兼容分支）：`sector_neutral_score` 删除，
   `selection_score(g)` 只返回 raw prob；`backtest` / `selection_ic` / `eval_overfit` /
   `monthly_guardrail` / `live_topk` / 生产调用点全部去掉口径参数。

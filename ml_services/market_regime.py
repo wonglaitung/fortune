@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 #   normal 保持绝对 0.50（硬约束语义：胜率>50%，与分位无关）
 # ---------------------------------------------------------------------------
 GATE_QUANTILES = {'bear': 0.92, 'weak': 0.90}
+# ⚠️ 本方向概率门槛仅适用于**方向概率 regime**（A 股 / 港股方向概率旧口径）。
+# 港股 D73 后生产为 `--label-mode rank` 排序分数，**无方向概率语义**，live 路径按 `up_ratio`
+# 分层（comprehensive_analysis.py:723 `get_threshold`），**不引用本门槛**；港股 rank 路径若误接本
+# 0.70/0.65 会因尺度错配而失效（见 prereg_thresh3）。
 GATE_FALLBACK = {'bear': 0.70, 'weak': 0.65}   # 快照/CSV 全无时的最终回退（原绝对值）
 GATE_MIN_SAMPLES = 200
 # 退化保护阈值：校准后概率唯一值过少 / bear·weak 分位几乎重合 → 分位无经济含义，

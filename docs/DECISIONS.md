@@ -5152,3 +5152,13 @@ raw 在两种模型上**点估计都更好**，但四条 95%CI **全跨 0** ⇒ 
 - **结论**：与 310 池、56 基线同判 —— **无 alpha**；净IR 0.82 低于等权基准 0.85。
 - DEPLOYMENT T2 已据此更新为 raw 数字；中性口径历史值（净IR 1.42 等）全部作废。
 - PBO 零假设带随配置族 6→3 重算为 **[0.70,0.97]**（seed=0 单次 50 重排，D26 口径：只看带内/带外）。
+
+### 七、门槛尺度错配修复（#3，2026-10-23，prereg_thresh3）
+
+- 症状：`market_regime.GATE_FALLBACK/SNAPSHOT` 的 0.70/0.65 是**方向概率**门槛；但港股生产（D59 起 `--label-mode rank`）输出的是**排序分数**，无方向概率语义 ⇒ 尺度错配。
+- 核查：港股 live 路径按 `up_ratio` 分层（`comprehensive_analysis.py:723`），**不引用方向概率门槛**；
+  方向概率门槛只在已死的 `compute_gate_thresholds/predict_and_filter` 路径，对 rank 主线恒为回退值。
+- 唯一漏到输出的错配是 `comprehensive_analysis.py:991` 的 `_cf_m` 仓位备忘（方向概率 0.70/0.65）→ 已删除，
+  改为 rank-native 文案（行情差时只采纳偏强档 rank ≥0.70 分位，与 L918 同源），具体仓位由人工按 DEPLOYMENT T2 定。
+- `market_regime.GATE_FALLBACK` 上方补注释：本方向概率门槛不适用于港股 rank regime（防后人误接）。
+- 未新增 rank 概率 gating（属行为变更，须 C 闸三冻结+双跑，不在本次）；未改 A 股方向概率门槛（另一口径）。
