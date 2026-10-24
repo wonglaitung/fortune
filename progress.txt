@@ -4869,6 +4869,7 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   `monthly_guardrail` / `live_topk` / 生产调用点全部去掉口径参数。
 - 契约测试 `tests/test_selection_mode_single_source.py`（4 条，含仓库级源码扫描：
   出现 `use_sector_neutral` / `SECTOR_NEUTRAL` 即失败）；全量 pytest **348 passed**。
+  - 生产 49 池 raw 重跑（output/20261023_232802）：净IR 0.82 / 超额 −0.09 / PBO 0.77（带内）/ DSR 0.925 / 部署IC 0.0183(t 0.79 不显著) → 无 alpha；DEPLOYMENT T2 已换真数。
 - 证据：30 只 Top10，56 模型 −0.44→−0.28pp，310 模型 −0.04→+0.05pp；CI 全跨 0 ⇒ 不称提升。
-- 连带：D64 能力 IC 口径改为「逐日 + raw」；PBO 配置族 6→3 列，零假设带须同报；
+- 连带：D64 能力 IC 口径改为「逐日 + raw」；PBO 配置族 6→3 列，零假设带 [0.70,0.97]；
   历史护栏数字均为中性口径，不可直接比。
