@@ -164,4 +164,6 @@ data/hsi_prediction_features_*.csv
 data/rank_models/
 data/a_stock_rank_models/
 
-data/hk_broad/
+# 训练池定义是生产依赖（同 lessons 三.51：被 gitignore 的生产依赖 = 生产端不存在）
+data/hk_broad/*
+!data/hk_broad/universe_310.json

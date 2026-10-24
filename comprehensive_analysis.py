@@ -121,6 +121,8 @@ SECTOR_TYPES = {
     'gas': {'name': '燃气', 'type': '防御'},
     'exchange': {'name': '交易所', 'type': '防御'},
     'index': {'name': '指数', 'type': '防御'},
+    'financial': {'name': '金融', 'type': '周期'},
+    'industrial': {'name': '工业', 'type': '周期'},
 }
 
 # 三周期预测模式配置（基于个股完整模型验证结果）

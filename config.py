@@ -128,6 +128,8 @@ SECTOR_NAME_MAPPING = {
     'auto': '汽车股',
     'gas': '燃气股',
     'materials': '材料股',
+    'financial': '金融股',
+    'industrial': '工业股',
 }
 
 # 自选股列表（核心30只，用于预测和日常监控；2026-10-06 剔除 ETF 2800.HK、2026-10-23 剔除 2 只低流动性）
@@ -202,17 +204,21 @@ TRAINING_STOCKS = {
 PREDICTION_HORIZONS = (5, 10, 20)
 
 
-# ========== 扩池实验（B′）：训练池覆盖（默认关闭） ==========
-# 设 HK_UNIVERSE_FILE=<json> 时，用该文件的 {code.HK: {sector,type,name,...}} 整体替换
-# 训练池与板块映射；不设则完全保持原 49 只行为（生产/基线不受影响）。
-# 用途：56 → 300 宽基池 A/B。sector 进中性化，type/profile 进 Stock_Type 特征。
+# ========== 训练池（2026-10-24 生产同步：310 只；预测仍只跑 WATCHLIST 30 只） ==========
+# 训练池由 `data/hk_broad/universe_310.json`（300 冻结池 ∪ 49 原池）整体定义，
+# 同时替换 `STOCK_SECTOR_MAPPING`（sector 进中性化诊断，type/profile 进 Stock_Type 特征）。
+# 预测侧只遍历 `WATCHLIST`（30 只），不受本池影响；市场广度按训练池计算。
+# `HK_UNIVERSE_FILE` 仅作为**实验**覆盖入口（如宽基 A/B），生产不需要设置。
 import json as _json
 import os as _os
 
-HK_UNIVERSE_FILE = _os.environ.get('HK_UNIVERSE_FILE', '').strip()
-if HK_UNIVERSE_FILE:
-    with open(HK_UNIVERSE_FILE, encoding='utf-8') as _f:
-        _uni = _json.load(_f)
-    STOCK_SECTOR_MAPPING = dict(_uni)
-    TRAINING_STOCKS = {_k: _v.get('name', _k) for _k, _v in _uni.items()}
-    print(f'[config] 训练池覆盖: {len(TRAINING_STOCKS)} 只（{HK_UNIVERSE_FILE}）')
+_DEFAULT_UNIVERSE = _os.path.join(
+    _os.path.dirname(_os.path.abspath(__file__)), 'data', 'hk_broad', 'universe_310.json')
+HK_UNIVERSE_FILE = (_os.environ.get('HK_UNIVERSE_FILE', '').strip() or _DEFAULT_UNIVERSE)
+if not _os.path.exists(HK_UNIVERSE_FILE):
+    raise SystemExit(f'[config] 训练池文件不存在: {HK_UNIVERSE_FILE}（生产依赖，须入库）')
+with open(HK_UNIVERSE_FILE, encoding='utf-8') as _f:
+    _uni = _json.load(_f)
+STOCK_SECTOR_MAPPING = dict(_uni)
+TRAINING_STOCKS = {_k: _v.get('name', _k) for _k, _v in _uni.items()}
+print(f'[config] 训练池: {len(TRAINING_STOCKS)} 只（{HK_UNIVERSE_FILE}）；预测池 WATCHLIST={len(WATCHLIST)} 只')

@@ -1,0 +1,3102 @@
+{
+ "0700.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Tencent Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "9988.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Alibaba Group Holding Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "3690.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Meituan",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0981.HK": {
+  "sector": "semiconductor",
+  "type": "semiconductor",
+  "name": "Semiconductor Manufacturing International Corporation",
+  "defensive": 25.0,
+  "growth": 80.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "1810.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Xiaomi Corporation",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0388.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "Hong Kong Exchanges and Clearing Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1299.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "AIA Group Limited",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "2318.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "Ping An Insurance (Group) Company of China, Ltd.",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "0005.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "HSBC Holdings plc",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "0939.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "China Construction Bank Corporation",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "2382.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Sunny Optical Technology (Group) Company Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "2013.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Weimob Inc.",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0175.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Geely Automobile Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0941.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Mobile Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1398.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Industrial and Commercial Bank of China Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "0241.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Alibaba Health Information Technology Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2628.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "China Life Insurance Company Limited",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "2018.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "AAC Technologies Holdings Inc.",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0027.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Galaxy Entertainment Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1928.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Sands China Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0788.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Tower Corporation Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1918.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Sunac China Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2269.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "WuXi Biologics (Cayman) Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1177.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Sino Biopharmaceutical Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2020.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "ANTA Sports Products Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0493.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "GOME Retail Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1093.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "CSPC Pharmaceutical Group Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0016.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Sun Hung Kai Properties Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0763.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "ZTE Corporation",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0001.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "CK Hutchison Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "3968.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "China Merchants Bank Co., Ltd.",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "3988.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Bank of China Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "3888.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Kingsoft Corporation Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1211.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "BYD Company Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0853.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "MicroPort Scientific Corporation",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0883.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "CNOOC Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "0772.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Literature Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1066.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Shandong Weigao Group Medical Polymer Company Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2319.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Mengniu Dairy Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2331.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Li Ning Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1347.HK": {
+  "sector": "semiconductor",
+  "type": "semiconductor",
+  "name": "Hua Hong Grace Semiconductor Limited",
+  "defensive": 25.0,
+  "growth": 80.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "2313.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Shenzhou International Group Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "6185.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "CanSino Biologics Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "6186.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Feihe Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0669.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Techtronic Industries Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0291.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Resources Beer (Holdings) Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2202.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Vanke Co., Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1997.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Wharf Real Estate Investment Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "6051.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Youzan Technology Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1113.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "CK Asset Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1109.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Resources Land Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0268.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Kingdee International Software Group Company Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0914.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Anhui Conch Cement Company Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "2388.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "BOC Hong Kong (Holdings) Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1787.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Shandong Gold Mining Co., Ltd.",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "2601.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "China Pacific Insurance (Group) Co., Ltd.",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "1099.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Sinopharm Group Co. Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0688.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Overseas Land & Investment Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "6030.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "CITIC Securities Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1833.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Ping An Healthcare and Technology Company Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0386.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "China Petroleum & Chemical Corporation",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "6060.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "ZhongAn Online P & C Insurance Co., Ltd.",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "0003.HK": {
+  "sector": "gas",
+  "type": "gas",
+  "name": "The Hong Kong and China Gas Company Limited",
+  "defensive": 70.0,
+  "growth": 45.0,
+  "cyclical": 30.0,
+  "liquidity": 55.0,
+  "risk": 40.0
+ },
+ "0288.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "WH Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "6862.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Haidilao International Holding Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0002.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "CLP Holdings Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "1801.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Innovent Biologics, Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1288.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Agricultural Bank of China Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1548.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Genscript Biotech Corporation",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0066.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "MTR Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1876.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Budweiser Brewing Company APAC Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0813.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Shimao Group Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "6110.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Topsports International Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2400.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "XD Inc.",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1530.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "3SBio Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2007.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Country Garden Holdings Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1336.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "New China Life Insurance Company Ltd.",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "3323.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "China National Building Material Company Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0285.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "BYD Electronic (International) Company Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "2328.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "PICC Property and Casualty Company Limited",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "1128.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Wynn Macau, Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2238.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Guangzhou Automobile Group Co., Ltd.",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "6049.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Poly Property Services Co., Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0966.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "China Taiping Insurance Holdings Company Limited",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "1088.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "China Shenhua Energy Company Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "1910.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Samsonite Group S.A.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0960.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Longfor Group Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0762.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Unicom (Hong Kong) Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "3692.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Hansoh Pharmaceutical Group Company Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0857.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "PetroChina Company Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "1873.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Viva Biotech Holdings",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1995.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Ever Sunshine Services Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1797.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "East Buy Holding Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2688.HK": {
+  "sector": "gas",
+  "type": "gas",
+  "name": "ENN Energy Holdings Limited",
+  "defensive": 70.0,
+  "growth": 45.0,
+  "cyclical": 30.0,
+  "liquidity": 55.0,
+  "risk": 40.0
+ },
+ "0168.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Tsingtao Brewery Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2888.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Standard Chartered PLC",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1951.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Jinxin Fertility Group Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0384.HK": {
+  "sector": "gas",
+  "type": "gas",
+  "name": "China Gas Holdings Limited",
+  "defensive": 70.0,
+  "growth": 45.0,
+  "cyclical": 30.0,
+  "liquidity": 55.0,
+  "risk": 40.0
+ },
+ "0017.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "New World Development Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3908.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "China International Capital Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0004.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "The Wharf (Holdings) Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0992.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Lenovo Group Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0968.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Xinyi Solar Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "2186.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Luye Pharma Group Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "6098.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Country Garden Services Holdings Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2869.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Greentown Service Group Co. Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0019.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Swire Pacific Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "6808.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Sun Art Retail Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1268.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "China MeiDong Auto Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "1044.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Hengan International Group Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2338.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Weichai Power Co., Ltd.",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0880.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "SJM Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0012.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Henderson Land Development Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0425.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Minth Group Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "2359.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "WuXi AppTec Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1579.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Yihai International Holding Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0881.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Zhongsheng Group Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "9926.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Akeso, Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "6169.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China YuHua Education Corporation Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "6066.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "CSC Financial Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0728.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Telecom Corporation Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1789.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "AK Medical Holdings Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "3669.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "China Yongda Automobiles Services Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0302.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "CMGE Technology Group Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1772.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Ganfeng Lithium Group Co., Ltd.",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0753.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Air China Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1038.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "CK Infrastructure Holdings Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "3319.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "A-Living Smart City Services Co., Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "9923.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Yeahka Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0006.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "Power Assets Holdings Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "0819.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Tianneng Power International Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "1055.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Southern Airlines Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2883.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "China Oilfield Services Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "2333.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Great Wall Motor Company Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "3309.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "C-MER Medical Holdings Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2899.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Zijin Mining Group Company Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "9966.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Alphamab Oncology",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0101.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Hang Lung Properties Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0345.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Vitasoy International Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "3933.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "The United Laboratories International Holdings Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1658.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Postal Savings Bank of China Co., Ltd.",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "0586.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Conch Venture Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0884.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "CIFI Holdings (Group) Co. Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1813.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "KWG Group Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1458.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Zhou Hei Ya International Holdings Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2777.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Guangzhou R&F Properties Co., Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0522.HK": {
+  "sector": "semiconductor",
+  "type": "semiconductor",
+  "name": "ASMPT Limited",
+  "defensive": 25.0,
+  "growth": 80.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0817.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Jinmao Holdings Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2342.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Comba Telecom Systems Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "9996.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Peijia Medical Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2669.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Overseas Property Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0708.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "China Evergrande New Energy Vehicle Group Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "3883.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China Aoyuan Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3759.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Pharmaron Beijing Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1313.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "China Resources Building Materials Technology Holdings Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0780.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Tongcheng Travel Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "9922.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Jiumaojiu International Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2588.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "BOC Aviation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "6088.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "FIT Hon Teng Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1717.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Ausnutria Dairy Corporation Ltd",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1316.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Nexteer Automotive Group Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0354.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Chinasoft International Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1193.HK": {
+  "sector": "gas",
+  "type": "gas",
+  "name": "China Resources Gas Group Limited",
+  "defensive": 70.0,
+  "growth": 45.0,
+  "cyclical": 30.0,
+  "liquidity": 55.0,
+  "risk": 40.0
+ },
+ "2196.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Shanghai Fosun Pharmaceutical (Group) Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0293.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Cathay Pacific Airways Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0694.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Beijing Capital International Airport Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0200.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Melco International Development Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0151.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Want Want China Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "3662.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Starjoy Wellness and Travel Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3328.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "Bank of Communications Co., Ltd.",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "3383.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Agile Group Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2689.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Nine Dragons Paper (Holdings) Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0656.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Fosun International Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1800.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Communications Construction Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2282.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "MGM China Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "6055.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Tobacco International (HK) Company Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0696.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "TravelSky Technology Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0267.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "CITIC Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2500.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Venus Medtech (Hangzhou) Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2357.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "AviChina Industry & Technology Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2168.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Kaisa Prosperity Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3993.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "CMOC Group Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "1818.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Zhaojin Mining Industry Company Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0270.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "Guangdong Investment Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "6886.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "Huatai Securities Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0868.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Xinyi Glass Holdings Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "1877.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Shanghai Junshi Biosciences Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "6823.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "HKT Trust and HKT Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1988.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "China Minsheng Banking Corp., Ltd.",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1030.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Seazen Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0670.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Eastern Airlines Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1972.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Swire Properties Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0322.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Tingyi (Cayman Islands) Holding Corp.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1765.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "XJ International Holdings Co., Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0916.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "China Longyuan Power Group Corporation Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "0998.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "China CITIC Bank Corporation Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1060.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Damai Entertainment Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1766.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "CRRC Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1186.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Railway Construction Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2858.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "Yixin Group Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "6855.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Ascentage Pharma Group International",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1233.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Times China Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1302.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "LifeTech Scientific Corporation",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0242.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Shun Tak Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1610.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "COFCO Joycome Foods Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0551.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Yue Yuen Industrial (Holdings) Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0083.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Sino Land Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1999.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Man Wah Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0135.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "Kunlun Energy Company Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "1753.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Duiba Group Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1478.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Q Technology (Group) Company Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1339.HK": {
+  "sector": "insurance",
+  "type": "insurance",
+  "name": "The People's Insurance Company (Group) of China Limited",
+  "defensive": 82.5,
+  "growth": 40.0,
+  "cyclical": 27.5,
+  "liquidity": 70.0,
+  "risk": 32.5
+ },
+ "0305.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Wuling Motors Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "3918.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "NagaCorp Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0902.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "Huaneng Power International, Inc.",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "3808.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Sinotruk (Hong Kong) Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "3998.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Bosideng International Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "6881.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "China Galaxy Securities Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "3738.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Vobile Group Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "3380.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Logan Group Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0520.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Xiabuxiabu Catering Management (China) Holdings Co., Ltd.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1929.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Chow Tai Fook Jewellery Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0014.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Hysan Development Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0751.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Skyworth Group Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1317.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Maple Leaf Educational Systems Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0144.HK": {
+  "sector": "shipping",
+  "type": "shipping",
+  "name": "China Merchants Port Holdings Company Limited",
+  "defensive": 25.0,
+  "growth": 45.0,
+  "cyclical": 95.0,
+  "liquidity": 65.0,
+  "risk": 80.0
+ },
+ "2208.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Goldwind Science&Technology Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0836.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "China Resources Power Holdings Company Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "0303.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Vtech Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0867.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "China Medical System Holdings Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1585.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Yadea Group Holdings Ltd.",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "0552.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Communications Services Corporation Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0136.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "China Ruyi Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "9969.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "InnoCare Pharma Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0341.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Café de Coral Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "2638.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "HK Electric Investments and HK Electric Investments Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "1728.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "China ZhengTong Auto Services Holdings Limited",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "3800.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "GCL Technology Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "2128.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Lesso Group Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1521.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Frontage Holdings Corporation",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0257.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Everbright Environment Group Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "6865.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Flat Glass Group Co., Ltd.",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "6158.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Zhenro Properties Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0358.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "Jiangxi Copper Company Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "3898.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Zhuzhou CRRC Times Electric Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0799.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "IGG Inc",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1858.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Beijing Chunlizhengda Medical Instruments Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "0570.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "China Traditional Chinese Medicine Holdings Co. Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1515.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "China Resources Medical Holdings Company Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "2607.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Shanghai Pharmaceuticals Holding Co., Ltd",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1755.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "S-Enjoy Service Group Co., Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "9928.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Times Neighborhood Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3900.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Greentown China Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1896.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Maoyan Entertainment",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0535.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Gemdale Properties and Investment Corporation Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1638.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Kaisa Group Holdings Ltd.",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "0023.HK": {
+  "sector": "bank",
+  "type": "bank",
+  "name": "The Bank of East Asia, Limited",
+  "defensive": 90.0,
+  "growth": 30.0,
+  "cyclical": 20.0,
+  "liquidity": 77.5,
+  "risk": 20.0
+ },
+ "1171.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "Yankuang Energy Group Company Limited",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "0357.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Hainan Meilan International Airport Company Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0152.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Shenzhen International Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0392.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Beijing Enterprises Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0683.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Kerry Properties Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2163.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Changsha Broad Homes Industrial Group Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "0371.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "Beijing Enterprises Water Group Limited",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "1208.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "MMG Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0008.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "PCCW Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "0390.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China Railway Group Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1243.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Wang On Properties Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "3606.HK": {
+  "sector": "auto",
+  "type": "auto",
+  "name": "Fuyao Glass Industry Group Co., Ltd.",
+  "defensive": 25.0,
+  "growth": 75.0,
+  "cyclical": 70.0,
+  "liquidity": 70.0,
+  "risk": 75.0
+ },
+ "9983.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Central China New Life Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1913.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Prada S.p.A.",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "9939.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Kintor Pharmaceutical Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1513.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Livzon Pharmaceutical Group Inc.",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1112.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Health and Happiness (H&H) International Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1636.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "China Metal Resources Utilization Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "1157.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Zoomlion Heavy Industry Science and Technology Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1628.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Yuzhou Group Holdings Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "6099.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "China Merchants Securities Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1448.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "Fu Shou Yuan International Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0839.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China Education Group Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0667.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China East Education Holdings Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "1472.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Sang Hing Holdings (International) Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1816.HK": {
+  "sector": "utility",
+  "type": "utility",
+  "name": "CGN Power Co., Ltd.",
+  "defensive": 95.0,
+  "growth": 22.5,
+  "cyclical": 12.5,
+  "liquidity": 72.5,
+  "risk": 12.5
+ },
+ "1138.HK": {
+  "sector": "energy",
+  "type": "energy",
+  "name": "COSCO SHIPPING Energy Transportation Co., Ltd.",
+  "defensive": 27.5,
+  "growth": 52.5,
+  "cyclical": 90.0,
+  "liquidity": 67.5,
+  "risk": 77.5
+ },
+ "1776.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "GF Securities Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2001.HK": {
+  "sector": "consumer",
+  "type": "consumer",
+  "name": "China New Higher Education Group Limited",
+  "defensive": 40.0,
+  "growth": 47.5,
+  "cyclical": 62.5,
+  "liquidity": 67.5,
+  "risk": 60.0
+ },
+ "0874.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "Guangzhou Baiyunshan Pharmaceutical Holdings Company Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1357.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Meitu, Inc.",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "3311.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "China State Construction International Holdings Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "1888.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Kingboard Laminates Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "3396.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "Legend Holdings Corporation",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "1622.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Redco Properties Group Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1119.HK": {
+  "sector": "tech",
+  "type": "tech",
+  "name": "iDreamSky Technology Holdings Limited",
+  "defensive": 32.5,
+  "growth": 80.0,
+  "cyclical": 42.5,
+  "liquidity": 80.0,
+  "risk": 67.5
+ },
+ "2772.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "Zhongliang Holdings Group Company Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "1359.HK": {
+  "sector": "financial",
+  "type": "financial",
+  "name": "China Cinda Asset Management Co., Ltd.",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "6160.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "BeOne Medicines AG",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "3320.HK": {
+  "sector": "biotech",
+  "type": "biotech",
+  "name": "China Resources Pharmaceutical Group Limited",
+  "defensive": 30.0,
+  "growth": 75.0,
+  "cyclical": 52.5,
+  "liquidity": 65.0,
+  "risk": 70.0
+ },
+ "1966.HK": {
+  "sector": "real_estate",
+  "type": "real_estate",
+  "name": "China SCE Group Holdings Limited",
+  "defensive": 22.5,
+  "growth": 32.5,
+  "cyclical": 92.5,
+  "liquidity": 52.5,
+  "risk": 82.5
+ },
+ "2233.HK": {
+  "sector": "materials",
+  "type": "materials",
+  "name": "West China Cement Limited",
+  "defensive": 15.0,
+  "growth": 40.0,
+  "cyclical": 95.0,
+  "liquidity": 60.0,
+  "risk": 90.0
+ },
+ "0548.HK": {
+  "sector": "industrial",
+  "type": "industrial",
+  "name": "Shenzhen Expressway Corporation Limited",
+  "defensive": 30.0,
+  "growth": 52.5,
+  "cyclical": 52.5,
+  "liquidity": 70.0,
+  "risk": 72.5
+ },
+ "2533.HK": {
+  "sector": "ai",
+  "name": "黑芝麻智能",
+  "type": "ai",
+  "defensive": 15,
+  "growth": 95,
+  "cyclical": 65,
+  "liquidity": 50,
+  "risk": 90
+ },
+ "6682.HK": {
+  "sector": "ai",
+  "name": "范式智能",
+  "type": "ai",
+  "defensive": 20,
+  "growth": 90,
+  "cyclical": 50,
+  "liquidity": 60,
+  "risk": 85
+ },
+ "9660.HK": {
+  "sector": "ai",
+  "name": "地平线机器人",
+  "type": "ai",
+  "defensive": 15,
+  "growth": 95,
+  "cyclical": 60,
+  "liquidity": 55,
+  "risk": 90
+ },
+ "2513.HK": {
+  "sector": "ai",
+  "name": "智谱",
+  "type": "ai",
+  "defensive": 15,
+  "growth": 95,
+  "cyclical": 50,
+  "liquidity": 65,
+  "risk": 90
+ },
+ "9888.HK": {
+  "sector": "tech",
+  "name": "百度集团-SW",
+  "type": "tech",
+  "defensive": 30,
+  "growth": 75,
+  "cyclical": 45,
+  "liquidity": 75,
+  "risk": 70
+ },
+ "0020.HK": {
+  "sector": "ai",
+  "name": "商汤-W",
+  "type": "ai",
+  "defensive": 15,
+  "growth": 90,
+  "cyclical": 55,
+  "liquidity": 55,
+  "risk": 85
+ },
+ "2228.HK": {
+  "sector": "biotech",
+  "name": "晶泰控股",
+  "type": "biotech",
+  "defensive": 25,
+  "growth": 85,
+  "cyclical": 50,
+  "liquidity": 60,
+  "risk": 85
+ },
+ "1024.HK": {
+  "sector": "tech",
+  "name": "快手-W",
+  "type": "tech",
+  "defensive": 25,
+  "growth": 85,
+  "cyclical": 50,
+  "liquidity": 70,
+  "risk": 75
+ },
+ "9618.HK": {
+  "sector": "tech",
+  "name": "京东集团-SW",
+  "type": "tech",
+  "defensive": 30,
+  "growth": 80,
+  "cyclical": 40,
+  "liquidity": 80,
+  "risk": 70
+ },
+ "9999.HK": {
+  "sector": "tech",
+  "name": "网易-S",
+  "type": "tech",
+  "defensive": 35,
+  "growth": 75,
+  "cyclical": 45,
+  "liquidity": 75,
+  "risk": 65
+ }
+}
