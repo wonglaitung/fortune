@@ -4866,6 +4866,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 
 - **#3 门槛尺度修复（同夜）**：港股 rank 排序分数无方向概率语义，删除 `comprehensive_analysis.py:991`
   的方向概率 0.70/0.65 仓位备忘（错配），改 rank-native 文案；`market_regime` 方向概率门槛标注不适用于 rank 路径。
+- **49 池验证收尾**：双跑 md5 一致 `938bfa99…`；独立窗（2021-06→2023-05，24 折）净IR −0.01 /
+  超额 +0.27 [−1.30,1.85] / lift −0.3pp / DSR 0.476 / PBO 0.94（带内）/ MDE 2.03 / 逐日 IC −0.0149
+  ⇒ 主窗不复现、IC 转负。判决维持无 alpha。
 - **#4 A 闸新增 H6 条件变量外生性硬检查**：`scripts/presentation_gate.py` 分解 raw vs 板块中性逐日 rank IC；
   纯共同层数据 FAIL、含个股特异 PASS；生产 49 池 IC_raw 0.0183 / IC_neutral 0.0093（比值 0.51）⇒ PASS。
 
