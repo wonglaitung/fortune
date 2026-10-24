@@ -5162,3 +5162,17 @@ raw 在两种模型上**点估计都更好**，但四条 95%CI **全跨 0** ⇒ 
   改为 rank-native 文案（行情差时只采纳偏强档 rank ≥0.70 分位，与 L918 同源），具体仓位由人工按 DEPLOYMENT T2 定。
 - `market_regime.GATE_FALLBACK` 上方补注释：本方向概率门槛不适用于港股 rank regime（防后人误接）。
 - 未新增 rank 概率 gating（属行为变更，须 C 闸三冻结+双跑，不在本次）；未改 A 股方向概率门槛（另一口径）。
+
+### 八、A 闸第 6 条「条件变量外生性」硬检查（H6，2026-10-23，prereg_exogeneity_h6）
+
+- 动机：A 闸 H1–H5 只查「公布的统计数是否像泄漏」，不查**信号来源**——逐日 rank IC 是否主要由
+  板块/市场**共同层**撑起（板块轮动/市场择时），而非个股特异选择。港股 alpha 结论（D1/D72）是
+  「个股横截面 alpha null」；H6 用独立方法再证一次，并把「IC 涨、钱不涨」的机理落成硬检查。
+- 做法（`scripts/presentation_gate.py` 新增 H6）：用 `config.STOCK_SECTOR_MAPPING` 把 `Stock_Code`
+  映到板块；逐 `Date` 算①原始逐日 rank IC（共同层+特异层）②**板块中性**逐日 rank IC（每日每板块内
+  去板块均值，剥掉板块间共同层）。跨日平均得 `IC_raw / IC_neutral` 与比值。
+- 判据（可 FAIL）：若 `|IC_raw| ≥ 0.02`（D64 下限）且 `|IC_neutral| < 0.3·|IC_raw|`（中性化后几乎归零）
+  ⇒ FAIL：**IC 主要由共同层解释，个股特异选择信息不足**。否则 PASS（或 INFO）。
+- 实测（生产 49 池 `output/20261023_232802`）：IC_raw 0.0183 / IC_neutral 0.0093 / 比值 0.51 ⇒ **PASS**——
+  信号并非纯共同层，与「alpha null 但非退化」一致。H6 不单独判 alpha 死刑（板块间 edge 经 TopK 跨板块选股仍可捕获）。
+- 测试：`tests/test_presentation_gate.py` 加两例——纯共同层数据应 FAIL、含个股特异数据应 PASS；全量 pytest 350 passed。

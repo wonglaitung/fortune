@@ -18,6 +18,7 @@
                                      （CSV 无此列，须重建 = Actual − HSI 未来收益）
   H4 IC 异常             A闸判据「IC」（无文档数字阈值，仅在完美时判定）
   H5 分组符号一致性       A闸判据「分组符号一致性」（同上）
+  H6 条件变量外生性       A闸新增：分解共同层 vs 个股特异层（信号来源诊断）
   C1 行级 vs Fold 聚类    约束 1  行级统计不得用于因果推断
                                   ⚠️ C1 的「t」是**阈值命中率**的折聚类 t，
                                      不是 IC、也不是技能（D64）；能力读 guardrail 部署口径 IC
@@ -189,6 +190,58 @@ def run_checks(df: pd.DataFrame, horizon: int, market: str) -> tuple[list[str], 
                 )
     except Exception as e:  # 分组失败不阻断，报告即可
         notes.append(f"[H5] 分组失败：{type(e).__name__}: {e}")
+
+    # ---------- H6 条件变量外生性（共同层分解，信号来源诊断） ----------
+    # 目的：逐日 rank IC 是否主要由板块/市场**共同层**撑起（板块轮动/市场择时），
+    # 而非个股特异选择。剥掉板块间共同层后若 IC 几乎归零 ⇒ 个股特异信息不足。
+    # 部署口径仍是 raw（D73），本检查只做诊断、不改口径。
+    try:
+        _sec_map = {}
+        try:
+            import config as _cfg  # noqa: E402
+
+            _sm = getattr(_cfg, "STOCK_SECTOR_MAPPING", {})
+            _sec_map = {str(k): (v.get("sector") if isinstance(v, dict) else v) for k, v in _sm.items()}
+        except Exception:
+            _sec_map = {}
+        if _sec_map and "Date" in df.columns and "Stock_Code" in df.columns:
+            _d6 = df.copy()
+            _d6["sector"] = _d6["Stock_Code"].astype(str).map(_sec_map)
+            _raw_ics, _neu_ics = [], []
+            for _, _g in _d6.groupby("Date"):
+                _gp = _g["Predict_Prob"].astype(float).values
+                _gr = _g["Actual_Return"].astype(float).values
+                if len(_gp) < 10 or _g["sector"].nunique() < 2:
+                    continue
+                _raw_ics.append(_spearman(_gp, _gr))
+                # 板块中性：每日、每板块内去板块均值（仅保留板块内 ≥2 只）
+                _sg = _g.assign(_p=_gp, _r=_gr).groupby("sector", observed=True)
+                _cnt = _sg["_p"].transform("count").values
+                _rp = (_g["Predict_Prob"].astype(float) - _sg["Predict_Prob"].transform("mean")).values
+                _rr = (_g["Actual_Return"].astype(float) - _sg["Actual_Return"].transform("mean")).values
+                _keep = _cnt >= 2
+                _neu_ics.append(_spearman(_rp[_keep], _rr[_keep]))
+            _raw_ics = [x for x in _raw_ics if x == x]
+            _neu_ics = [x for x in _neu_ics if x == x]
+            if _raw_ics and _neu_ics:
+                _ic_raw = float(np.mean(_raw_ics))
+                _ic_neu = float(np.mean(_neu_ics))
+                _ratio = _ic_neu / _ic_raw if _ic_raw else float("nan")
+                notes.append(
+                    f"[H6][报告] 逐日 rank IC(原始)={_fmt(_ic_raw)}；板块中性(特异层)={_fmt(_ic_neu)}；"
+                    f"比值={_fmt(_ratio)}（n日={len(_raw_ics)}）"
+                )
+                if abs(_ic_raw) >= 0.02 and abs(_ic_neu) < 0.3 * abs(_ic_raw):
+                    failures.append(
+                        f"H6 IC 主要由板块/市场共同层解释（原始 {_ic_raw:+.4f} → 中性 {_ic_neu:+.4f}），"
+                        f"个股特异选择信息不足（信号来源非个股外生）"
+                    )
+            else:
+                notes.append("[H6] 有效日不足，跳过")
+        else:
+            notes.append("[H6] 无 sector 映射或缺少 Date/Stock_Code，跳过（需 config.STOCK_SECTOR_MAPPING）")
+    except Exception as e:  # 诊断失败不阻断
+        notes.append(f"[H6] 分解失败：{type(e).__name__}: {e}")
 
     # ---------- C1 约束 1：行级 vs Fold 聚类 ----------
     if n_folds and n_folds > 1:
