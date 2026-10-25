@@ -5180,3 +5180,35 @@ raw 在两种模型上**点估计都更好**，但四条 95%CI **全跨 0** ⇒ 
 - 实测（生产 49 池 `output/20261023_232802`）：IC_raw 0.0183 / IC_neutral 0.0093 / 比值 0.51 ⇒ **PASS**——
   信号并非纯共同层，与「alpha null 但非退化」一致。H6 不单独判 alpha 死刑（板块间 edge 经 TopK 跨板块选股仍可捕获）。
 - 测试：`tests/test_presentation_gate.py` 加两例——纯共同层数据应 FAIL、含个股特异数据应 PASS；全量 pytest 350 passed。
+
+## D74（2026-10-25）：**310 池 CatBoost vs LightGBM（20d）学习器 A/B —— 换学习器不改变 alpha null**
+
+**命题（预注册，`output/_logs/prereg_lgbm_310.txt`）**：310 池、同窗口 / 同折 / 同特征 / 同时点下，
+LGBM 20d 的决策指标是否不劣于 CatBoost（D10 的「20d LGBM 优」限定旧 56 池旧口径，不可外推）。
+
+**对照**：池 310；窗口 2020-06-01→2026-09-30（41 期）；Top500 + HIBOR；F1=0；rank 标签；
+三冻结 + 同 `GATE_SOURCE_CSV`；`--model-type catboost --learner lightgbm`（同一管线只换拟合器）。
+两套宇宙都报：①全 310 池 ②生产 30 只自选（过滤 CSV 后重算，等权基准=30 池）。
+
+| 宇宙 | 学习器 | 净IR | 超额 IR | PBO（零假设带） | DSR | 超额 lift | 逐日 raw IC |
+|---|---|---|---|---|---|---|---|
+| 全 310 | CatBoost | 0.18 | −0.08 | 0.54 | 0.762 | +2.4pp | 0.1047 |
+| 全 310 | LightGBM | **0.43** | **+0.20** | **0.34**（带内） | **0.852** | +2.4pp | 0.0951 |
+| 自选 30 | CatBoost | 0.97 | −0.32 | 0.06（带内） | 0.937 | +1.1pp | — |
+| 自选 30 | LightGBM | 0.90 | **−0.28** | 0.06（带内） | **0.946** | **+1.5pp** | — |
+
+**判决（按预注册 4 条）**：
+- 全 310：LGBM 在净IR/超额/PBO/DSR 均更好，但 **DSR 0.852 < 0.95** ⇒ 不满足「≥0.95」。
+- 自选 30：LGBM 超额/lift/DSR 略好，**DSR 0.946 < 0.95**、净IR 更低 ⇒ 不满足。
+- **两条宇宙的超额 CI 下界均未 >0**（MDE 1.55）⇒ **C 闸不过**。
+⇒ **维持 CatBoost**（D10 的分周期选型不变）；更关键的是 **换学习器不改变 alpha null**：
+两臂在「只预测 30 只」的真实生产口径下超额分别为 −0.32 / −0.28。
+
+**连带修复（真实 bug）**：D59 把个股标签改成 rank（连续）后，`_train_lightgbm` 仍无条件用
+`LGBMClassifier(objective='binary')` ⇒ 首跑 **40/40 折全失败**
+（`Unknown label type: continuous`）。已改为按 `label_mode` 选 `LGBMRegressor(objective='regression')`，
+预测侧连续分数裁剪到 [0,1]；契约测试 `tests/test_learner_label_mode.py`（2 条）锁定。
+**教训**：换标签口径要扫全部学习器路径——只测生产在用的那个，会把另一条路径的失效藏起来。
+
+**适用范围**：本池（310）/ 本窗口（2023-06→2026-09）/ 20d / rank / F1-off ·
+**WF 内部比较 ✓ / 外推生产 ✗**（未见段为负，见 D72）。

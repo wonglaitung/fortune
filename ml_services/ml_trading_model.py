@@ -5224,9 +5224,13 @@ class CatBoostModel(BaseTradingModel):
                     'date': latest_data.index[0]
                 }
             elif getattr(self, 'learner', 'catboost') == 'lightgbm':
-                # LightGBM 直接预测（复用同一特征管线）
+                # LightGBM 直接预测（复用同一特征管线）；rank 回归输出连续分数
                 import numpy as _np
-                proba = self.model.predict_proba(X)[0]
+                if getattr(self, 'label_mode', 'absolute') == 'rank':
+                    _s = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
+                    proba = [1 - _s, _s]
+                else:
+                    proba = self.model.predict_proba(X)[0]
                 prediction = int(proba[1] >= 0.5)
             else:
                 # 使用 CatBoost 模型直接预测
@@ -5345,6 +5349,10 @@ class CatBoostModel(BaseTradingModel):
 
         # 返回预测概率
         if getattr(self, 'learner', 'catboost') == 'lightgbm':
+            if getattr(self, 'label_mode', 'absolute') == 'rank':
+                import numpy as _np
+                p = _np.clip(_np.asarray(self.model.predict(test_df)).ravel(), 0.0, 1.0)
+                return _np.column_stack([1 - p, p])
             return self.model.predict_proba(test_df)
         if getattr(self, '_ranking', False):
             # 排序模型：predict 返回原始分数，映射为伪概率 (1-p, p) 兼容现有 [:,1] 用法
@@ -5367,8 +5375,10 @@ class CatBoostModel(BaseTradingModel):
         # n_jobs 过大（如 -1=32）在高负载下会因线程争用导致 40 倍反向劣化，
         # 可用 LGBM_N_JOBS 限制线程数（默认 -1 不变）
         lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))
+        _reg = getattr(self, 'label_mode', 'absolute') == 'rank'
         lgb_params = dict(
-            objective='binary', learning_rate=0.06, num_leaves=2 ** 6,
+            objective='regression' if _reg else 'binary',
+            learning_rate=0.06, num_leaves=2 ** 6,
             max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
             colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
             random_state=42, n_jobs=lgb_n_jobs, verbose=-1,
@@ -5378,7 +5388,7 @@ class CatBoostModel(BaseTradingModel):
         )
         if lgb_n_jobs > 0:
             print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS，避免高负载线程争用）")
-        self.model = lgb.LGBMClassifier(**lgb_params)
+        self.model = lgb.LGBMRegressor(**lgb_params) if _reg else lgb.LGBMClassifier(**lgb_params)
         self.model.fit(X, y)
         self.actual_n_estimators = self.model.n_estimators
         print(f"✅ LightGBM 训练完成 (learner=lightgbm, n_estimators={self.actual_n_estimators})")
@@ -5394,6 +5404,9 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"保存 LightGBM 特征重要性失败: {e}")
 
         # 时间序列交叉验证评估（与 CatBoost 管线同口径），写入 model_accuracy.json 供综合分析展示
+        # rank 回归标签下准确率/F1 无意义 ⇒ 跳过（模型展示层不用置信度）
+        if _reg:
+            return None
         try:
             from sklearn.model_selection import TimeSeriesSplit
             tscv = TimeSeriesSplit(n_splits=5, gap=horizon)

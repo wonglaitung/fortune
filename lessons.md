@@ -3415,3 +3415,17 @@ score 与流动性相关仅 0.078 ⇒ 成本惩罚项加进去也只改几只票
 
 **另一条**：24 组网格挑 1 组 p=0.035，Bonferroni 后 0.84；独立窗该配置超额 +0.21 [−0.79,+1.50]、p=0.393。
 **先算选择惩罚，再谈显著性。**
+
+### 三.89 换标签口径后，未在生产路径的学习器会静默失效
+
+**场景**：D59 把个股标签改为横截面百分位 rank（连续值）后，生产只跑 CatBoost，
+`_train_lightgbm` 一直没被触发。2026-10-25 做 310 池学习器 A/B 时首跑 **40/40 折全失败**：
+`Unknown label type: continuous. Maybe you are trying to fit a classifier` —— LGBM 路径仍写死
+`LGBMClassifier(objective='binary')`，喂进连续标签直接抛错。
+
+**判定式**：改标签 / 时点 / 特征口径时，`grep` 出**所有学习器训练与预测入口**（本例
+`_train_lightgbm` + 两处 `predict_proba`），逐个确认口径一致；只测「生产在用的那个」会把
+另一条路径的失效藏起来，直到有人做 A/B 才发现。
+
+**修复**：按 `label_mode` 选 `LGBMRegressor(objective='regression')`；预测侧连续分数裁到 [0,1]
+并返回 `[1-p, p]` 兼容既有 `[:,1]` 用法；契约测试 `tests/test_learner_label_mode.py`。
