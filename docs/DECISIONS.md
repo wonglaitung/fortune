@@ -5282,3 +5282,40 @@ score = 平均 IC − 0.5×折间 std；随机搜索 20 组（seed=42）。
 
 **适用范围**：120 只子集 / 2018-06→2023-05 / 20d / 本特征集 · **WF 内部比较 ✓ / 外推生产 ✗**。
 多重比较提示：20 组取 max 已按 Bonferroni 视角解读（α/20），本差异连未校正门槛都远不到。
+
+## D77（2026-10-25）：**恒指生产改为按周期加载模型 —— 补上 ⓪ 同一性缺口**
+
+**问题**：D75 切换后，恒指生产 5/10/20 是 `hsi_prediction._run_multi_horizon_prediction`
+**每次现场训练**（yfinance 5y、80/20、11 个特征），而 WF 走 `HSIModel.train`（119 特征、滚动重训）。
+两者不是同一个函数 ⇒ ⓪ 同一性闸（Q1 模型/特征来源、Q3 时点）不过；且已保存的 pkl
+文件名无 horizon 元数据，无法按周期加载。
+
+**改动（`grep` 旧符号 0 命中）**
+- `hsi_ml_model.save_model`：文件名 `hsi_lightgbm_{horizon}d_{timestamp}.pkl`；
+  payload = `{model, horizon, feature_names, saved_at}`（不再写 `hsi_features_*.json`，特征名随模型走）。
+- `hsi_ml_model.load_model`：默认按 `self.horizon` 取该周期最新一份；从 payload 恢复
+  `horizon` / `feature_names`；**旧格式（裸模型）直接 `ValueError`**，不静默兼容。
+- `hsi_prediction`：`_run_lightgbm_comparison`（20d 面板）与 `_run_multi_horizon_prediction`
+  均改为 `HSIModel(horizon=h).load_model()` + `calculate_features()` 预测，**删除现场训练分支**
+  （同时删除 `from lightgbm import LGBMClassifier` 与 11 特征临时管道）。
+- 删除旧产物：3 个无 horizon 的 `hsi_lightgbm_20261025_12*.pkl` + 全部孤儿
+  `hsi_features_*.json`；`scripts/doc_gate.py` 例外改为 `hsi_lightgbm_\d+d_\d{8}_\d{6}\.pkl`。
+- 重训 5/10/20（119 特征，`LGBMClassifier`，`class_weight='balanced'`）。
+
+**顺带根除的静默错误**：原现场训练段仍用 CatBoost 参数名（`iterations/depth/auto_class_weights`）。
+LightGBM 对未知 kwarg **不报错**，实际一直用默认 `n_estimators=100 / max_depth=-1 / 无类别平衡`。
+改为加载 pkl 后该路径不再存在；另加契约测试扫描 `LGBMClassifier(...)` 内的 CatBoost 参数（防复活）。
+
+**同一性现状（恒指）**
+| 问 | 结论 |
+|---|---|
+| ① 模型来源 | ✓ 生产与 WF 均 `HSIModel.train` 产物（LGBM），按 horizon 取用 |
+| ② 特征列 | ✓ 两侧同一 `calculate_features`（119 列） |
+| ③ 时点 | ✓ 两侧均 `use_shift=True`（T-1）；恒指历史口径，未改 |
+| ④ 概率 | ✓ 无校准器，直出原始概率（与 WF 一致） |
+
+**验证**：`python3 hsi_prediction.py --no-email` 依次加载 5d/10d/20d 模型，
+输出 89.57% / 94.28% / 95.28%（2026-10-25 数据）；`tests/test_hsi_model_io.py`
+（按周期取模、周期隔离、拒绝旧格式）3 passed。
+
+**适用范围**：恒指 5/10/20 · **WF 内部比较 ✓ / 外推生产 ✗**（alpha 仍 null，见三层总账）。

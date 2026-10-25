@@ -826,40 +826,47 @@ class HSIModel:
         return results
 
     def save_model(self):
-        """保存模型"""
+        """保存模型（文件名带 horizon，生产按周期加载）"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        model_path = os.path.join(MODEL_DIR, f'hsi_lightgbm_{timestamp}.pkl')
+        model_path = os.path.join(
+            MODEL_DIR, f'hsi_lightgbm_{self.horizon}d_{timestamp}.pkl')
 
+        payload = {
+            'model': self.model,
+            'horizon': int(self.horizon),
+            'feature_names': list(self.feature_names or []),
+            'saved_at': timestamp,
+        }
         with open(model_path, 'wb') as f:
-            pickle.dump(self.model, f)
-
-        # 同时保存特征名称
-        feature_path = os.path.join(MODEL_DIR, f'hsi_features_{timestamp}.json')
-        with open(feature_path, 'w') as f:
-            json.dump(self.feature_names, f)
+            pickle.dump(payload, f)
 
         print(f"\n💾 模型已保存到: {model_path}")
 
     def load_model(self, model_path=None):
-        """加载模型"""
+        """加载指定周期的模型（默认取该 horizon 的最新一份）。"""
+        import glob
         if model_path is None:
-            # 查找最新模型
-            import glob
-            models = glob.glob(os.path.join(MODEL_DIR, 'hsi_lightgbm_*.pkl'))
+            pattern = os.path.join(
+                MODEL_DIR, f'hsi_lightgbm_{self.horizon}d_*.pkl')
+            models = glob.glob(pattern)
             if not models:
+                print(f"⚠️ 未找到 {self.horizon}d 模型: {pattern}")
                 return False
             model_path = max(models, key=os.path.getmtime)
 
         with open(model_path, 'rb') as f:
-            self.model = pickle.load(f)
+            payload = pickle.load(f)
+        if not isinstance(payload, dict) or 'model' not in payload:
+            raise ValueError(
+                f'旧格式模型（无 horizon 元数据）不再支持: {model_path}；'
+                '请用 --mode train 重训')
+        self.model = payload['model']
+        self.horizon = int(payload.get('horizon', self.horizon))
+        self.feature_names = payload.get('feature_names') or []
+        self.model_path = model_path
 
-        # 加载特征名称
-        feature_path = model_path.replace('.pkl', '.json').replace('hsi_lightgbm', 'hsi_features')
-        if os.path.exists(feature_path):
-            with open(feature_path, 'r') as f:
-                self.feature_names = json.load(f)
-
-        print(f"✅ 模型已加载: {model_path}")
+        print(f"✅ 模型已加载: {model_path}（{self.horizon}d）")
+        return True
         return True
 
     def walk_forward_validation(self, start_date='2020-01-01', end_date='2025-12-31',

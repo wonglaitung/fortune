@@ -2535,50 +2535,25 @@ class HSI_Predictor:
         print("=" * 80)
 
         try:
-            # 尝试加载已有的 LightGBM 模型
-            import glob
-            model_files = glob.glob(os.path.join(data_dir, 'hsi_models', 'hsi_lightgbm_*.pkl'))
+            # 生产与 WF 同源：加载已训练的 20d 模型，不在预测时现场训练
+            from ml_services.hsi_ml_model import HSIModel
 
-            if not model_files:
-                print("⚠️ 未找到 LightGBM 模型，跳过对比")
-                print("   提示: 运行 python3 ml_services/hsi_ml_model.py --mode train 训练模型")
+            hsi_model = HSIModel(horizon=20)
+            if not hsi_model.load_model():
+                print("⚠️ 未找到 20d LightGBM 模型，跳过对比")
+                print("   提示: 运行 python3 ml_services/hsi_ml_model.py --mode train --horizon 20")
                 return None
 
-            # 加载最新模型
-            latest_model = max(model_files, key=os.path.getmtime)
-            print(f"📂 加载模型: {latest_model}")
-
-            import pickle
-            with open(latest_model, 'rb') as _f:
-                model = pickle.load(_f)
-
-            # 加载特征名称
-            feature_file = latest_model.replace('.pkl', '.json').replace('hsi_lightgbm', 'hsi_features')
-            if os.path.exists(feature_file):
-                with open(feature_file, 'r') as f:
-                    feature_names = json.load(f)
-            else:
-                print("⚠️ 未找到特征文件，跳过对比")
+            hsi_df, us_df, vix_df = hsi_model.fetch_data()
+            feature_df = hsi_model.calculate_features(hsi_df, us_df, vix_df)
+            latest = feature_df.iloc[-1:][hsi_model.feature_names]
+            if latest.empty or latest.isna().any().any():
+                print("⚠️ 最新特征缺失，跳过对比")
                 return None
 
-            # 准备特征数据
-            # 从 self.features 构建特征向量
-            feature_values = []
-            missing_features = []
-            for fname in feature_names:
-                if fname in self.features:
-                    feature_values.append(self.features[fname])
-                else:
-                    missing_features.append(fname)
-                    feature_values.append(0)  # 缺失特征用0填充
-
-            if missing_features:
-                print(f"⚠️ 缺失特征: {missing_features[:5]}... (共{len(missing_features)}个)")
-
-            # 预测
-            X = np.array([feature_values])
-            prob = model.predict_proba(X)[0, 1]
-            pred = model.predict(X)[0]
+            prob = float(hsi_model.model.predict_proba(latest)[0, 1])
+            pred = 1 if prob > 0.5 else 0
+            latest_model = hsi_model.model_path
 
             lightgbm_trend = "上涨" if pred == 1 else "下跌"
 
@@ -2659,7 +2634,6 @@ class HSI_Predictor:
         print("=" * 80)
 
         try:
-            from lightgbm import LGBMClassifier
 
             # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-01-01→2025-12-31，
             # 34 folds / 697 样本，2026-10-17 重跑；池化口径）
@@ -2690,63 +2664,26 @@ class HSI_Predictor:
 
             results = {}
 
-            # 获取恒指数据
-            import yfinance as yf
-            hsi = yf.Ticker("^HSI")
-            df = hsi.history(period="5y", interval="1d")
+            # 生产与 WF 同源：加载按 horizon 训练好的模型，不在预测时现场训练
+            from ml_services.hsi_ml_model import HSIModel
 
-            # 计算基础特征
-            df['MA20'] = df['Close'].rolling(20).mean()
-            df['MA60'] = df['Close'].rolling(60).mean()
-            df['MA120'] = df['Close'].rolling(120).mean()
-            df['MA250'] = df['Close'].rolling(250).mean()
-            df['Return_1d'] = df['Close'].pct_change().shift(1)
-            df['Return_5d'] = df['Close'].pct_change(5).shift(1)
-            df['Return_20d'] = df['Close'].pct_change(20).shift(1)
-            df['Volatility_20d'] = df['Return_1d'].rolling(20).std()
-            df['Volatility_60d'] = df['Return_1d'].rolling(60).std()
-            df['Volatility_120d'] = df['Return_1d'].rolling(120).std()
-
-            # RSI
-            delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            df['RSI'] = (100 - (100 / (1 + gain/(loss+1e-10)))).shift(1)
-
-            features = ['MA20', 'MA60', 'MA120', 'MA250', 'Return_1d', 'Return_5d', 'Return_20d',
-                       'Volatility_20d', 'Volatility_60d', 'Volatility_120d', 'RSI']
+            base = HSIModel(horizon=HORIZONS[0])
+            hsi_df, us_df, vix_df = base.fetch_data()
+            feature_df = base.calculate_features(hsi_df, us_df, vix_df)
 
             for horizon in HORIZONS:
-                # 创建目标
-                df[f'Target_{horizon}d'] = (df['Close'].pct_change(horizon).shift(-horizon) > 0).astype(float)
-
-                # 准备数据
-                df_clean = df[features + [f'Target_{horizon}d']].dropna()
-
-                if len(df_clean) < 100:
+                model = HSIModel(horizon=horizon)
+                if not model.load_model():
+                    print(f"  ⚠️ 缺少 {horizon}d 模型，跳过"
+                          f"（先运行 hsi_ml_model.py --mode train --horizon {horizon}）")
                     continue
 
-                X = df_clean[features]
-                y = df_clean[f'Target_{horizon}d']
-
-                # 时序分割
-                split = int(len(X) * 0.8)
-                X_train, X_test = X.iloc[:split], X.iloc[split:]
-                y_train, y_test = y.iloc[:split], y.iloc[split:]
-
-                # 训练模型
-                model = LGBMClassifier(
-                    n_estimators=200, learning_rate=0.05, max_depth=3,
-                    class_weight='balanced', verbose=-1
-                )
-                model.fit(X_train, y_train)
-
-                # 用最新数据预测
-                latest = df.iloc[-1:][features].dropna()
-                if latest.empty:
+                latest = feature_df.iloc[-1:][model.feature_names]
+                if latest.empty or latest.isna().any().any():
+                    print(f"  ⚠️ {horizon}d 最新特征缺失，跳过")
                     continue
 
-                prob = model.predict_proba(latest)[0, 1]
+                prob = float(model.model.predict_proba(latest)[0, 1])
                 pred = 1 if prob > 0.5 else 0
 
                 # 置信度计算
@@ -2759,10 +2696,11 @@ class HSI_Predictor:
 
                 results[horizon] = {
                     'prediction': '上涨' if pred == 1 else '下跌',
-                    'probability': float(prob),
+                    'probability': prob,
                     'confidence': confidence,
                     'historical_accuracy': historical_accuracy.get(horizon, 0.50),
-                    'historical_auc': historical_auc.get(horizon, 0.50)
+                    'historical_auc': historical_auc.get(horizon, 0.50),
+                    'model_path': model.model_path,
                 }
 
             # 打印汇总表格
@@ -2782,8 +2720,8 @@ class HSI_Predictor:
                 pattern = f"{'1' if pred_5d == '上涨' else '0'}{'1' if pred_10d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
                 # 市场环境判断
-                current_price = df['Close'].iloc[-1]
-                ma250_val = df['MA250'].iloc[-1]
+                current_price = feature_df['Close'].iloc[-1]
+                ma250_val = feature_df['MA250'].iloc[-1]
                 is_bull_market = current_price > ma250_val if not pd.isna(ma250_val) else True
 
                 print(f"\n📊 预测模式: {pattern}")

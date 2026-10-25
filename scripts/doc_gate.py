@@ -104,7 +104,7 @@ RISK_PANEL_LEDGER_CSV = re.compile(r"^data/risk_panel_ledger\.csv$")
 # 既有跟踪资产，CI 定期更新；10d 为新周期槽，与 5d/20d 同类，属既有实践）
 A_STOCK_MODEL_PKL = re.compile(r"^data/a_stock_models/trading_model_lightgbm_\d+d\.pkl$")
 # 例外：恒指生产模型 pkl（D75 起 LightGBM；原 .cbm 为 CatBoost，已改用 pickle 格式）
-HSI_MODEL_PKL = re.compile(r"^data/hsi_models/hsi_lightgbm_\d{8}_\d{6}\.pkl$")
+HSI_MODEL_PKL = re.compile(r"^data/hsi_models/hsi_lightgbm_\d+d_\d{8}_\d{6}\.pkl$")
 
 # 新增数据文件的放行清单（集中一处，避免条件链继续变长）
 DATA_EXCEPTIONS = [
