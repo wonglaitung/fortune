@@ -3926,6 +3926,36 @@ class BaseTradingModel:
         return X, y, feature_columns
 
 
+LGBM_DEFAULT_PARAMS = {
+    'n_estimators': 400,
+    'num_leaves': 64,
+    'max_depth': 8,
+    'learning_rate': 0.06,
+    'min_child_samples': 50,
+    'reg_lambda': 2.0,
+    'subsample': 0.75,
+    'colsample_bytree': 0.8,
+}
+
+
+def load_lgbm_params(horizon):
+    """唯一参数入口：默认值 + data/lgbm_best_params.json 的按周期覆盖。
+
+    生产训练与 Walk-forward 都经此函数取参，避免两条路径参数分叉。
+    """
+    params = dict(LGBM_DEFAULT_PARAMS)
+    path = os.path.join('data', 'lgbm_best_params.json')
+    if os.path.exists(path):
+        try:
+            with open(path) as f:
+                cfg = json.load(f)
+            override = cfg.get(str(horizon)) or {}
+            params.update({k: v for k, v in override.items() if k in params})
+        except Exception as e:
+            logger.warning(f"读取 {path} 失败，使用默认参数: {e}")
+    return params
+
+
 class TradingModel(BaseTradingModel):
     """LightGBM 模型 - 基于 LightGBM 梯度提升算法的单一模型
     
@@ -5092,12 +5122,10 @@ class TradingModel(BaseTradingModel):
         # 可用 LGBM_N_JOBS 限制线程数（默认 -1 不变）
         lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))
         _reg = getattr(self, 'label_mode', 'absolute') == 'rank'
-        lgb_params = dict(
+        lgb_params = load_lgbm_params(horizon)
+        lgb_params.update(
             objective='regression' if _reg else 'binary',
-            learning_rate=0.06, num_leaves=2 ** 6,
-            max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
-            colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
-            random_state=42, n_jobs=lgb_n_jobs, verbose=-1,
+            subsample_freq=1, random_state=42, n_jobs=lgb_n_jobs, verbose=-1,
             # 去噪声（2026-09-28 A方案）：LGBM 官方确定性模式——同数据+同线程数→比特级复现；
             # force_row_wise 必须显式指定，否则 deterministic 不完全生效（LGBM 文档要求二选一）
             deterministic=True, force_row_wise=True,

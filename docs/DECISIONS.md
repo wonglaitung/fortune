@@ -5247,3 +5247,38 @@ CatBoost 0.18 / −0.08 / 0.54 / 0.762。自选 30 池 LGBM 超额 −0.28 / DSR
 
 **适用范围**：本池 / 本窗口 / 20d（A/B 证据）；恒指未做 A/B（CatBoost→LGBM 属实现替换）·
 **WF 内部比较 ✓ / 外推生产 ✗**。
+
+## D76（2026-10-25）：**LGBM 20d 超参数调优 —— 默认参数已在平台区，不采纳**
+
+**命题（预登记，跑前写死）**：当前 LGBM 参数是 CatBoost 口径的近似移植，未针对 rank 回归调过。
+H0：调参后 inner-CV 逐日横截面 rank IC 相对默认提升 < 10%。
+H1：≥ 10% 且 ≥3/4 验证折 IC>0。采纳还须全 310 池 WF 过三闸 + 相邻参数符号不翻转。
+预登记原文：`output/_logs/prereg_lgbm_tune.txt`。
+
+**口径**：`label_mode='rank'`；只用训练期 2018-06-01→2023-05-31（测试窗不参与）；
+120 只固定子集（seed=42）；特征固定为生产模型 `feature_columns`（567）；
+后 40% 切 4 个扩展窗，purge gap = horizon+1；指标 = 逐日横截面 Spearman IC（预测分数 vs `Future_Return`），
+score = 平均 IC − 0.5×折间 std；随机搜索 20 组（seed=42）。
+
+**结果**
+| 参数组 | 平均 IC | 折间 std | 正折 | score |
+|---|---|---|---|---|
+| 默认（生产） | 0.0709 | 0.0480 | 3/4 | 0.0469 |
+| 最优（n=300, leaves=127, depth=8, lr=0.06, mcs=30, λ=5, sub=1.0, col=0.6） | 0.0712 | 0.0399 | 4/4 | 0.0513 |
+
+相对提升 **+0.48%**（≪ 10% 门槛）。最优组仅把折间波动略微压低，均值几乎不动；
+`num_leaves 64→127`、`subsample 0.75→1.0`、`colsample 0.8→0.6` 的差异落在噪声内。
+
+**判决**：🔴 **不采纳**（预登记判据 1 未过）⇒ 保持默认参数；按规程**不跑**全量 WF
+（判据 1 已否决，后续闸不必跑）。alpha 结论不变（仍为 null）。
+
+**机制（供以后调参）**
+- 新增唯一参数入口 `ml_services/ml_trading_model.py::load_lgbm_params(horizon)`：
+  默认值 + `data/lgbm_best_params.json` 按周期覆盖；生产训练与 WF 同走此函数，防止参数分叉。
+  本次未写该 JSON ⇒ 全链路仍是默认参数。
+- 调参器重写为 LGBM/rank 口径（原实现是 CatBoost + 二分类 accuracy，口径不符）：
+  `ml_services/hyperparameter_tuner.py`。
+- 结果文件：`output/_logs/lgbm_tune_20d_20261025_171934.json`。
+
+**适用范围**：120 只子集 / 2018-06→2023-05 / 20d / 本特征集 · **WF 内部比较 ✓ / 外推生产 ✗**。
+多重比较提示：20 组取 max 已按 Bonferroni 视角解读（α/20），本差异连未校正门槛都远不到。
