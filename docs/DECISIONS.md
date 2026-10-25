@@ -5319,3 +5319,26 @@ LightGBM 对未知 kwarg **不报错**，实际一直用默认 `n_estimators=100
 （按周期取模、周期隔离、拒绝旧格式）3 passed。
 
 **适用范围**：恒指 5/10/20 · **WF 内部比较 ✓ / 外推生产 ✗**（alpha 仍 null，见三层总账）。
+
+## D78（2026-10-25）：**按用户指令采用 20d 调参结果 —— 生产与 WF 同源（非统计显著驱动）**
+
+**背景**：D76 的预登记判据 1 未过（最优组 IC +0.48% ≪ 10% 门槛），当时判决不采纳。
+用户明确要求「生产和 WF 都使用新参数」⇒ 本条记录**按指令采纳**，并保留 D76 的统计结论不变。
+
+**改动**
+- 新增 `data/lgbm_best_params.json`：仅覆盖 `"20"`（5/10 未调参，保持默认）：
+  `n_estimators=300, num_leaves=127, max_depth=8, lr=0.06, min_child_samples=30,
+  reg_lambda=5.0, subsample=1.0, colsample_bytree=0.6`。
+- 唯一入口 `load_lgbm_params(horizon)`：默认值 + JSON 按周期覆盖；
+  **生产训练与 Walk-forward 都经此函数取参**（D76 已建，本次首次写入配置）。
+- 重训港股 20d 生产模型（`data/ml_trading_model_lgbm_20d.pkl`，310 池 / rank / 567 特征）。
+- 契约测试 `tests/test_lgbm_params_single_source.py`：覆盖合并、未知键忽略、
+  `_train_lightgbm` 内无硬编码参数。
+
+**定性（不可包装成提升）**：该参数组在 inner-CV 上仅比默认高 0.48%，落在噪声内；
+D76 的多重比较提示（20 组取 max）仍然成立。本条是**口径选择 + 用户决策**，
+不构成「信息层提升」或「组合层可交易」的证据。alpha 结论不变（仍为 null）。
+
+**回滚**：删除 `data/lgbm_best_params.json` 中的 `"20"` 键即回到默认参数（无需改代码）。
+
+**适用范围**：港股个股 20d · **WF 内部比较 ✓ / 外推生产 ✗**。
