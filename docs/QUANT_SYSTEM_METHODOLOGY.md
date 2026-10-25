@@ -532,7 +532,7 @@ python3 ml_services/feature_selection.py --method statistical --top-k 300 --hori
 python3 scripts/train_lightgbm_20d.py            # 生产 20d
 python3 ml_services/ml_trading_model.py --mode train --horizon 20
 # 全折 walk-forward（每折产出 prediction_analysis.csv，D9 自动入库）
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 # 三道闸门（必跑）
 python3 ml_services/monthly_guardrail.py --horizon 20
 python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred … --output …

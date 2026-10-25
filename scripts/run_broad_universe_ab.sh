@@ -40,7 +40,7 @@ if pgrep -f "walk_forward_validation.py.*--horizon 20" > /dev/null; then
 else
   echo "[$(stamp)] 启动 300 池 WF" >> "$LOG"
   setsid env "${ENVBASE[@]}" HK_UNIVERSE_FILE=data/hk_broad/universe_2020-06-30.json \
-    nohup scripts/run_walk_forward.sh --model-type catboost --horizon 20 \
+    nohup scripts/run_walk_forward.sh --model-type lgbm --horizon 20 \
     --use-feature-selection --start-date 2020-06-01 --end-date 2026-09-30 --no-commit \
     >> "$WF300" 2>&1 < /dev/null &
 fi

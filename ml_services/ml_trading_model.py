@@ -3955,7 +3955,8 @@ class CatBoostModel(BaseTradingModel):
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
         self.actual_n_estimators = 0
-        self.model_type = 'catboost'  # 模型类型标识
+        self.learner = 'lightgbm'
+        self.model_type = 'lightgbm'  # 模型类型标识
         self.use_dynamic_threshold = use_dynamic_threshold
         self.fp_penalty = fp_penalty
 
@@ -4583,252 +4584,8 @@ class CatBoostModel(BaseTradingModel):
         # 但我们已将分类特征编码为数值，所以cat_features应为None
         categorical_features = None  # 不使用cat_features，因为数据已是数值型
 
-        # 管线级 A/B：learner='lightgbm' 时用 LightGBM 拟合（复用同一 prepare_data/特征选择/编码）
-        if getattr(self, 'learner', 'catboost') == 'lightgbm':
-            return self._train_lightgbm(df, use_feature_selection, selected_features, horizon, X, y)
-
-        print(f"训练数据形状: X={X.shape}, y={y.shape}")
-        print(f"已编码分类特征数量: {len(categorical_features_indices)} (已转为数值，不使用cat_features)")
-
-        # ========== 训练 CatBoost 模型 ==========
-        print("\n" + "="*70)
-        print("🐱 训练 CatBoost 模型")
-        print("="*70)
-
-        # 根据预测周期调整参数（统一使用20天调优参数）
-        if horizon == 5:
-            # 一周模型参数（与20天模型统一）
-            print("使用一周模型参数（统一参数）...")
-            n_estimators = 400
-            depth = 8
-            learning_rate = 0.06
-            stopping_rounds = 80
-            l2_leaf_reg = 2
-            subsample = 0.75
-            colsample_bylevel = 0.8
-        elif horizon == 1:
-            # 次日模型参数（与20天模型统一）
-            print("使用次日模型参数（统一参数）...")
-            n_estimators = 400
-            depth = 8
-            learning_rate = 0.06
-            stopping_rounds = 80
-            l2_leaf_reg = 2
-            subsample = 0.75
-            colsample_bylevel = 0.8
-        else:  # horizon == 20
-            # 一个月模型参数（特征选择版本）
-            # 2026-05-09：系统调优最优参数（准确率64.02%，夏普0.8027）
-            # 调优结果：depth 7→8, learning_rate 0.04→0.06, colsample_bylevel 0.6→0.8
-            print("使用20天模型参数（系统调优最优版）...")
-            n_estimators = 400  # 树数量
-            depth = 8  # 树深度（增加复杂度）
-            learning_rate = 0.06  # 学习率（加快收敛）
-            stopping_rounds = 80  # 早停耐心
-            l2_leaf_reg = 2  # L2正则化
-            subsample = 0.75  # 行采样
-            colsample_bylevel = 0.8  # 列采样（增加特征多样性）
-
-        from catboost import CatBoostClassifier, CatBoostRanker, CatBoostRegressor, Pool
-
-        if loss_function is None:
-            loss_function = getattr(self, 'loss_function', 'Logloss')
-        ranking = str(loss_function).lower() == 'yetirank'
-        # D59：rank 标签 → 回归目标（预测横截面百分位），不是分类也不是 LTR
-        regression = (getattr(self, 'label_mode', 'absolute') == 'rank')
-        self._ranking = ranking
-        self._regression = regression
-
-        # 准备类别权重参数
-        # 注意：分类特征已用LabelEncoder编码为数值，不使用cat_features参数
-        catboost_params = {
-            'loss_function': 'RMSE' if regression else ('YetiRank' if ranking else 'Logloss'),
-            'eval_metric': 'RMSE' if regression else ('NDCG' if ranking else 'Accuracy'),
-            'depth': depth,
-            'learning_rate': learning_rate,
-            'n_estimators': n_estimators,
-            'l2_leaf_reg': l2_leaf_reg,
-            'subsample': subsample,
-            'colsample_bylevel': colsample_bylevel,
-            'random_seed': 2020,
-            'verbose': 100,
-            'early_stopping_rounds': stopping_rounds,
-            # 去噪声（2026-09-28 A方案）：线程数必须恒定（-1=核数跨机不定，
-            # 且 CatBoost 确定性前提=同 thread_count）；可用 CATBOOST_THREAD_COUNT 覆盖
-            'thread_count': int(os.environ.get('CATBOOST_THREAD_COUNT', '8')),
-            'allow_writing_files': False
-            # cat_features 不设置，因为分类特征已编码为数值
-        }
-        if ranking:
-            catboost_params.pop('early_stopping_rounds', None)
-        
-        # 添加类别权重（温和调整）—— 排序/回归目标不使用类别权重
-        if not ranking and not regression and self.class_weight == 'balanced':
-            # 自动平衡类别权重（温和）
-            catboost_params['auto_class_weights'] = 'Balanced'
-            logger.info("使用自动平衡类别权重 (Balanced)")
-        elif not ranking and not regression and self.class_weight == 'balanced_subsample':
-            catboost_params['auto_class_weights'] = 'Balanced'
-            logger.info("使用子样本平衡类别权重 (Balanced)")
-        elif not ranking and not regression and isinstance(self.class_weight, dict):
-            # 手动指定权重
-            catboost_params['class_weights'] = [self.class_weight.get(0, 1.0), self.class_weight.get(1, 1.0)]
-            logger.info(f"使用手动类别权重: {self.class_weight}")
-        else:
-            logger.info("不使用类别权重")
-
-        if regression:
-            self.catboost_model = CatBoostRegressor(**catboost_params)
-        elif ranking:
-            self.catboost_model = CatBoostRanker(**catboost_params)
-        else:
-            self.catboost_model = CatBoostClassifier(**catboost_params)
-
-        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）—— 排序/回归目标跳过分类 CV
-        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
-        catboost_scores = []
-        catboost_f1_scores = []
-        folds_iter = [] if (ranking or regression) else tscv.split(X)
-
-        for fold, (train_idx, val_idx) in enumerate(folds_iter, 1):
-            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-
-            # 创建 Pool 对象（CatBoost 推荐）
-            # 注意：分类特征已编码为数值，不传递cat_features参数
-            train_pool = Pool(data=X_train_fold, label=y_train_fold)
-            val_pool = Pool(data=X_val_fold, label=y_val_fold)
-
-            self.catboost_model.fit(
-                train_pool,
-                eval_set=val_pool,
-                verbose=False
-            )
-
-            y_pred_fold = self.catboost_model.predict(X_val_fold)
-            score = accuracy_score(y_val_fold, y_pred_fold)
-            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
-            catboost_scores.append(score)
-            catboost_f1_scores.append(f1)
-            print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
-
-        # 使用全部数据重新训练
-        if ranking:
-            # 排序目标：按日期排序，group_id=每行所属日期组（CatBoost 要求组内连续、组号递增）
-            import pandas as _pd
-            date_grp = _pd.factorize(df.index)[0]
-            order = np.argsort(date_grp, kind='stable')
-            Xr, yr = X[order], y[order]
-            grp = date_grp[order]
-            full_pool = Pool(data=Xr, label=yr, group_id=grp)
-            self.catboost_model.fit(full_pool, verbose=100)
-        else:
-            full_pool = Pool(data=X, label=y)
-            self.catboost_model.fit(full_pool, verbose=100)
-
-        # 获取实际训练的树数量
-        self.actual_n_estimators = self.catboost_model.tree_count_
-        mean_accuracy = np.mean(catboost_scores) if catboost_scores else 0.0
-        std_accuracy = np.std(catboost_scores) if catboost_scores else 0.0
-        mean_f1 = np.mean(catboost_f1_scores) if catboost_f1_scores else 0.0
-        std_f1 = np.std(catboost_f1_scores) if catboost_f1_scores else 0.0
-        print(f"\n✅ CatBoost 训练完成")
-        print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
-        print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
-        print(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
-
-        # 保存准确率到文件（供综合分析使用）
-        accuracy_info = {
-            'model_type': 'catboost',
-            'horizon': horizon,
-            'accuracy': float(mean_accuracy),
-            'std': float(std_accuracy),
-            'f1_score': float(mean_f1),
-            'f1_std': float(std_f1),
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            '_caliber': 'train_inside_cv',
-            '_caliber_note': '训练集内 TimeSeriesSplit CV（乐观，20d 可达 0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift'
-        }
-        accuracy_file = 'data/model_accuracy.json'
-        try:
-            # 读取现有数据
-            if os.path.exists(accuracy_file):
-                with open(accuracy_file, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {}
-            
-            # 更新当前模型的准确率（无验证分数时不覆盖旧值，避免写入0.0）
-            if catboost_scores:
-                key = f'catboost_{horizon}d'
-                # 兜底：确保口径说明常驻（文件损坏重建时不丢失，lessons 三.34）
-                existing_data.setdefault('_meta', {
-                    'schema_version': 2,
-                    'warning': '本文件 accuracy/f1_score 均为**训练集内 TimeSeriesSplit CV**，乐观且不可用于评估真实交易能力。真实能力只看 walk-forward（净IR/PBO/DSR/lift，见 docs/DECISIONS.md D1/D2）。',
-                    'consumed_fields': '生产代码仅消费各条目的 std（模型稳定性），不消费 accuracy。',
-                    'caliber_tag': "_caliber=train_inside_cv 表示该条目为训练集内口径",
-                'stale_entries_note': 'gbdt_* 条目为遗留数据（无对应模型文件），读取方仍会读其 std，仅作兜底默认值参考。',
-                })
-                existing_data[key] = accuracy_info
-            else:
-                logger.warning(f"无{horizon}天验证分数，跳过更新 catboost_{horizon}d（保留旧值）")
-            
-            # 保存回文件
-            with open(accuracy_file, 'w', encoding='utf-8') as f:
-                json.dump(existing_data, f, indent=2, ensure_ascii=False)
-            logger.info(f"准确率已保存到 {accuracy_file}")
-        except Exception as e:
-            logger.warning(f"保存准确率失败: {e}")
-
-        # ========== 输出 CatBoost 特征重要性 ==========
-        print("\n" + "="*70)
-        logger.info("分析 CatBoost 特征重要性")
-        print("="*70)
-
-        # CatBoost 提供多种特征重要性计算方法（排序模型需显式指定 fstr_type）
-        try:
-            fi_kwargs = {'fstr_type': 'FeatureImportance'} if ranking else {}
-            feature_importance = self.catboost_model.get_feature_importance(prettified=True, **fi_kwargs)
-            imp_vals = feature_importance['Importances'].values if feature_importance is not None else None
-        except Exception:
-            imp_vals = None
-        if imp_vals is None or len(imp_vals) != len(self.feature_columns):
-            imp_vals = np.zeros(len(self.feature_columns))
-        feat_imp = pd.DataFrame({
-            'Feature': list(self.feature_columns),
-            'Importance': imp_vals
-        })
-        feat_imp = feat_imp.sort_values('Importance', ascending=False)
-
-        # 计算特征影响方向（使用 SHAP 值）
-        try:
-            # CatBoost 的 get_feature_importance 返回的是重要性排序
-            # 使用 predict_contributions 获取特征贡献值
-            contrib_values = self.catboost_model.predict(X, prediction_type='RawFormulaVal')
-            # 计算每个特征的边际贡献
-            # 对于二分类问题，CatBoost 的贡献值计算比较复杂
-            # 这里使用特征重要性作为替代，并基于特征的重要性方向推断
-            # 注意：CatBoost 的特征重要性都是正数，无法直接判断影响方向
-            # 因此我们标记为 'Unknown'
-            feat_imp['Impact_Direction'] = 'Unknown'
-            logger.info("CatBoost 特征贡献分析：由于 CatBoost 特征重要性为正值，无法直接判断影响方向，标记为 Unknown")
-        except Exception as e:
-            logger.warning(f"CatBoost 特征贡献分析失败: {e}")
-            feat_imp['Impact_Direction'] = 'Unknown'
-
-        # 保存特征重要性
-        feat_imp.to_csv('data/feature_selection/ml_trading_model_catboost_20d_importance.csv', index=False)
-        logger.info(r"已保存特征重要性至 data/feature_selection/ml_trading_model_catboost_20d_importance.csv")
-
-        # 显示前20个重要特征
-        print("\n📊 CatBoost Top 20 重要特征:")
-        print(feat_imp[['Feature', 'Importance', 'Impact_Direction']].head(20))
-
-        print("\n" + "="*70)
-        logger.info(r"CatBoost 模型训练完成！")
-        print("="*70)
-
-        return feat_imp
+        # 唯一学习器 = LightGBM（2026-10-25；CatBoost 分支已删除）
+        return self._train_lightgbm(df, use_feature_selection, selected_features, horizon, X, y)
 
     def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
         """预测单只股票
@@ -5209,46 +4966,22 @@ class CatBoostModel(BaseTradingModel):
             # 转换回 numpy 数组
             X = df_temp.values
 
-            if getattr(self, 'learner', 'lightgbm') == 'lightgbm':
-                # LightGBM（唯一学习器）：rank 回归输出连续分数
-                import numpy as _np
-                if getattr(self, 'label_mode', 'absolute') == 'rank':
-                    score = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
-                    return {
-                        'code': code,
-                        'name': STOCK_NAMES.get(code, code),
-                        'prediction': int(score >= 0.5),
-                        'probability': score,
-                        'score': score,
-                        'label_mode': 'rank',
-                        'current_price': float(latest_data['Close'].values[0]),
-                        'date': latest_data.index[0]
-                    }
-                proba = self.model.predict_proba(X)[0]
-                prediction = int(proba[1] >= 0.5)
-            elif getattr(self, 'label_mode', 'absolute') == 'rank':
-                # 旧 CatBoost rank 路径（非生产；保留给历史 pkl）
-                from catboost import Pool
-                score = float(self.catboost_model.predict(Pool(data=X))[0])
+            # 唯一学习器 = LightGBM：rank 回归输出连续分数
+            import numpy as _np
+            if getattr(self, 'label_mode', 'absolute') == 'rank':
+                score = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
                 return {
                     'code': code,
                     'name': STOCK_NAMES.get(code, code),
                     'prediction': int(score >= 0.5),
-                    'probability': float(score),
-                    'score': float(score),
+                    'probability': score,
+                    'score': score,
                     'label_mode': 'rank',
                     'current_price': float(latest_data['Close'].values[0]),
                     'date': latest_data.index[0]
                 }
-            else:
-                # 使用 CatBoost 模型直接预测
-                from catboost import Pool
-
-                # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
-                # 因为 X 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
-                test_pool = Pool(data=X)
-                proba = self.catboost_model.predict_proba(test_pool)[0]
-                prediction = self.catboost_model.predict(test_pool)[0]
+            proba = self.model.predict_proba(X)[0]
+            prediction = int(proba[1] >= 0.5)
 
             return {
                 'code': code,
@@ -5266,33 +4999,28 @@ class CatBoostModel(BaseTradingModel):
             return None
 
     def save_model(self, filepath):
-        """保存模型（CatBoost 或 LightGBM 学习器）"""
-        learner = getattr(self, 'learner', 'catboost')
-        base_model = (self.catboost_model if learner != 'lightgbm' else self.model)
+        """保存模型（唯一学习器 = LightGBM）"""
         model_data = {
-            'model': base_model,
-            'catboost_model': self.catboost_model,
+            'model': self.model,
             'feature_columns': self.feature_columns,
             'actual_n_estimators': self.actual_n_estimators,
             'horizon': self.horizon,
             'model_type': self.model_type,
             'categorical_encoders': self.categorical_encoders,
             'community_ids': self.community_ids,  # 保存社区 ID 列表
-            'learner': learner,
+            'learner': getattr(self, 'learner', 'lightgbm'),
             'label_mode': getattr(self, 'label_mode', 'absolute'),  # D59
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
-        print(f"{'CatBoost' if learner == 'catboost' else learner} 模型已保存到 {filepath}")
+        print(f"LightGBM 模型已保存到 {filepath}")
 
     def load_model(self, filepath):
-        """加载模型（CatBoost 或 LightGBM 学习器）"""
+        """加载模型（唯一学习器 = LightGBM）"""
         with open(filepath, 'rb') as f:
             model_data = pickle.load(f)
-        learner = model_data.get('learner', 'catboost')
-        base_model = model_data.get('model') or model_data.get('catboost_model')
-        self.catboost_model = base_model
-        self.model = base_model
+        learner = model_data.get('learner', 'lightgbm')
+        self.model = model_data['model']
         self.learner = learner
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
@@ -5351,31 +5079,12 @@ class CatBoostModel(BaseTradingModel):
                     lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
                 )
 
-        # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
-        # 因为 test_df 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
-        test_pool = Pool(data=test_df)
-
-        # 返回预测概率
-        if getattr(self, 'learner', 'catboost') == 'lightgbm':
-            if getattr(self, 'label_mode', 'absolute') == 'rank':
-                import numpy as _np
-                p = _np.clip(_np.asarray(self.model.predict(test_df)).ravel(), 0.0, 1.0)
-                return _np.column_stack([1 - p, p])
-            return self.model.predict_proba(test_df)
-        if getattr(self, '_ranking', False):
-            # 排序模型：predict 返回原始分数，映射为伪概率 (1-p, p) 兼容现有 [:,1] 用法
+        # 唯一学习器 = LightGBM
+        if getattr(self, 'label_mode', 'absolute') == 'rank':
             import numpy as _np
-            scores = np.asarray(self.catboost_model.predict(test_pool)).ravel()
-            p = 1.0 / (1.0 + _np.exp(-_np.clip(scores, -30, 30)))
+            p = _np.clip(_np.asarray(self.model.predict(test_df)).ravel(), 0.0, 1.0)
             return _np.column_stack([1 - p, p])
-        if getattr(self, '_regression', False) or getattr(self, 'label_mode', 'absolute') == 'rank':
-            # D59/D60：rank 标签 → 回归分数即横截面百分位预测值（∈[0,1]）。
-            # 直接作为伪概率 [:,1] = score，供 WF 回测 / comprehensive_analysis / 三闸 取用。
-            import numpy as _np
-            scores = _np.asarray(self.catboost_model.predict(test_pool)).ravel()
-            p = _np.clip(scores, 0.0, 1.0)
-            return _np.column_stack([1 - p, p])
-        return self.catboost_model.predict_proba(test_pool)
+        return self.model.predict_proba(test_df)
 
     def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
         """LightGBM 拟合（复用 CatBoost 管线的 prepare_data/特征选择/编码，仅换学习器）"""
@@ -6376,8 +6085,8 @@ def main():
     parser = argparse.ArgumentParser(description='机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate'],
                        help='运行模式: train=训练, predict=预测, evaluate=评估')
-    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt', 'catboost', 'ensemble'],
-                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型, catboost=单一CatBoost模型, ensemble=融合模型（默认lgbm）')
+    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt', 'ensemble'],
+                       help='模型类型: lgbm=LightGBM（默认，唯一生产学习器）, gbdt=LightGBM 别名, ensemble=三模型融合（研究用）')
     parser.add_argument('--model-path', type=str, default='data/ml_trading_model.pkl',
                        help='模型保存/加载路径')
     parser.add_argument('--start-date', type=str, default=None,
@@ -6418,14 +6127,6 @@ def main():
         lgbm_model = None
         gbdt_model = GBDTModel()
         catboost_model = None
-        ensemble_model = None
-    elif args.model_type == 'catboost':
-        logger.info("=" * 70)
-        print("🐱 使用单一 CatBoost 模型")
-        logger.info("=" * 70)
-        lgbm_model = None
-        gbdt_model = None
-        catboost_model = CatBoostModel()
         ensemble_model = None
     else:
         logger.info("=" * 70)

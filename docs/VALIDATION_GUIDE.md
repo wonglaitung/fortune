@@ -181,7 +181,7 @@ python3 ml_services/walk_forward_validation.py
 
 # 自定义参数
 python3 ml_services/walk_forward_validation.py \
-    --model-type catboost \
+    --model-type lgbm \
     --start-date 2024-01-01 \
     --end-date 2025-12-31 \
     --train-window 12 \
@@ -365,13 +365,13 @@ python3 ml_services/backtest_20d_horizon.py \
 
 # 批量回测（28只股票）
 python3 ml_services/batch_backtest.py \
-    --model-type catboost \
+    --model-type lgbm \
     --horizon 20 \
     --confidence-threshold 0.6
 
 # 板块批量回测
 python3 ml_services/batch_backtest.py \
-    --model-type catboost \
+    --model-type lgbm \
     --horizon 20 \
     --confidence-threshold 0.6 \
     --stocks 0005.HK 0939.HK 3968.HK 1288.HK 0883.HK 2318.HK
@@ -646,7 +646,7 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confid
 
 **推荐**：
 ```bash
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 ```
 
 **不推荐**：
@@ -791,7 +791,7 @@ if self.horizon > 1:
 **解决方案**：
 ```bash
 # ✅ 使用Walk-forward验证
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 
 # ❌ 不要使用简单回测
 python3 ml_services/backtest_20d_horizon.py --horizon 20

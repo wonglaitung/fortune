@@ -3986,7 +3986,7 @@ python3 scripts/pin_macro_snapshot.py
 python3 scripts/pin_hk_snapshot.py
 # 逐周期跑（--no-commit 防污染分位门槛数据源 CSV；同配置连跑两次验 md5）
 US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
-  bash scripts/run_walk_forward.sh --model-type catboost --horizon <5|10|20> \
+  bash scripts/run_walk_forward.sh --model-type lgbm --horizon <5|10|20> \
   --use-feature-selection --label-mode rank --no-commit
 ```
 
@@ -4027,7 +4027,7 @@ US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_ma
 ```bash
 # 复核命令（收市后跑；--no-commit；两次验 md5）
 US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
-  bash scripts/run_walk_forward.sh --model-type catboost --horizon <5|10|20> \
+  bash scripts/run_walk_forward.sh --model-type lgbm --horizon <5|10|20> \
   --start-date 2020-06-01 --end-date 2026-07-31 --train-window 36 \
   --label-mode rank --use-feature-selection --no-commit --output-dir <out>
 python3 ml_services/monthly_guardrail.py --pred <out>/*/prediction_analysis.csv --horizon <h> --topk 10
@@ -4121,7 +4121,7 @@ for arm in A B C D; do
     D) export F1_FEATURES=0 F1_FORCE=0 HIBOR_FEATURES=0 HIBOR_FORCE=0;;
   esac
   US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
-    bash scripts/run_walk_forward.sh --model-type catboost --horizon 20 \
+    bash scripts/run_walk_forward.sh --model-type lgbm --horizon 20 \
     --start-date 2020-06-01 --end-date 2026-07-31 --train-window 36 \
     --label-mode rank --use-feature-selection --no-commit \
     --output-dir /tmp/opencode/d62_$arm
@@ -5187,7 +5187,7 @@ raw 在两种模型上**点估计都更好**，但四条 95%CI **全跨 0** ⇒ 
 LGBM 20d 的决策指标是否不劣于 CatBoost（D10 的「20d LGBM 优」限定旧 56 池旧口径，不可外推）。
 
 **对照**：池 310；窗口 2020-06-01→2026-09-30（41 期）；Top500 + HIBOR；F1=0；rank 标签；
-三冻结 + 同 `GATE_SOURCE_CSV`；`--model-type catboost --learner lightgbm`（同一管线只换拟合器）。
+三冻结 + 同 `GATE_SOURCE_CSV`；`--model-type lgbm --learner lightgbm`（同一管线只换拟合器）。
 两套宇宙都报：①全 310 池 ②生产 30 只自选（过滤 CSV 后重算，等权基准=30 池）。
 
 | 宇宙 | 学习器 | 净IR | 超额 IR | PBO（零假设带） | DSR | 超额 lift | 逐日 raw IC |
@@ -5236,6 +5236,14 @@ LGBM 20d 的决策指标是否不劣于 CatBoost（D10 的「20d LGBM 优」限�
 **定性（不可包装成提升）**：D74 同窗口 A/B：全 310 池 LGBM 净IR 0.43 / 超额 +0.20 / PBO 0.34 / DSR 0.852；
 CatBoost 0.18 / −0.08 / 0.54 / 0.762。自选 30 池 LGBM 超额 −0.28 / DSR 0.946；CatBoost −0.32 / 0.937。
 **两臂 DSR 均 <0.95、超额 CI 跨 0** ⇒ 换学习器**不改变 alpha null**，本次属工程统一。
+
+**清理（按 AGENTS「不保留旧分支」）**
+- 删除港股 `CatBoostModel.train` 的 CatBoost 训练体、单只/批量预测的 CatBoost 分支；
+  `save_model/load_model` 只保留 `model` 键（旧 `catboost_model` 键不再兼容）。
+- 删除 A股 CatBoost 训练分支（`_train_with_weights_rank` / 分类器路径）与 `learner` 参数；
+  `AStockWalkForwardValidator` 的 `learner` 参数一并移除（固定 `lightgbm`）。
+- 删除旧模型产物：港股 `ml_trading_model_catboost_*.pkl`、A股 `trading_model_catboost_*.pkl`、
+  恒指 12 个 `hsi_catboost_*.cbm`；旧文件名 `ml_trading_model_lightgbm_*` 亦删除。
 
 **适用范围**：本池 / 本窗口 / 20d（A/B 证据）；恒指未做 A/B（CatBoost→LGBM 属实现替换）·
 **WF 内部比较 ✓ / 外推生产 ✗**。

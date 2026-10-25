@@ -88,7 +88,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（**16:30 HKT**；cron 已改 `30 8` UTC，D25） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数。**2026-10-22 起 CLI 默认 `--label-mode rank`**；**D23 起默认 `F1_FEATURES=1 F1_FORCE=1`（例外观察采用；D20 ⑦ 期为 =0）**；复现 2026-10-11 前一切基线须显式 `--label-mode absolute` + `F1_FEATURES=0 F1_FORCE=0`，复现 F1-on 旧基线（212920/234941/B2）同 =1 但另需 `HIBOR_FEATURES=0`） | - |
+| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type lgbm --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数。**2026-10-22 起 CLI 默认 `--label-mode rank`**；**D23 起默认 `F1_FEATURES=1 F1_FORCE=1`（例外观察采用；D20 ⑦ 期为 =0）**；复现 2026-10-11 前一切基线须显式 `--label-mode absolute` + `F1_FEATURES=0 F1_FORCE=0`，复现 F1-on 旧基线（212920/234941/B2）同 =1 但另需 `HIBOR_FEATURES=0`） | - |
 | **SFC 卖空周报周更** | `python3 scripts/fetch_sfc_short.py`（增量抓 SFC 官方每周 CSV 追加 `data/sfc_short/`；`--dry` 预览 / `--full` 回填）；已挂进 `run_comprehensive_analysis.sh` 前置步骤 | 每周（SFC 周五发布后） |
 | **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） | - |
 | **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结宏观快照，`python3 scripts/pin_hk_snapshot.py` 先冻结个股行情快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**三冻结，缺一不可**（lessons 三.29/三.30/三.50）。验收=同配置连跑两次 CSV md5 相同。注意：runner **默认 `--label-mode rank`**（2026-10-22；复现旧 absolute 基线须显式 `--label-mode absolute`）且 **默认 F1=0**（D20 ⑦ 生产口径；复现 F1-on 旧基线须 `F1_FEATURES=1 F1_FORCE=1`）；`data/sfc_short/` 为周更文件不属三冻结——PIT t-7 + WF 窗口止于新周之前 ⇒ 追加不改窗口内特征，跨周复现仍须同版本 CSV；WF `--start-date` 是**全程起点**（测试期起点=start+训练窗），复现测试期 2023-06→2026-07 须 `--start-date 2020-06-01`（lessons 三.52） | - |
@@ -331,6 +331,7 @@ python hsi_email.py --no-email
    - 判据（可 FAIL）：改完后 `grep -rn "<旧符号>" --include=*.py .` **必须 0 命中**；命中即视为未完成。唯一例外是文档里标注「历史」的记录。
    - 必须扫完四类调用点再收工：①生产路径 ②回测/护栏 ③脚本与报告文案 ④测试断言。漏改一处 = 静默走错口径。
    - 防复活靠契约测试：如 `tests/test_selection_mode_single_source.py::test_no_switch_symbols_anywhere` 扫描 `ml_services/`、`scripts/`、根目录 py，出现旧开关符号即红。
+   - **旧实现 / 旧模型文件 / 旧格式一并删除**：不留「存档」目录、不留旧 `.pkl` / `.cbm`、不留别名类或兼容加载分支。判据同上（`grep` 旧符号 0 命中；旧产物文件不存在）。
    - 反面教材：保留开关会让两条口径长期并存，谁「优化」其中一条就静默分叉（D25/D30 的同类事故）。
 
 ### 🚨 对抗性审核：⓪ 同一性闸 + 三道闸（强制，不可跳过）

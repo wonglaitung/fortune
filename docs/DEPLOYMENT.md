@@ -64,7 +64,7 @@
 
 **学习器**：**CatBoost（F1-off）**（2026-10-10 D20 ⑦ 四格同条件多数判切换；此前 LightGBM 管线级 A/B
 > 曾判 🟢 → 2026-10-05 复现降 🟡（PBO 0.90）→ 四格终判 C1 夺魁改产，D10 管线级 A/B 结论以 D20 ⑦ 为准）；
-生产模型 `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
+生产模型 `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm
 --use-feature-selection` 产出 `data/ml_trading_model_catboost_20d.pkl`（F1-off，Top500），
 `comprehensive_analysis.py` 优先加载；`lightgbm_20d.pkl` 降为回退留档。最优组合参数：**top5-neutral**。
 > ✅ **遗留已关闭（2026-10-17 D60/D61）**：T2 已用**生产 rank 口径**（`--label-mode rank`，全特征 + CatBoostRegressor，

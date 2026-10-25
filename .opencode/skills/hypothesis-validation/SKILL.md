@@ -146,7 +146,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred <csv>
 HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
 US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot \
 GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv \
-  scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection \
+  scripts/run_walk_forward.sh --model-type lgbm --horizon 20 --use-feature-selection \
   --start-date 2020-06-01 --end-date 2026-07-31 --no-commit
 
 # 时序/择时类策略评估（唯一实现：逐日 mark + 静态对照 + MDE）

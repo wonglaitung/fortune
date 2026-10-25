@@ -614,7 +614,7 @@ def main():
     print("\n💡 下一步:")
     print(f"1. 如果最终验证结果满意，更新 ml_trading_model.py 中的参数配置")
     print(f"2. 运行完整 Walk-forward 验证确认:")
-    print(f"   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon {args.horizon}")
+    print(f"   python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon {args.horizon}")
 
 
 if __name__ == "__main__":

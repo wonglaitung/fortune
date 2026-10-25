@@ -288,9 +288,9 @@ python3 comprehensive_analysis.py
 ./scripts/run_comprehensive_analysis.sh
 python3 detect_stock_anomalies.py --mode standalone --mode-type deep
 python3 simulation_trader.py
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm --use-feature-selection
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20 --use-feature-selection
 python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
 
 # ============ 🇨🇳 A股 ============

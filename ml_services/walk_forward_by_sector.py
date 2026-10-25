@@ -49,7 +49,7 @@ class SectorWalkForwardValidator:
 
     def __init__(
         self,
-        model_type: str = 'catboost',
+        model_type: str = 'lightgbm',
         train_window_months: int = 12,
         test_window_months: int = 1,
         step_window_months: int = 1,
@@ -857,7 +857,7 @@ def main():
     
     # 创建验证器
     validator = SectorWalkForwardValidator(
-        model_type='catboost',
+        model_type='lightgbm',
         train_window_months=args.train_window,
         test_window_months=args.test_window,
         step_window_months=args.step_window,

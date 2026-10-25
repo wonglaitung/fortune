@@ -11,7 +11,7 @@
 # 目标：同配置双跑 prediction_analysis.csv DataFrame.equals() == True。
 #
 # 用法（与直接 python3 调用完全一致）：
-#   scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection \
+#   scripts/run_walk_forward.sh --model-type lgbm --horizon 20 --use-feature-selection \
 #       --learner lightgbm --start-date 2020-06-01 --end-date 2026-07-31 --no-commit
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

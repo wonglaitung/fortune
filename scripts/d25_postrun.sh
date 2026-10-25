@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 echo "[post] 等待双跑结束 $(date '+%F %T')"
-while pgrep -f "walk_forward_validation.py --model-type catboost --horizon 20" > /dev/null; do
+while pgrep -f "walk_forward_validation.py --model-type lgbm --horizon 20" > /dev/null; do
   sleep 60
 done
 echo "[post] 双跑进程已退出 $(date '+%F %T')"

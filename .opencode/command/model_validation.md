@@ -115,13 +115,13 @@ python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 1
 
 ```bash
 # 【推荐】使用特征选择（Top 500 特征，需先运行阶段 0）
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20 --use-feature-selection
 
 # 使用全量特征（约 1132 个特征）
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 
 # 带置信度阈值
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
 # 板块验证（可选）
 python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
@@ -1113,8 +1113,8 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 |------|------|
 | **特征选择** | `python3 ml_services/feature_selection.py --method model --top-k 500 --horizon 20` |
 | **恒指 Walk-forward** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
-| **个股 Walk-forward（推荐）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection` |
-| **个股 Walk-forward（全量特征）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
+| **个股 Walk-forward（推荐）** | `python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20 --use-feature-selection` |
+| **个股 Walk-forward（全量特征）** | `python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20` |
 | **组合层复核（20d）** | `python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10` |
 
 ### 模型对比

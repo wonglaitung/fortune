@@ -23,7 +23,7 @@ for RUN in 1 2; do
     echo "[d25] 第2轮保留特征缓存（热跑）"
   fi
   scripts/run_walk_forward.sh \
-      --model-type catboost --horizon 20 \
+      --model-type lgbm --horizon 20 \
       --start-date 2020-06-01 --end-date 2026-07-31 \
       --use-feature-selection --no-commit 2>&1 | tee "logs/d25_run${RUN}.log"
 done

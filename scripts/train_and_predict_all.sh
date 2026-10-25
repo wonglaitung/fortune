@@ -170,7 +170,7 @@ echo "  - 历史日期预测: ./train_and_predict_all.sh --predict-date 2026-01-
 echo "  - 限制训练数据: ./train_and_predict_all.sh --start-date 2024-01-01 --end-date 2024-12-31"
 echo ""
 echo "🔧 批量回测（推荐用于评估模型在所有股票上的表现）:"
-echo "  python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55"
+echo "  python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55"
 echo "  python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55"
 echo "  详细文档请参见: ml_services/BACKTEST_GUIDE.md"
 echo "=========================================="

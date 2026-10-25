@@ -25,7 +25,7 @@ L=output/train_retrain
 S10="0700.HK 0005.HK 2318.HK 1299.HK 9988.HK 0388.HK 0883.HK 1398.HK 0688.HK 1810.HK"
 for r in A B; do
   echo "[$(date '+%F %T')] 可复现性验证 run $r 开始" >> $L/repro.log
-  bash scripts/run_walk_forward.sh --model-type catboost --horizon 20 \
+  bash scripts/run_walk_forward.sh --model-type lgbm --horizon 20 \
        --use-feature-selection --label-mode absolute \
        --start-date 2021-01-01 --end-date 2024-12-31 \
        --stocks $S10 \
@@ -46,7 +46,7 @@ for h in 20 5 1; do
   extra=""
   [ "$h" = "20" ] && extra="--learner lightgbm"
   echo "[$(date '+%F %T')] 冻结快照 abs${h}d 完整基线开始" >> $L/repro.log
-  bash scripts/run_walk_forward.sh --model-type catboost --horizon $h \
+  bash scripts/run_walk_forward.sh --model-type lgbm --horizon $h \
        --use-feature-selection $extra --label-mode absolute \
        --start-date 2019-06-01 --end-date 2026-07-31 \
        > output/pin${h}d_abs.log 2>&1

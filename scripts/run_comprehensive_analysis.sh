@@ -103,7 +103,7 @@ TRAIN_SUCCESS=0
 TRAIN_FAILED=0
 for horizon in 5 10 20; do
     echo "  🔄 训练 ${horizon}d 模型..."
-    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type catboost --use-feature-selection
+    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type lgbm --use-feature-selection
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
         TRAIN_FAILED=$((TRAIN_FAILED + 1))
@@ -137,7 +137,7 @@ PREDICT_SUCCESS=0
 PREDICT_FAILED=0
 for horizon in 5 10 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
-    python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type catboost --use-feature-selection
+    python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type lgbm --use-feature-selection
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 生成 ${horizon}d 预测失败（继续执行其他周期）"
         PREDICT_FAILED=$((PREDICT_FAILED + 1))

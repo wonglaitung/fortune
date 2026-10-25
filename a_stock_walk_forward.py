@@ -114,7 +114,6 @@ class AStockWalkForwardValidator:
         confidence_threshold: float = 0.50,
         use_market_filter: bool = True,    # 启用市场情绪过滤器
         min_train_samples: int = 100,
-        learner: str = 'catboost',         # P4.1 学习器 A/B：catboost | lightgbm
     ):
         """
         初始化验证器
@@ -135,7 +134,7 @@ class AStockWalkForwardValidator:
         self.confidence_threshold = confidence_threshold
         self.use_market_filter = use_market_filter
         self.min_train_samples = min_train_samples
-        self.learner = learner
+        self.learner = 'lightgbm'  # 唯一学习器
         self.stock_list = list(A_STOCK_TRAINING_LIST.keys())
 
         # 市场情绪过滤器（延迟初始化）
@@ -153,7 +152,7 @@ class AStockWalkForwardValidator:
         logger.info(f"滚动步长: {step_window_months} 个月")
         logger.info(f"预测周期: {horizon} 天")
         logger.info(f"市场情绪过滤: {'启用' if use_market_filter else '禁用'}")
-        logger.info(f"学习器: {learner}")
+        logger.info("学习器: lightgbm")
         logger.info(f"股票数量: {len(self.stock_list)}")
 
     def validate(self, start_date='2024-01-01', end_date='2026-07-01'):
@@ -339,7 +338,7 @@ class AStockWalkForwardValidator:
         print(f"\n  🔄 准备训练数据...")
 
         # 创建模型实例
-        model = AStockTradingModel(horizon=self.horizon, learner=self.learner)
+        model = AStockTradingModel(horizon=self.horizon)
 
         # 训练数据：从全量预准备数据切片（与 prepare_data(train 窗口) 等价）
         if self._full_data is None:

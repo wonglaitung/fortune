@@ -34,13 +34,13 @@
 
 ```bash
 # 模型训练（使用全量特征）
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm
 
 # 特征选择
 python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20
 
 # Walk-forward 验证
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 
 # 清除特征缓存（新增特征后必须执行）
 rm -rf data/feature_cache/*.pkl
@@ -532,7 +532,7 @@ test_df[col] = test_df[col].apply(
 **验证命令**：
 ```bash
 # Walk-forward 验证
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20
 
 # 特征重要性分析
 python3 scripts/analyze_feature_importance_by_horizon.py

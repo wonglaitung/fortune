@@ -16,9 +16,9 @@ Walk-forward 验证 - 模型预测能力验证（业界标准）
 - 滚动步长：1个月（业界标准）
 
 使用方法：
-  python3 ml_services/walk_forward_validation.py --model-type catboost --start-date 2024-01-01 --end-date 2025-12-31
-  python3 ml_services/walk_forward_validation.py --model-type catboost --train-window 12 --test-window 1 --step-window 1
-  python3 ml_services/walk_forward_validation.py --model-type catboost --confidence-threshold 0.55 --use-feature-selection
+  python3 ml_services/walk_forward_validation.py --model-type lgbm --start-date 2024-01-01 --end-date 2025-12-31
+  python3 ml_services/walk_forward_validation.py --model-type lgbm --train-window 12 --test-window 1 --step-window 1
+  python3 ml_services/walk_forward_validation.py --model-type lgbm --confidence-threshold 0.55 --use-feature-selection
 """
 
 import warnings
@@ -38,7 +38,7 @@ warnings.filterwarnings('ignore')
 
 # 导入项目模块
 from ml_services.ml_trading_model import (
-    CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer, LABEL_ENTRY_LAG_DAYS,
+    LightGBMModel, GBDTModel, FeatureEngineer, LABEL_ENTRY_LAG_DAYS,
 )
 from ml_services.run_manifest import resolve_flags
 from ml_services.network_ids import resolve_community_ids
@@ -103,7 +103,7 @@ class WalkForwardValidator:
 
     def __init__(
         self,
-        model_type: str = 'catboost',
+        model_type: str = 'lightgbm',
         train_window_months: int = 12,    # 业界标准：12个月
         test_window_months: int = 1,       # 业界标准：1个月
         step_window_months: int = 1,        # 业界标准：1个月
@@ -115,7 +115,6 @@ class WalkForwardValidator:
         embargo_days: int = None,          # 训练/测试之间的隔离期（默认=horizon，消除标签穿越）
         top_k: int = 500,                  # 每折特征选择保留的特征数
         loss_function: str = None,          # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
-        learner: str = None,               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
         label_mode: str = 'rank'           # 标签口径：'absolute' / 'relative_hsi' / 'rank'（V4 横截面百分位，D60）
     ):
         """
@@ -147,13 +146,13 @@ class WalkForwardValidator:
         self.embargo_days = embargo_days if embargo_days is not None else horizon
         self.top_k = top_k
         self.loss_function = loss_function
-        self.learner = learner
+        self.learner = 'lightgbm'  # 唯一学习器
         self.label_mode = label_mode
 
         # 模型类映射
         self.model_classes = {
-            'catboost': CatBoostModel,
             'lightgbm': LightGBMModel,
+            'lgbm': LightGBMModel,
             'gbdt': GBDTModel
         }
 
@@ -417,10 +416,6 @@ class WalkForwardValidator:
         if getattr(self, 'loss_function', None):
             model.loss_function = self.loss_function
             print(f"  🧭 目标函数: {self.loss_function}")
-        # 管线级 A/B：learner（如 lightgbm），复用 CatBoost 管线只换拟合器
-        if getattr(self, 'learner', None):
-            model.learner = self.learner
-            print(f"  🔁 学习器: {self.learner}")
 
         # 准备训练数据：优先用一次性预取全段按日期切分（修复历史区间取数失败）
         train_codes = stock_list
@@ -1729,8 +1724,8 @@ def main():
     parser = argparse.ArgumentParser(description='Walk-forward 验证 - 模型预测能力验证')
 
     # 模型参数
-    parser.add_argument('--model-type', type=str, default='catboost',
-                       choices=['catboost', 'lightgbm', 'gbdt'],
+    parser.add_argument('--model-type', type=str, default='lightgbm',
+                       choices=['lightgbm', 'lgbm', 'gbdt'],
                        help='模型类型 (默认: catboost)')
 
     # Walk-forward 参数
@@ -1774,8 +1769,6 @@ def main():
                        help='训练/测试隔离期天数（默认=horizon，消除标签穿越测试期）')
     parser.add_argument('--loss-function', type=str, default=None,
                        help='目标函数（默认 Logloss；YetiRank 为管线级排序目标 A/B）')
-    parser.add_argument('--learner', type=str, default=None,
-                        help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
     parser.add_argument('--label-mode', type=str, default='rank',
                         choices=['absolute', 'relative_hsi', 'rank'],
                         help='标签口径：rank=当日横截面百分位回归（默认，D59/D60）；absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）')
@@ -1811,7 +1804,6 @@ def main():
         fp_penalty=args.fp_penalty,
         embargo_days=args.embargo_days,
         loss_function=args.loss_function,
-        learner=args.learner,
         label_mode=args.label_mode
     )
 

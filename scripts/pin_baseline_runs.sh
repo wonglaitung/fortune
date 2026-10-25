@@ -29,7 +29,7 @@ run_wf () {   # $1=horizon $2=tag
   local h=$1 tag=$2 extra=""
   [ "$h" = "20" ] && extra="--learner lightgbm"
   echo "[$(date '+%F %T')] ${tag} abs${h}d 开始" >> $L/pin_baseline.log
-  bash scripts/run_walk_forward.sh --model-type catboost --horizon "$h" \
+  bash scripts/run_walk_forward.sh --model-type lgbm --horizon "$h" \
        --use-feature-selection $extra --label-mode absolute \
        --start-date 2019-06-01 --end-date 2026-07-31 \
        > "output/${tag}${h}d_abs.log" 2>&1

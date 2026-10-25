@@ -895,7 +895,7 @@ class AStockTradingModel(CatBoostModel):
     4. 标签标准化（除以滚动波动率）
     """
 
-    def __init__(self, horizon=20, learner='lightgbm'):
+    def __init__(self, horizon=20):
         # 应用 A股数据源替换（延迟执行）
         _apply_a_stock_patch()
 
@@ -904,8 +904,8 @@ class AStockTradingModel(CatBoostModel):
         self.horizon = horizon
         # D59：分析/训练默认排序口径（rank），不再默认 absolute
         self.label_mode = 'rank'
-        # P4.1 学习器 A/B（决策点3：三周期全做）：'catboost' | 'lightgbm'
-        self.learner = learner
+        # 唯一学习器 = LightGBM（2026-10-25）
+        self.learner = 'lightgbm'
         self.market = 'a_stock'
         self.feature_engineer = AStockFeatureEngineer()
         self.stock_list = list(A_STOCK_TRAINING_LIST.keys())
@@ -1327,7 +1327,7 @@ class AStockTradingModel(CatBoostModel):
         """
         使用样本权重训练模型（带时间序列交叉验证）
 
-        P4.1：learner='lightgbm' 时改走 LightGBM 路径（同 TSCV 口径，仅换拟合器）
+        唯一学习器 = LightGBM（2026-10-25；同 TSCV 口径）
 
         注意：特征必须已经编码为数值型（由 train() 方法处理）
 
@@ -1338,136 +1338,10 @@ class AStockTradingModel(CatBoostModel):
             cat_features: 分类特征索引（已编码为数值，应为None）
             horizon: 预测周期
         """
-        from catboost import CatBoostClassifier, Pool
-        from sklearn.model_selection import TimeSeriesSplit
-        from sklearn.metrics import accuracy_score, f1_score
-
-        if getattr(self, 'learner', 'catboost') == 'lightgbm':
-            return self._train_with_weights_lgbm(X, y, sample_weights, horizon)
-
-        # D59：rank 标签 → 回归目标（横截面百分位），不是分类
-        if getattr(self, 'label_mode', 'absolute') == 'rank':
-            return self._train_with_weights_rank(X, y, sample_weights, horizon)
-
-        # 如果没有提供样本权重，使用默认权重
-        if sample_weights is None:
-            sample_weights = np.ones(len(y))
-
-        # 验证特征是否为数值型
-        if X.dtype == object:
-            logger.error("特征矩阵包含字符串，请确保分类特征已编码")
-            # 尝试转换
-            try:
-                X = X.astype(float)
-                logger.warning("已自动转换为数值型")
-            except Exception as e:
-                logger.error(f"无法转换特征: {e}")
-                raise ValueError("特征必须为数值型，请检查分类特征编码")
-
-        # 创建 CatBoost 模型（不使用 auto_class_weights，避免与样本权重冲突）
-        catboost_params = {
-            'loss_function': 'Logloss',
-            'eval_metric': 'Accuracy',
-            'depth': 8,
-            'learning_rate': 0.06,
-            'n_estimators': 400,
-            'l2_leaf_reg': 2,
-            'subsample': 0.75,
-            'colsample_bylevel': 0.8,
-            'random_seed': 2020,
-            'verbose': False,
-        }
-
-        self.catboost_model = CatBoostClassifier(**catboost_params)
-
-        # 使用时间序列交叉验证
-        # 数据已按日期排序，训练集是早期所有股票，验证集是后期所有股票
-        # 这样验证集的日期完全是新的，避免市场特征泄漏
-        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
-        cv_scores = []
-        cv_f1_scores = []
-
-        logger.info("开始时间序列交叉验证...")
-        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
-            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-            weights_train_fold = sample_weights[train_idx]
-
-            # 创建新的模型实例（避免累积训练）
-            fold_model = CatBoostClassifier(**catboost_params)
-
-            train_pool = Pool(
-                data=X_train_fold,
-                label=y_train_fold,
-                weight=weights_train_fold,
-                cat_features=None
-            )
-            val_pool = Pool(data=X_val_fold, label=y_val_fold)
-
-            # 不使用 eval_set 进行早停（避免过拟合验证集）
-            fold_model.fit(train_pool, verbose=False)
-            y_pred_fold = fold_model.predict(X_val_fold)
-
-            score = accuracy_score(y_val_fold, y_pred_fold)
-            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
-            cv_scores.append(score)
-            cv_f1_scores.append(f1)
-            logger.info(f"   Fold {fold} 验证准确率: {score:.4f}, F1分数: {f1:.4f}")
-
-        mean_accuracy = np.mean(cv_scores)
-        std_accuracy = np.std(cv_scores)
-        mean_f1 = np.mean(cv_f1_scores)
-        std_f1 = np.std(cv_f1_scores)
-
-        logger.info(f"\n✅ 交叉验证完成")
-        logger.info(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
-        logger.info(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
-
-        # 使用全部数据重新训练（带样本权重）
-        full_pool = Pool(
-            data=X,
-            label=y,
-            weight=sample_weights,
-            cat_features=None
-        )
-        self.catboost_model.fit(full_pool, verbose=100)
-
-        # 更新实际树数量
-        self.actual_n_estimators = self.catboost_model.tree_count_
-
-        logger.info(f"\n✅ 模型训练完成（样本加权：核心股3.0，扩展股1.0）")
-        logger.info(f"   实际训练树数量: {self.actual_n_estimators}")
-
-        # 保存准确率到文件（供综合分析使用）
-        self._save_accuracy(mean_accuracy, std_accuracy, mean_f1, std_f1, horizon)
-
-        return {
-            'accuracy': mean_accuracy,
-            'std': std_accuracy,
-            'f1': mean_f1,
-            'f1_std': std_f1
-        }
-
-    def _train_with_weights_rank(self, X, y, sample_weights=None, horizon=20):
-        """D59：rank 标签（横截面百分位）→ CatBoostRegressor(RMSE)。"""
-        from catboost import CatBoostRegressor, Pool
-        if sample_weights is None:
-            sample_weights = np.ones(len(y))
-        params = dict(loss_function='RMSE', eval_metric='RMSE', depth=8, learning_rate=0.06,
-                      n_estimators=400, l2_leaf_reg=2, subsample=0.75, colsample_bylevel=0.8,
-                      random_seed=2020, verbose=100,
-                      thread_count=int(os.environ.get('CATBOOST_THREAD_COUNT', '8')),
-                      allow_writing_files=False)
-        if X.dtype == object:
-            X = X.astype(np.float64)
-        self.catboost_model = CatBoostRegressor(**params)
-        self.catboost_model.fit(Pool(data=X, label=y, weight=sample_weights), verbose=100)
-        self.actual_n_estimators = self.catboost_model.tree_count_
-        logger.info(f"✅ rank 回归模型训练完成（RMSE），树数={self.actual_n_estimators}")
-        return {'accuracy': 0.0, 'std': 0.0, 'f1': 0.0, 'f1_std': 0.0}
+        return self._train_with_weights_lgbm(X, y, sample_weights, horizon)
 
     def _train_with_weights_lgbm(self, X, y, sample_weights=None, horizon=20):
-        """P4.1 LightGBM 拟合（A股专用）：与 CatBoost 路径同口径（TSCV 5 折 gap=horizon + 全量终拟）。
+        """LightGBM 拟合（A股专用）：TSCV 5 折 gap=horizon + 全量终拟。
 
         与港股 _train_lightgbm 的差异：样本权重进 CV/终拟、准确率写 a_stock_lightgbm_{h}d
         （不覆盖港股 lgbm_{h}d）、特征重要性写 A股文件名。
@@ -1512,8 +1386,8 @@ class AStockTradingModel(CatBoostModel):
 
         self.model = lgb.LGBMRegressor(**lgb_params) if _reg else lgb.LGBMClassifier(**lgb_params)
         self.model.fit(X, y, sample_weight=sample_weights)
-        # 与 CatBoost 路径共用 self.catboost_model 句柄，predict/feature_importance 无需改动
-        self.catboost_model = self.model
+        # 统一句柄 self.model（predict / feature_importance 共用）
+        self.model = self.model
         self.learner = 'lightgbm'
         self.actual_n_estimators = self.model.n_estimators
         print(f"✅ LightGBM 训练完成 (n_estimators={self.actual_n_estimators})"
@@ -1529,7 +1403,7 @@ class AStockTradingModel(CatBoostModel):
     def _save_accuracy(self, accuracy, std, f1, f1_std, horizon):
         """保存模型准确率到文件"""
         import json
-        learner_tag = 'lightgbm' if getattr(self, 'learner', 'catboost') == 'lightgbm' else 'catboost'
+        learner_tag = 'lightgbm'
         accuracy_info = {
             'model_type': f'a_stock_{learner_tag}',
             'horizon': horizon,
@@ -1682,7 +1556,7 @@ class AStockTradingModel(CatBoostModel):
         Returns:
             DataFrame: 特征重要性排序
         """
-        if self.catboost_model is None:
+        if self.model is None:
             logger.warning("模型未训练，无法获取特征重要性")
             return None
 
@@ -1694,7 +1568,7 @@ class AStockTradingModel(CatBoostModel):
         import pandas as pd
         feat_imp = pd.DataFrame({
             'Feature': self.feature_columns,
-            'Importance': self.catboost_model.feature_importances_
+            'Importance': self.model.feature_importances_
         })
         feat_imp = feat_imp.sort_values('Importance', ascending=False)
 
@@ -1971,7 +1845,7 @@ class AStockTradingModel(CatBoostModel):
         # 预测
         if getattr(self, 'label_mode', 'absolute') == 'rank':
             # D59：回归 score（≈横截面百分位）；无概率语义
-            score = float(self.catboost_model.predict(X)[0])
+            score = float(self.model.predict(X)[0])
             current_price = latest_data['Close'].iloc[-1] if 'Close' in latest_data.columns else None
             return {
                 'code': code,
@@ -1982,8 +1856,8 @@ class AStockTradingModel(CatBoostModel):
                 'label_mode': 'rank',
                 'current_price': float(current_price) if current_price is not None else None,
             }
-        prediction = self.catboost_model.predict(X)[0]
-        probability = self.catboost_model.predict_proba(X)[0][1]
+        prediction = self.model.predict(X)[0]
+        probability = self.model.predict_proba(X)[0][1]
 
         # 获取当前价格
         current_price = latest_data['Close'].iloc[-1] if 'Close' in latest_data.columns else None
@@ -2189,7 +2063,7 @@ def save_a_stock_prediction_history(predictions, horizon, predict_date=None):
                 'prediction_probability': probability,
                 'confidence_level': 'high' if probability > 0.6 else ('medium' if probability > 0.5 else 'low'),
                 'entry_price': float(pred.get('current_price', 0)),
-                'model_type': 'catboost',
+                'model_type': 'lightgbm',
                 'data_date': data_date,
                 'target_date': target_date,
                 'market': 'A',
