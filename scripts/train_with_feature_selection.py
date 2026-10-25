@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import LightGBMModel
 from config import WATCHLIST
 from ml_services.logger_config import get_logger
 
@@ -87,7 +87,7 @@ def train_model_with_features(
     logger.info("=" * 70)
 
     # 创建模型实例
-    model = MLTradingModel()
+    model = LightGBMModel()
     model.horizon = horizon
 
     # 设置特征选择

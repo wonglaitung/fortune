@@ -35,7 +35,7 @@ import lightgbm as lgb
 
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_selection')
@@ -55,7 +55,7 @@ def load_training_data(horizon=20):
     logger.info("=" * 50)
 
     # 创建模型实例
-    model = CatBoostModel()
+    model = TradingModel()
 
     # 调用 ml_trading_model.py 中的方法，确保特征处理逻辑完全一致
     # 该方法已包含：预加载社区ID、数据准备、NaN处理、特征列获取、分类特征编码

@@ -972,9 +972,9 @@ def main():
                        help='预测周期: 5=一周, 10=两周, 20=一个月（默认）')
     parser.add_argument('--confidence-threshold', type=float, default=0.50,
                        help='置信度阈值（默认: 0.50）')
-    parser.add_argument('--learner', type=str, default='catboost',
-                       choices=['catboost', 'lightgbm'],
-                       help='P4.1 学习器 A/B（默认 catboost）')
+    parser.add_argument('--learner', type=str, default='lightgbm',
+                       choices=['lightgbm', 'lightgbm'],
+                       help='P4.1 学习器 A/B（默认 lightgbm）')
 
     # 数据参数
     parser.add_argument('--start-date', type=str, default='2024-01-01',

@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 warnings.filterwarnings('ignore')
 
 # 导入项目模块
-from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer
+from ml_services.ml_trading_model import TradingModel, FeatureEngineer
 from ml_services.logger_config import get_logger
 from config import STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING, WATCHLIST
 
@@ -246,7 +246,7 @@ class FeatureComparisonValidator:
             dict: fold验证结果
         """
         # 初始化模型
-        model = CatBoostModel(
+        model = TradingModel(
             class_weight=self.class_weight,
             use_dynamic_threshold=False
         )

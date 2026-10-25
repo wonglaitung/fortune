@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 warnings.filterwarnings('ignore')
 
 # 导入项目模块
-from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer
+from ml_services.ml_trading_model import TradingModel, FeatureEngineer
 from ml_services.logger_config import get_logger
 from config import TRAINING_STOCKS as STOCK_LIST
 
@@ -151,7 +151,7 @@ class HyperparameterTuner:
             dict: 评估结果
         """
         # 创建模型实例
-        model = CatBoostModel()
+        model = TradingModel()
 
         # 选择股票子集（固定随机种子确保可重现）
         rng = random.Random(42)

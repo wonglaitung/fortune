@@ -25,7 +25,7 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 from ml_services.logger_config import get_logger
 from config import STOCK_SECTOR_MAPPING
 
@@ -163,7 +163,7 @@ def main():
     print("=" * 70)
 
     # 加载模型
-    model = CatBoostModel()
+    model = TradingModel()
     # 尝试加载板块特定的模型
     model_path = f'data/ml_trading_model_lgbm_{args.sector}_{args.horizon}d.pkl'
     # 如果不存在，尝试加载通用模型

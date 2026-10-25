@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """P4.1 学习器 A/B 开关（A股，决策点3：三周期全做）
 
-AStockTradingModel(learner='lightgbm') 走 LightGBM 路径（同 TSCV 口径、样本权重、
+AStockTradingModel 唯一学习器 = LightGBM（同 TSCV 口径、样本权重、
 准确率写 a_stock_lightgbm_{h}d 不覆盖 catboost 键），walk-forward 目录名带学习器。
 """
 import json
@@ -31,7 +31,7 @@ def test_learner_defaults_to_lightgbm():
 
 def test_lightgbm_train_and_predict():
     X, y, w, cols = _tiny_xy()
-    m = AStockTradingModel(horizon=20, learner='lightgbm')
+    m = AStockTradingModel(horizon=20)
     m.label_mode = 'absolute'   # 分类口径用于验证 classifier 分支
     m.feature_columns = cols
     m._save_accuracy = lambda *a, **k: None   # 不污染真实 model_accuracy.json
@@ -39,7 +39,6 @@ def test_lightgbm_train_and_predict():
     res = m.train_with_weights(X, y, sample_weights=w, horizon=20)
     assert m.learner == 'lightgbm'
     assert type(m.model).__name__ == 'LGBMClassifier'
-    assert m.catboost_model is m.model          # 共用句柄，feature_importance 无需改
     assert set(res) >= {'accuracy', 'f1'}
 
     proba = m.predict_proba(pd.DataFrame(X, columns=cols))
@@ -52,7 +51,7 @@ def test_rank_label_uses_regressor():
     """D59 rank 连续标签 ⇒ LGBMRegressor（与港股同源修复）。"""
     X, _, w, cols = _tiny_xy()
     y_cont = np.random.default_rng(1).random(len(X))
-    m = AStockTradingModel(horizon=20, learner='lightgbm')
+    m = AStockTradingModel(horizon=20)
     m.label_mode = 'rank'
     m.feature_columns = cols
     m._save_accuracy = lambda *a, **k: None
@@ -63,25 +62,6 @@ def test_rank_label_uses_regressor():
     assert np.isfinite(proba[:, 1]).all()
 
 
-def test_accuracy_key_separated_by_learner(tmp_path, monkeypatch):
-    """准确率写 a_stock_lightgbm_{h}d，不覆盖 a_stock_catboost_{h}d"""
-    monkeypatch.chdir(tmp_path)
-    os.makedirs('data', exist_ok=True)
-
-    m = AStockTradingModel(horizon=20, learner='lightgbm')
-    m._save_accuracy(0.51, 0.01, 0.49, 0.01, 20)
-
-    m2 = AStockTradingModel(horizon=20, learner='catboost')
-    m2._save_accuracy(0.55, 0.01, 0.53, 0.01, 20)
-
-    data = json.load(open('data/model_accuracy.json'))
-    assert 'a_stock_lightgbm_20d' in data
-    assert 'a_stock_catboost_20d' in data
-    assert data['a_stock_lightgbm_20d']['model_type'] == 'a_stock_lightgbm'
-    assert data['a_stock_catboost_20d']['model_type'] == 'a_stock_catboost'
-
-
-def test_validator_forwards_learner():
-    v = awf.AStockWalkForwardValidator(horizon=20, learner='lightgbm')
+def test_validator_learner_is_fixed_lightgbm():
+    v = awf.AStockWalkForwardValidator(horizon=20)
     assert v.learner == 'lightgbm'
-    assert awf.AStockWalkForwardValidator(horizon=20).learner == 'catboost'

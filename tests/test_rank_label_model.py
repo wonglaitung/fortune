@@ -6,11 +6,11 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 
 
 def test_create_label_rank_is_placeholder():
-    m = CatBoostModel()
+    m = TradingModel()
     df = pd.DataFrame({"Close": np.linspace(100, 120, 60)},
                       index=pd.bdate_range("2020-01-01", periods=60))
     out = m.feature_engineer.create_label(df.copy(), horizon=5, label_mode="rank")
@@ -20,7 +20,7 @@ def test_create_label_rank_is_placeholder():
 
 
 def test_get_feature_columns_excludes_label_mode():
-    m = CatBoostModel()
+    m = TradingModel()
     df = pd.DataFrame({"Close": [1.0], "Label": [0], "Label_Mode": ["rank"],
                        "Label_Threshold": [0.0], "RSI_14": [0.5], "Volume": [1.0]})
     cols = m.get_feature_columns(df)
@@ -29,20 +29,19 @@ def test_get_feature_columns_excludes_label_mode():
 
 
 def test_save_load_preserves_label_mode():
-    m = CatBoostModel()
+    m = TradingModel()
     m.label_mode = "rank"
     m.feature_columns = ["a"]
     m.actual_n_estimators = 10
     m.horizon = 5
-    m.model_type = "catboost"
+    m.model_type = "lightgbm"
     m.categorical_encoders = {}
     m.community_ids = None
-    m.catboost_model = None
     m.model = None
-    m.learner = "catboost"
+    m.learner = "lightgbm"
     p = os.path.join(tempfile.mkdtemp(), "m.pkl")
     m.save_model(p)
-    m2 = CatBoostModel()
+    m2 = TradingModel()
     m2.load_model(p)
     assert m2.label_mode == "rank"
 
@@ -50,12 +49,15 @@ def test_save_load_preserves_label_mode():
 def test_a_stock_rank_trainer_smoke():
     from a_stock_ml_model import AStockTradingModel
     m = AStockTradingModel(horizon=5)
+    m.label_mode = 'rank'
+    m.feature_columns = [f'f{i}' for i in range(5)]
+    m._save_accuracy = lambda *a, **k: None
     rng = np.random.default_rng(0)
     X = rng.normal(0, 1, (200, 5))
     y = rng.random(200)
-    r = m._train_with_weights_rank(X, y, None, 5)
-    assert m.catboost_model is not None
-    assert r["accuracy"] == 0.0
+    r = m.train_with_weights(X, y, None, horizon=5)
+    assert type(m.model).__name__ == 'LGBMRegressor'
+    assert np.isnan(r["accuracy"])   # rank 下准确率无意义
 
 
 def test_walk_forward_accepts_rank_label_mode():
@@ -73,16 +75,16 @@ def test_walk_forward_accepts_rank_label_mode():
 
 def test_predict_proba_rank_returns_clipped_score():
     """rank 口径下 predict_proba 必须返回 [:,1]=clip(score,0,1)（回归器无 predict_proba）。"""
-    from catboost import CatBoostRegressor
-    m = CatBoostModel()
+    import lightgbm as lgb
+    m = TradingModel()
     m.label_mode = "rank"
     m.feature_columns = ["a", "b"]
     m.categorical_encoders = {}
     rng = np.random.default_rng(0)
     X = rng.normal(0, 1, (60, 2))
     y = rng.random(60)
-    m.catboost_model = CatBoostRegressor(n_estimators=5, verbose=False, allow_writing_files=False)
-    m.catboost_model.fit(X, y)
+    m.model = lgb.LGBMRegressor(n_estimators=5, verbose=-1)
+    m.model.fit(X, y)
     df = pd.DataFrame(X, columns=["a", "b"])
     p = m.predict_proba(df)
     assert p.shape == (60, 2)

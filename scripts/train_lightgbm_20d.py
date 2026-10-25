@@ -13,14 +13,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 from config import WATCHLIST
 
 
 def main():
     codes = list(WATCHLIST.keys())
     print(f"股票数量: {len(codes)}")
-    m = CatBoostModel(class_weight='balanced')
+    m = TradingModel(class_weight='balanced')
     m.learner = 'lightgbm'
     m.train(codes, start_date='2020-10-01', end_date=None, horizon=20,
             use_feature_selection=True)

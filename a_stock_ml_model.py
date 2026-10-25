@@ -52,7 +52,7 @@ A_STOCK_DROP_LIMIT_FEATURES = os.environ.get('A_STOCK_DROP_LIMIT_FEATURES', '0')
 def _drop_limit_abs() -> bool:
     return A_STOCK_DROP_LIMIT_FEATURES
 
-from ml_services.ml_trading_model import (CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES,
+from ml_services.ml_trading_model import (TradingModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES,
                                       logger, get_target_date_trading_days,
                                       merge_pit_features, DEFAULT_NETWORK_FEATURES)
 
@@ -885,8 +885,8 @@ class AStockFeatureEngineer(FeatureEngineer):
             }
 
 
-class AStockTradingModel(CatBoostModel):
-    """A股交易模型 - 继承港股CatBoost模型
+class AStockTradingModel(TradingModel):
+    """A股交易模型 - 继承港股LightGBM模型
 
     关键改进：
     1. 样本权重训练（核心股3.0，扩展股1.0）
@@ -1494,7 +1494,7 @@ class AStockTradingModel(CatBoostModel):
         # 使用统一的特征列定义（排除 Future_Return 等泄漏特征）
         feature_cols = self.get_feature_columns(df)
 
-        # 处理分类特征（与父类 CatBoostModel 一致）
+        # 处理分类特征（与父类 TradingModel 一致）
         from sklearn.preprocessing import LabelEncoder
         categorical_features = []
         self.categorical_encoders = {}
@@ -1517,7 +1517,7 @@ class AStockTradingModel(CatBoostModel):
 
         # 确保特征矩阵为数值型
         # 注意：当特征包含 NaN 时，numpy 数组会被视为 object 类型，这是正常的
-        # CatBoost 可以正确处理 NaN，无需填充
+        # LightGBM 可以正确处理 NaN，无需填充
         if X.dtype == object:
             # 检查是否有未编码的分类特征
             obj_cols = [col for col in feature_cols if df[col].dtype == 'object']

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-20天持有期回测脚本 - 正确评估CatBoost 20天模型的实际性能
+20天持有期回测脚本 - 正确评估LightGBM 20天模型的实际性能
 """
 
 import argparse
@@ -16,7 +16,7 @@ import yfinance as yf
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 from ml_services.logger_config import get_logger
 from ml_services.dynamic_risk_control import DynamicRiskControl, calculate_market_beta
 from config import WATCHLIST as STOCK_LIST
@@ -28,7 +28,7 @@ STOCK_NAMES = STOCK_LIST
 
 
 class Backtest20DHoldPeriod:
-    """20天持有期回测器 - 符合CatBoost 20天模型的实际预测逻辑
+    """20天持有期回测器 - 符合LightGBM 20天模型的实际预测逻辑
     
     新增功能（业界标准）：
     - 动态仓位管理
@@ -114,39 +114,25 @@ class Backtest20DHoldPeriod:
         X_test = single_stock_df_filtered[feature_columns].copy()
         y_test = single_stock_df_filtered['Label'].values
 
-        # 生成预测
-        if hasattr(self.model, 'catboost_model'):
-            from catboost import Pool
-            categorical_encoders = getattr(self.model, 'categorical_encoders', {})
-            model_features = getattr(self.model, 'feature_columns', [])
-            catboost_model = self.model.catboost_model
-
-            # 确保特征列正确
-            available_features = [col for col in model_features if col in X_test.columns]
-            if len(available_features) < len(model_features):
-                missing_cols = [col for col in model_features if col not in X_test.columns]
-                X_test = X_test.copy()
-                for col in missing_cols:
-                    X_test[col] = 0.0
-
-            X_test = X_test[model_features]
-
-            # 处理分类特征（使用训练时的编码器转换字符串为数字）
-            for col_name, encoder in categorical_encoders.items():
-                if col_name in X_test.columns:
-                    try:
-                        X_test[col_name] = X_test[col_name].fillna('unknown').astype(str)
-                        X_test[col_name] = encoder.transform(X_test[col_name])
-                        X_test[col_name] = X_test[col_name].astype(np.int32)
-                    except ValueError:
-                        # 处理未见过的类别
-                        X_test[col_name] = 0
-
-            # 使用 Pool 对象进行预测
-            test_pool = Pool(data=X_test)
-            predictions = catboost_model.predict_proba(test_pool)[:, 1]
-        else:
-            predictions = self.model.predict_proba(X_test)[:, 1]
+        # 生成预测（唯一学习器 = LightGBM）
+        categorical_encoders = getattr(self.model, 'categorical_encoders', {})
+        model_features = getattr(self.model, 'feature_columns', [])
+        available_features = [col for col in model_features if col in X_test.columns]
+        if len(available_features) < len(model_features):
+            missing_cols = [col for col in model_features if col not in X_test.columns]
+            X_test = X_test.copy()
+            for col in missing_cols:
+                X_test[col] = 0.0
+        X_test = X_test[model_features]
+        for col_name, encoder in categorical_encoders.items():
+            if col_name in X_test.columns:
+                try:
+                    X_test[col_name] = X_test[col_name].fillna('unknown').astype(str)
+                    X_test[col_name] = encoder.transform(X_test[col_name])
+                    X_test[col_name] = X_test[col_name].astype(np.int32)
+                except ValueError:
+                    X_test[col_name] = 0
+        predictions = self.model.predict_proba(X_test)[:, 1]
 
         horizon = 20
         capital = 100000
@@ -711,11 +697,11 @@ def generate_text_report(metrics, df):
     """
     report = f"""
 {'='*80}
-20天持有期回测报告 - CatBoost 20天模型
+20天持有期回测报告 - LightGBM 20天模型
 {'='*80}
 
 【回测参数】
-  模型类型: CatBoost 20天
+  模型类型: LightGBM 20天
   持有期: 20个交易日
   评估方式: 买入后持有20天（符合模型预测周期）
   交易成本: 滑点 0.1% + 佣金 0.1% (双边 0.4%)
@@ -782,7 +768,7 @@ def generate_text_report(metrics, df):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='20天持有期回测 CatBoost 20天模型')
+    parser = argparse.ArgumentParser(description='20天持有期回测 LightGBM 20天模型')
     parser.add_argument('--horizon', type=int, default=20, help='预测周期（天）')
     parser.add_argument('--confidence-threshold', type=float, default=0.55, help='置信度阈值')
     parser.add_argument('--start-date', type=str, default='2026-01-01', help='开始日期 (YYYY-MM-DD)')
@@ -792,7 +778,7 @@ def main():
     args = parser.parse_args()
 
     logger.info(f"开始20天持有期回测")
-    print(f"   模型类型: CatBoost {args.horizon}天")
+    print(f"   模型类型: LightGBM {args.horizon}天")
     print(f"   持有期: {args.horizon}天（符合模型预测周期）")
     print(f"   置信度阈值: {args.confidence_threshold}")
     print(f"   回测日期范围: {args.start_date} 至 {args.end_date}")
@@ -802,8 +788,8 @@ def main():
         print(f"   动态风险控制: 未启用（传统模式）")
 
     # 加载模型
-    print("\n🔧 加载 CatBoost 模型...")
-    model = CatBoostModel()
+    print("\n🔧 加载 LightGBM 模型...")
+    model = TradingModel()
     model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
     print(f"✅ 模型已加载")
 

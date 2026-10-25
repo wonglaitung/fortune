@@ -18,7 +18,7 @@ import ml_services.ml_trading_model as m
 
 
 def _bare(reg: bool):
-    obj = m.CatBoostModel.__new__(m.CatBoostModel)
+    obj = m.TradingModel.__new__(m.TradingModel)
     obj.label_mode = "rank" if reg else "absolute"
     obj.horizon = 20
     obj.feature_columns = ["f1", "f2"]

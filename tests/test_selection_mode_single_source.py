@@ -39,7 +39,7 @@ def test_top_is_global_max_not_sector_adjusted():
 
 def test_production_call_site_has_no_caliber_argument():
     src = (ROOT / 'comprehensive_analysis.py').read_text(encoding='utf-8')
-    m = re.search(r'select_from_df\(df_catboost[^\n]*\)', src)
+    m = re.search(r'select_from_df\(df_ml[^\n]*\)', src)
     assert m, '未找到生产 select_from_df 调用'
     assert 'sector_neutral' not in m.group(0), '生产调用点又传了口径参数'
 

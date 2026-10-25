@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 warnings.filterwarnings('ignore')
 
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 from ml_services.logger_config import get_logger
 from config import STOCK_SECTOR_MAPPING
 
@@ -62,7 +62,7 @@ def main():
     print("=" * 70)
 
     # 初始化 CatBoost 模型（方案B：Balanced + Fixed 0.55）
-    model = CatBoostModel()
+    model = TradingModel()
 
     # 训练模型
     print("\n开始训练...")

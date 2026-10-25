@@ -14,7 +14,7 @@ from datetime import datetime
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ml_services.ml_trading_model import CatBoostModel, LightGBMModel, GBDTModel
+from ml_services.ml_trading_model import TradingModel, LightGBMModel, GBDTModel
 from ml_services.backtest_evaluator import BacktestEvaluator
 from ml_services.logger_config import get_logger
 from config import WATCHLIST as STOCK_LIST
@@ -40,7 +40,7 @@ def get_model_instance(model_type):
         模型实例
     """
     if model_type == 'catboost':
-        return CatBoostModel(class_weight='balanced', use_dynamic_threshold=False)
+        return TradingModel(class_weight='balanced', use_dynamic_threshold=False)
     elif model_type == 'lgbm':
         return LightGBMModel()
     elif model_type == 'gbdt':

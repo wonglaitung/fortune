@@ -227,7 +227,7 @@ def load_a_stock_model_accuracy(horizon=20):
     返回:
     - dict: 包含准确率信息
       {
-        'catboost': {'accuracy': float, 'std': float},
+        'lightgbm': {'accuracy': float, 'std': float},
         '5d': {'accuracy': float, 'std': float},
         '10d': {'accuracy': float, 'std': float},
         '20d': {'accuracy': float, 'std': float}
@@ -237,7 +237,7 @@ def load_a_stock_model_accuracy(horizon=20):
 
     # 默认准确率值（A股个股预测准确率通常在50-60%）
     default_accuracy = {
-        'catboost': {'accuracy': 0.55, 'std': 0.05},
+        'lightgbm': {'accuracy': 0.55, 'std': 0.05},
         '5d': {'accuracy': 0.54, 'std': 0.06},
         '10d': {'accuracy': 0.55, 'std': 0.05},
         '20d': {'accuracy': 0.55, 'std': 0.05}
@@ -251,17 +251,17 @@ def load_a_stock_model_accuracy(horizon=20):
                 data = json.load(f)
 
             result = {}
-            catboost_key = f'catboost_{horizon}d'
-            if catboost_key in data:
-                result['catboost'] = {
-                    'accuracy': data[catboost_key].get('accuracy', default_accuracy['catboost']['accuracy']),
-                    'std': data[catboost_key].get('std', default_accuracy['catboost']['std'])
+            lightgbm_key = f'lightgbm_{horizon}d'
+            if lightgbm_key in data:
+                result['lightgbm'] = {
+                    'accuracy': data[lightgbm_key].get('accuracy', default_accuracy['lightgbm']['accuracy']),
+                    'std': data[lightgbm_key].get('std', default_accuracy['lightgbm']['std'])
                 }
             else:
-                result['catboost'] = default_accuracy['catboost']
+                result['lightgbm'] = default_accuracy['lightgbm']
 
             for period in ['5d', '10d', '20d']:
-                key = f'catboost_{period}'
+                key = f'lightgbm_{period}'
                 if key in data:
                     result[period] = {
                         'accuracy': data[key].get('accuracy', default_accuracy[period]['accuracy']),
@@ -294,13 +294,13 @@ def load_a_stock_model_accuracy(horizon=20):
                     std = vf.get('accuracy_std', 0.05)
 
                     result = {
-                        'catboost': {'accuracy': accuracy, 'std': std},
+                        'lightgbm': {'accuracy': accuracy, 'std': std},
                         '5d': default_accuracy['5d'],
                         '10d': default_accuracy['10d'],
                         '20d': {'accuracy': accuracy, 'std': std}
                     }
                     print(f"✅ 从Walk-forward结果加载准确率: {latest_file}")
-                    print(f"   CatBoost 20天: {accuracy:.2%} (±{std:.2%})")
+                    print(f"   LightGBM 20天: {accuracy:.2%} (±{std:.2%})")
                     return result
             except Exception as e:
                 print(f"⚠️ 解析验证结果失败: {e}")
@@ -508,9 +508,9 @@ def load_historical_profit_loss_ratio_a_stock():
 
     # 查找最新的A股prediction_analysis.csv文件
     search_patterns = [
-        'output/*_a_stock_catboost_*/prediction_analysis.csv',
+        'output/*_a_stock_lightgbm_*/prediction_analysis.csv',
         'output/*_a_stock_*_20d/prediction_analysis.csv',
-        'output/*_catboost_20d/prediction_analysis.csv',  # 兼容港股格式
+        'output/*_lightgbm_20d/prediction_analysis.csv',  # 兼容港股格式
     ]
 
     prediction_files = []
@@ -818,14 +818,14 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
             model = AStockTradingModel(horizon=horizon)
             with open(model_path, 'rb') as f:
                 model_data = pickle.load(f)
-            model.catboost_model = model_data['catboost_model']
-            model.model = model_data.get('model') or model_data['catboost_model']
+            model.lightgbm_model = model_data['lightgbm_model']
+            model.model = model_data.get('model') or model_data['lightgbm_model']
             model.feature_columns = model_data['feature_columns']
             model.categorical_encoders = model_data.get('categorical_encoders', {})
             model.community_ids = model_data.get('community_ids', [0, 1, 2, 3, 4, 5, 6])
             # D59/D26：必须恢复标签口径，否则 rank 回归器会被当分类器调 predict_proba
             model.label_mode = model_data.get('label_mode', 'absolute')
-            model.learner = model_data.get('learner', 'catboost')
+            model.learner = model_data.get('learner', 'lightgbm')
 
             print(f"  ✅ 加载 {horizon}d 模型")
 
@@ -1617,7 +1617,7 @@ def generate_comprehensive_recommendations_with_llm(
     ml_stock_list.sort(key=lambda x: x['score_20d'], reverse=True)
 
     # 构建ML预测JSON文本
-    ml_predictions_text = "【CatBoost模型预测结果（20天）- JSON格式】\n"
+    ml_predictions_text = "【LightGBM模型预测结果（20天）- JSON格式】\n"
     ml_predictions_text += "```json\n"
     ml_predictions_text += json.dumps(ml_stock_list, ensure_ascii=False, indent=2)
     ml_predictions_text += "\n```\n\n"
@@ -1712,7 +1712,7 @@ def generate_comprehensive_recommendations_with_llm(
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_medium_term}
 
-【2. CatBoost模型20天排序分数（交叉参考，非硬约束）】
+【2. LightGBM模型20天排序分数（交叉参考，非硬约束）】
 **重要：score_20d = 20天排序分数（横截面分位，0-1；越高=池内越偏强）。它是排序分位，不是上涨概率、不是胜率、不是置信度；只作交叉参考，不是买卖的唯一依据。**
 {ml_predictions_text}
 
@@ -1750,7 +1750,7 @@ def generate_comprehensive_recommendations_with_llm(
 🔥 **分析顺序**：
 第一步：短期与中期一致性
 第二步：技术面、基本面、风险收益
-第三步：CatBoost 排序分数交叉参考（确认/分歧）
+第三步：LightGBM 排序分数交叉参考（确认/分歧）
 第四步：生成建议
 
 === 综合分析规则 ===
@@ -1758,19 +1758,19 @@ def generate_comprehensive_recommendations_with_llm(
 **规则1：时间维度匹配**
 - **短期信号（触发器）**：负责"何时做"（Timing）
 - **中期信号（确认器）**：负责"是否做"（Direction）
-- **CatBoost 分数（交叉参考）**：提供池内相对强弱，不单独决定买卖
+- **LightGBM 分数（交叉参考）**：提供池内相对强弱，不单独决定买卖
 - 短期与中期冲突 → 观望；一致 → 进入风险与交叉参考评估
 
-**决策逻辑（短中期为主，CatBoost 交叉参考）**：
+**决策逻辑（短中期为主，LightGBM 交叉参考）**：
 - **第一步：短期与中期一致性** → 一致进入评估，冲突观望
 - **第二步：技术面/基本面/风险收益** → 形成主建议
-- **第三步：CatBoost 分数交叉参考**
+- **第三步：LightGBM 分数交叉参考**
   - 一致（≥0.55）→ 基准仓位最多 +2 个百分点（不超单票上限）
   - 中性（0.50-0.55）→ 维持主建议，仓位≤2%
   - 分歧（≤0.50）→ 写明分歧；仓位≤2%并收紧止损，或列观察
 - **第四步：生成建议**（理由同时包含短中期结论与分数交叉参考）
 
-**规则2：CatBoost 分数评估（仅作交叉参考）**
+**规则2：LightGBM 分数评估（仅作交叉参考）**
 - **偏强**：>0.60
 - **中等**：0.55-0.60
 - **中性**：0.50-0.55
@@ -1791,7 +1791,7 @@ def generate_comprehensive_recommendations_with_llm(
 
 ## 强烈买入信号（如有）
 1. [股票代码] [股票名称]
-   - 推荐理由：[包含短期建议、中期建议、CatBoost分数]
+   - 推荐理由：[包含短期建议、中期建议、LightGBM分数]
    - 操作建议：买入
    - 建议仓位（三档均须落在主判据与风险预算区间内；分数仅作交叉参考）：
      * 保守型：[X]%
@@ -2772,7 +2772,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """
     <h2>💡 大模型分析建议</h2>
     <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
-        <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于CatBoost三周期预测）可能存在差异，请综合参考。
+        <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于LightGBM三周期预测）可能存在差异，请综合参考。
     </p>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """

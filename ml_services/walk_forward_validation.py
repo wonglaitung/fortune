@@ -121,7 +121,7 @@ class WalkForwardValidator:
         初始化 Walk-forward 验证器
 
         Args:
-            model_type: 模型类型（catboost、lightgbm、gbdt）
+            model_type: 模型类型（lightgbm、lgbm、gbdt）
             train_window_months: 训练窗口（月）
             test_window_months: 测试窗口（月）
             step_window_months: 滚动步长（月）
@@ -412,7 +412,7 @@ class WalkForwardValidator:
             print(f"  ⚠️ 使用非对称损失函数: FP惩罚={self.fp_penalty}x")
         else:
             model = self.model_class()
-        # 管线级 A/B：排序目标（如 YetiRank），仅对 CatBoost 生效
+        # 管线级 A/B：排序目标（如 YetiRank），仅对旧 CatBoost 管道生效（已废弃）
         if getattr(self, 'loss_function', None):
             model.loss_function = self.loss_function
             print(f"  🧭 目标函数: {self.loss_function}")
@@ -585,17 +585,12 @@ class WalkForwardValidator:
         metrics['num_test_samples'] = len(test_data)
 
         # 获取特征重要性（Top 100）
-        # 2026-10-03 修复：原实现只认 `model.catboost_model`，而 20d 用 LightGBM
-        # 时模型在 `model.model`（LGBMClassifier），导致**港股 50 折的 top_features
-        # 全部为空** —— 即港股模型的特征构成从未被记录，D11「折间排序不稳」的解释
-        # 一直是盲的。改为按学习器取模型对象。
+        # 统一从 `model.model` 取估计器（唯一学习器 = LightGBM）
         try:
             est = None
-            for attr in ('catboost_model', 'model'):
-                cand = getattr(model, attr, None)
-                if cand is not None and hasattr(cand, 'feature_importances_'):
-                    est = cand
-                    break
+            cand = getattr(model, 'model', None)
+            if cand is not None and hasattr(cand, 'feature_importances_'):
+                est = cand
             if est is not None and getattr(model, 'feature_columns', None):
                 feat_imp = pd.DataFrame({
                     'Feature': model.feature_columns,
@@ -1726,7 +1721,7 @@ def main():
     # 模型参数
     parser.add_argument('--model-type', type=str, default='lightgbm',
                        choices=['lightgbm', 'lgbm', 'gbdt'],
-                       help='模型类型 (默认: catboost)')
+                       help='模型类型 (默认: lightgbm)')
 
     # Walk-forward 参数
     parser.add_argument('--train-window', type=int, default=36,

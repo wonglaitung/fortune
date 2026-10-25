@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 warnings.filterwarnings('ignore')
 
 # 导入项目模块
-from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer
+from ml_services.ml_trading_model import TradingModel, FeatureEngineer
 from ml_services.logger_config import get_logger
 from config import STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING
 
@@ -250,7 +250,7 @@ class SectorWalkForwardValidator:
         print(f"\n  🔄 准备训练数据...")
 
         # 创建模型实例（传入类别权重参数）
-        model = CatBoostModel(class_weight=self.class_weight)
+        model = TradingModel(class_weight=self.class_weight)
 
         # 准备训练数据
         train_data = model.prepare_data(

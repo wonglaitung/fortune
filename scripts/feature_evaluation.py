@@ -37,7 +37,7 @@ except ImportError:
 
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import LightGBMModel
 from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_evaluation')
@@ -71,7 +71,7 @@ class FeatureEvaluator:
         logger.info("=" * 70)
 
         # 创建模型实例
-        model = MLTradingModel()
+        model = LightGBMModel()
         model.horizon = horizon
 
         # 加载模型

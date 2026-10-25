@@ -26,7 +26,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import LightGBMModel
 from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_eval_v2')
@@ -58,7 +58,7 @@ def evaluate_feature_importance_improved(
     os.makedirs(output_dir, exist_ok=True)
 
     # 创建模型实例
-    model = MLTradingModel()
+    model = LightGBMModel()
     model.horizon = horizon
 
     # 准备数据

@@ -51,16 +51,16 @@ class HSI_Predictor:
     # 2026-04-16: 新增RSI/MACD/布林带/动量特征
     # 2026-04-16: 新增多周期均线组合、均线斜率分析、价格距离分析
     FEATURE_IMPORTANCE = {
-        # ========== 核心技术指标（CatBoost 最重要特征）==========
-        'MA20': {'weight': 0.12, 'direction': 1},  # ⬆️ 提升（CatBoost #1，重要性45.08）
-        'MA250_Slope_5d': {'weight': 0.10, 'direction': 1},  # ⬆️ 提升（CatBoost #3，重要性17.26）
+        # ========== 核心技术指标（LightGBM 最重要特征）==========
+        'MA20': {'weight': 0.12, 'direction': 1},  # ⬆️ 提升（LightGBM #1，重要性45.08）
+        'MA250_Slope_5d': {'weight': 0.10, 'direction': 1},  # ⬆️ 提升（LightGBM #3，重要性17.26）
         'MA250_Slope': {'weight': 0.06, 'direction': 1},
         'MA250_Slope_20d': {'weight': 0.04, 'direction': 1},
         'MA250_Slope_Direction': {'weight': 0.03, 'direction': 1},
 
-        # ========== 月份效应（CatBoost 重要特征，新增）==========
-        'Month_Sin': {'weight': 0.10, 'direction': 1},  # ➕ 新增（CatBoost #2，重要性26.10）
-        'Month_of_Year': {'weight': 0.08, 'direction': 1},  # ➕ 新增（CatBoost #4，重要性11.55）
+        # ========== 月份效应（LightGBM 重要特征，新增）==========
+        'Month_Sin': {'weight': 0.10, 'direction': 1},  # ➕ 新增（LightGBM #2，重要性26.10）
+        'Month_of_Year': {'weight': 0.08, 'direction': 1},  # ➕ 新增（LightGBM #4，重要性11.55）
         'Month_Cos': {'weight': 0.05, 'direction': 1},  # ➕ 新增
 
         # ========== 移动平均线 ==========
@@ -666,7 +666,7 @@ class HSI_Predictor:
             # ========== 成交量相对强度 ==========
             '20d_RS_Signal_Volume_MA250': safe_get(latest_hsi.get('20d_RS_Signal_Volume_MA250', 0), 0),
 
-            # ========== 月份效应（新增，CatBoost 重要特征）==========
+            # ========== 月份效应（新增，LightGBM 重要特征）==========
             'Month_Sin': np.sin(2 * np.pi * latest_hsi.name.month / 12) if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 0,
             'Month_Cos': np.cos(2 * np.pi * latest_hsi.name.month / 12) if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 0,
             'Month_of_Year': latest_hsi.name.month if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 1,
@@ -2151,7 +2151,7 @@ class HSI_Predictor:
         print(f"   - {json_file}")
         print(f"   - {features_file}")
 
-    def save_prediction_to_history(self, score, trend, feature_details, catboost_result=None, multi_horizon_results=None):
+    def save_prediction_to_history(self, score, trend, feature_details, lightgbm_result=None, multi_horizon_results=None):
         """
         保存预测到历史记录
 
@@ -2159,7 +2159,7 @@ class HSI_Predictor:
         - score: 预测得分
         - trend: 预测趋势
         - feature_details: 特征详情列表
-        - catboost_result: CatBoost 预测结果（可选）
+        - lightgbm_result: LightGBM 预测结果（可选）
         - multi_horizon_results: 多周期预测结果（可选）
         """
         history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
@@ -2519,9 +2519,9 @@ class HSI_Predictor:
 
         return display if display else "-"
 
-    def _run_catboost_comparison(self, score_model_score, score_model_trend):
+    def _run_lightgbm_comparison(self, score_model_score, score_model_trend):
         """
-        运行 CatBoost 模型与评分模型对比
+        运行 LightGBM 模型与评分模型对比
 
         参数:
         - score_model_score: 评分模型得分
@@ -2580,20 +2580,20 @@ class HSI_Predictor:
             prob = model.predict_proba(X)[0, 1]
             pred = model.predict(X)[0]
 
-            catboost_trend = "上涨" if pred == 1 else "下跌"
+            lightgbm_trend = "上涨" if pred == 1 else "下跌"
 
             # 置信度分级（更细粒度）
             if prob > 0.7 or prob < 0.3:
-                catboost_confidence = "高"
+                lightgbm_confidence = "高"
                 confidence_action = "可作为参考"
             elif prob > 0.6 or prob < 0.4:
-                catboost_confidence = "中高"
+                lightgbm_confidence = "中高"
                 confidence_action = "有一定参考价值"
             elif prob > 0.55 or prob < 0.45:
-                catboost_confidence = "中"
+                lightgbm_confidence = "中"
                 confidence_action = "需谨慎参考"
             else:
-                catboost_confidence = "低"
+                lightgbm_confidence = "低"
                 confidence_action = "建议观望"
 
             # 动态阈值（基于概率偏离 0.5 的程度）
@@ -2604,16 +2604,16 @@ class HSI_Predictor:
             print(f"\n{'='*50}")
             print("📊 双模型预测对比")
             print(f"{'='*50}")
-            print(f"\n{'指标':<20} {'评分模型':<20} {'CatBoost模型':<20}")
+            print(f"\n{'指标':<20} {'评分模型':<20} {'LightGBM模型':<20}")
             print("-" * 60)
-            print(f"{'预测趋势':<20} {score_model_trend:<20} {catboost_trend:<20}")
+            print(f"{'预测趋势':<20} {score_model_trend:<20} {lightgbm_trend:<20}")
             print(f"{'预测概率':<20} {score_model_score:.4f}              {prob:.4f}")
-            print(f"{'置信度':<20} {'-':<20} {catboost_confidence:<20}")
+            print(f"{'置信度':<20} {'-':<20} {lightgbm_confidence:<20}")
             print(f"{'置信建议':<20} {'-':<20} {confidence_action:<20}")
 
             # 判断一致性
             score_direction = "上涨" if score_model_score > 0.5 else "下跌"
-            consistency = "✅ 一致" if score_direction == catboost_trend else "⚠️ 不一致"
+            consistency = "✅ 一致" if score_direction == lightgbm_trend else "⚠️ 不一致"
             print(f"\n{'一致性分析':<20} {consistency}")
 
             # 综合建议
@@ -2622,27 +2622,27 @@ class HSI_Predictor:
             print(f"{'='*50}")
 
             if consistency == "✅ 一致":
-                if catboost_confidence in ["高", "中高"]:
-                    print(f"  两个模型一致且置信度较高，{catboost_trend}信号较强")
+                if lightgbm_confidence in ["高", "中高"]:
+                    print(f"  两个模型一致且置信度较高，{lightgbm_trend}信号较强")
                 else:
                     print(f"  两个模型一致但置信度一般，建议结合其他因素判断")
             else:
                 print(f"  ⚠️ 模型意见分歧，建议谨慎决策")
                 print(f"     评分模型: {score_model_trend} ({score_model_score:.2%})")
-                print(f"     CatBoost: {catboost_trend} ({prob:.2%}, {catboost_confidence}置信度)")
+                print(f"     LightGBM: {lightgbm_trend} ({prob:.2%}, {lightgbm_confidence}置信度)")
 
             print(f"{'='*50}\n")
 
             return {
-                'trend': catboost_trend,
+                'trend': lightgbm_trend,
                 'probability': float(prob),
-                'confidence': catboost_confidence,
+                'confidence': lightgbm_confidence,
                 'consistency': consistency,
                 'model_path': latest_model
             }
 
         except Exception as e:
-            print(f"⚠️ CatBoost 模型对比失败: {e}")
+            print(f"⚠️ LightGBM 模型对比失败: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -2659,7 +2659,7 @@ class HSI_Predictor:
         print("=" * 80)
 
         try:
-            from catboost import CatBoostClassifier
+            from lightgbm import LGBMClassifier
 
             # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-01-01→2025-12-31，
             # 34 folds / 697 样本，2026-10-17 重跑；池化口径）
@@ -2735,7 +2735,7 @@ class HSI_Predictor:
                 y_train, y_test = y.iloc[:split], y.iloc[split:]
 
                 # 训练模型
-                model = CatBoostClassifier(
+                model = LGBMClassifier(
                     iterations=200, learning_rate=0.05, depth=3,
                     auto_class_weights='Balanced', verbose=0
                 )
@@ -2835,12 +2835,12 @@ class HSI_Predictor:
             traceback.print_exc()
             return None
 
-    def run(self, send_email_flag=True, run_catboost=True):
+    def run(self, send_email_flag=True, run_lightgbm=True):
         """运行预测流程
 
         参数:
         - send_email_flag: 是否发送邮件，默认True
-        - run_catboost: 是否同时运行 CatBoost 模型对比，默认True
+        - run_lightgbm: 是否同时运行 LightGBM 模型对比，默认True
         """
         try:
             # 1. 获取数据
@@ -2856,10 +2856,10 @@ class HSI_Predictor:
             # 4. 生成控制台报告
             self._generate_console_report(score, trend, feature_details)
 
-            # 5. CatBoost 模型对比（新增）
-            catboost_result = None
-            if run_catboost:
-                catboost_result = self._run_catboost_comparison(score, trend)
+            # 5. LightGBM 模型对比（新增）
+            lightgbm_result = None
+            if run_lightgbm:
+                lightgbm_result = self._run_lightgbm_comparison(score, trend)
 
             # 6. 多周期预测（5天、10天、20天）
             multi_horizon_results = self._run_multi_horizon_prediction()
@@ -2868,7 +2868,7 @@ class HSI_Predictor:
             self.save_report(score, feature_details)
 
             # 8. 保存预测历史记录
-            self.save_prediction_to_history(score, trend, feature_details, catboost_result, multi_horizon_results)
+            self.save_prediction_to_history(score, trend, feature_details, lightgbm_result, multi_horizon_results)
 
             # 8. 发送邮件
             if send_email_flag:
@@ -3092,7 +3092,7 @@ def verify_predictions():
     """
     验证历史预测的准确性
 
-    对比评分模型与CatBoost模型的预测效果
+    对比评分模型与LightGBM模型的预测效果
     """
     print("=" * 80)
     print("恒指预测验证系统".center(80))
@@ -3127,9 +3127,9 @@ def verify_predictions():
     # 验证结果统计
     verified_count = 0
     score_model_correct = 0
-    catboost_correct = 0
+    lightgbm_correct = 0
     score_model_total = 0
-    catboost_total = 0
+    lightgbm_total = 0
 
     updated_predictions = []
 
@@ -3219,14 +3219,14 @@ def verify_predictions():
                         if predicted_direction == actual_direction:
                             score_model_correct += 1
 
-                    # 验证CatBoost模型
-                    catboost_model = pred.get('catboost_model', {})
-                    if catboost_model and catboost_model.get('trend'):
-                        catboost_pred = catboost_model.get('trend')
-                        catboost_predicted_direction = 1 if catboost_pred == '上涨' else 0
-                        catboost_total += 1
-                        if catboost_predicted_direction == (1 if actual_direction_str == 'up' else 0):
-                            catboost_correct += 1
+                    # 验证LightGBM模型
+                    lightgbm_model = pred.get('lightgbm_model', {})
+                    if lightgbm_model and lightgbm_model.get('trend'):
+                        lightgbm_pred = lightgbm_model.get('trend')
+                        lightgbm_predicted_direction = 1 if lightgbm_pred == '上涨' else 0
+                        lightgbm_total += 1
+                        if lightgbm_predicted_direction == (1 if actual_direction_str == 'up' else 0):
+                            lightgbm_correct += 1
 
                     verified_count += 1
                     print(f"✅ 验证: {prediction_date_str} → {target_date_str}")
@@ -3256,16 +3256,16 @@ def verify_predictions():
         score_accuracy = score_model_correct / score_model_total * 100
         print(f"\n📈 评分模型准确率: {score_accuracy:.2f}% ({score_model_correct}/{score_model_total})")
 
-    if catboost_total > 0:
-        catboost_accuracy = catboost_correct / catboost_total * 100
-        print(f"🤖 CatBoost模型准确率: {catboost_accuracy:.2f}% ({catboost_correct}/{catboost_total})")
+    if lightgbm_total > 0:
+        lightgbm_accuracy = lightgbm_correct / lightgbm_total * 100
+        print(f"🤖 LightGBM模型准确率: {lightgbm_accuracy:.2f}% ({lightgbm_correct}/{lightgbm_total})")
 
-    if score_model_total > 0 and catboost_total > 0:
+    if score_model_total > 0 and lightgbm_total > 0:
         print(f"\n📊 模型对比:")
-        if score_accuracy > catboost_accuracy:
-            print(f"   评分模型更优 (+{score_accuracy - catboost_accuracy:.2f}%)")
-        elif catboost_accuracy > score_accuracy:
-            print(f"   CatBoost模型更优 (+{catboost_accuracy - score_accuracy:.2f}%)")
+        if score_accuracy > lightgbm_accuracy:
+            print(f"   评分模型更优 (+{score_accuracy - lightgbm_accuracy:.2f}%)")
+        elif lightgbm_accuracy > score_accuracy:
+            print(f"   LightGBM模型更优 (+{lightgbm_accuracy - score_accuracy:.2f}%)")
         else:
             print(f"   两模型准确率相同")
 

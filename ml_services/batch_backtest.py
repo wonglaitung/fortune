@@ -16,7 +16,7 @@ from backtest_evaluator import BacktestEvaluator
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_services.ml_trading_model import (
-    MLTradingModel, GBDTModel, CatBoostModel, EnsembleModel
+    LightGBMModel, GBDTModel, TradingModel, EnsembleModel
 )
 from ml_services.logger_config import get_logger
 
@@ -304,7 +304,7 @@ def main():
     data_prep_model = None  # 用于准备数据的模型
 
     if args.model_type == 'lgbm':
-        model = MLTradingModel()
+        model = LightGBMModel()
         # 优先使用新训练的模型，否则使用旧路径
         new_model_path = f'data/models_with_feature_selection/lightgbm_stable_high_100_h5.pkl'
         if os.path.exists(new_model_path):
@@ -319,7 +319,7 @@ def main():
         model.load_model(f'data/ml_trading_model_gbdt_{args.horizon}d.pkl')
         data_prep_model = model
     elif args.model_type == 'catboost':
-        model = CatBoostModel()
+        model = TradingModel()
         model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
         data_prep_model = model
     elif args.model_type == 'ensemble':

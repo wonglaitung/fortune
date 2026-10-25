@@ -28,13 +28,13 @@ def main() -> int:
     args = ap.parse_args()
 
     import config
-    from ml_services.ml_trading_model import CatBoostModel
+    from ml_services.ml_trading_model import TradingModel
     from ml_services.network_ids import resolve_community_ids
 
     codes = list(config.TRAINING_STOCKS)
     print(f'池 {len(codes)} 只，区间 {args.start} → {args.end}', flush=True)
     t0 = time.time()
-    m = CatBoostModel()
+    m = TradingModel()
     df = m.prepare_data(codes, start_date=args.start, end_date=args.end,
                         horizon=args.horizon, for_backtest=False,
                         label_mode='rank', mode='production',

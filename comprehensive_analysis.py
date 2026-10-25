@@ -85,7 +85,7 @@ except ImportError:
 
 # 导入 ML 模型（用于三周期预测）
 try:
-    from ml_services.ml_trading_model import CatBoostModel
+    from ml_services.ml_trading_model import TradingModel
     ML_MODEL_AVAILABLE = True
 except ImportError:
     ML_MODEL_AVAILABLE = False
@@ -293,7 +293,7 @@ def load_historical_profit_loss_ratio(output_dir='output'):
             import subprocess
             from ml_services.market_regime import is_voided_output_dir
             tracked = subprocess.run(
-                ['git', 'ls-files', '--', 'output/*_catboost_20d/prediction_analysis.csv'],
+                ['git', 'ls-files', '--', 'output/*_ml_20d/prediction_analysis.csv'],
                 capture_output=True, text=True, timeout=10).stdout.split()
             cands = [f for f in tracked
                      if '_a_stock_' not in f and '_lightgbm_' not in f
@@ -304,9 +304,9 @@ def load_historical_profit_loss_ratio(output_dir='output'):
             pass
     if latest_file is None:
         search_patterns = [
-            os.path.join(output_dir, '*_catboost_20d/prediction_analysis.csv'),
-            os.path.join(output_dir, 'walk_forward_catboost_20d_*/prediction_analysis.csv'),
-            os.path.join(output_dir, 'walk_forward_catboost_20d_*/*_catboost_20d/prediction_analysis.csv'),
+            os.path.join(output_dir, '*_ml_20d/prediction_analysis.csv'),
+            os.path.join(output_dir, 'walk_forward_lgbm_20d_*/prediction_analysis.csv'),
+            os.path.join(output_dir, 'walk_forward_lgbm_20d_*/*_ml_20d/prediction_analysis.csv'),
         ]
         prediction_files = []
         for pattern in search_patterns:
@@ -422,7 +422,7 @@ def load_multi_horizon_models():
             print(f"  ⚠️ {horizon}d 模型文件不存在: {filepath}")
         else:
             try:
-                m = CatBoostModel()  # 通用加载器：learner 由 pkl 决定
+                m = TradingModel()  # 通用加载器：learner 由 pkl 决定
                 m.load_model(filepath)
                 loaded = m
             except Exception as e:
@@ -726,25 +726,25 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         except Exception as e:
             print(f"  ⚠️ 市场情绪过滤器初始化失败: {e}")
 
-        # 读取 CatBoost 单模型预测结果
-        catboost_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
+        # 读取 LightGBM 单模型预测结果
+        pred_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
 
         result = {
             'ensemble': '',
             'ensemble_email': ''
         }
 
-        # 读取 CatBoost 预测结果
-        if os.path.exists(catboost_csv):
-            df_catboost = pd.read_csv(catboost_csv)
-            df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
+        # 读取 LightGBM 预测结果
+        if os.path.exists(pred_csv):
+            df_ml = pd.read_csv(pred_csv)
+            df_ml_sorted = df_ml.sort_values('probability', ascending=False)
 
             # D59：rank 模式——模型输出 score（≈横截面百分位目标），**无概率语义**。
             # RANK_MODE 为模块级常量（见文件顶部）；预先算好当池横截面分位供展示层用；
             # 市场分位门槛（P(up) 口径）对 score 无意义，故展示层切到"相对强弱分位"。
             rank_pct_map = {}
-            if RANK_MODE and 'probability' in df_catboost.columns:
-                rank_pct_map = dict(zip(df_catboost['code'], df_catboost['probability'].rank(pct=True)))
+            if RANK_MODE and 'probability' in df_ml.columns:
+                rank_pct_map = dict(zip(df_ml['code'], df_ml['probability'].rank(pct=True)))
                 print(f"  🔢 rank 模式：展示层用横截面分位（{len(rank_pct_map)} 只），不走概率门槛")
 
             # D2 TopK 目标集（低配辅助信号，DECISIONS D2 / DEPLOYMENT T2）：
@@ -754,7 +754,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             d2_topk_k = 0
             try:
                 from ml_services.live_topk import select_from_df
-                _topk_target, _topk_ranked, d2_topk_k = select_from_df(df_catboost, topk=10)
+                _topk_target, _topk_ranked, d2_topk_k = select_from_df(df_ml, topk=10)
                 d2_topk_target = set(_topk_target['code'])
                 print(f"  ✅ D2 TopK（raw）: K={d2_topk_k} -> {sorted(d2_topk_target)}")
             except Exception as e:
@@ -766,7 +766,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             # 如果指定使用缓存预测，尝试读取已有的三周期预测CSV文件
             csv_5d = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_5d.csv')
             csv_10d = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_10d.csv')
-            csv_20d = catboost_csv  # 20d文件就是主文件
+            csv_20d = pred_csv  # 20d文件就是主文件
 
             if use_cached_predictions and all(os.path.exists(f) for f in [csv_5d, csv_10d]):
                 print("  📁 读取已缓存的三周期预测文件...")
@@ -774,11 +774,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     df_5d = pd.read_csv(csv_5d)
                     df_10d = pd.read_csv(csv_10d)
 
-                    for stock_code in df_catboost['code'].tolist():
+                    for stock_code in df_ml['code'].tolist():
                         try:
                             row_5d = df_5d[df_5d['code'] == stock_code]
                             row_10d = df_10d[df_10d['code'] == stock_code]
-                            row_20d = df_catboost[df_catboost['code'] == stock_code]
+                            row_20d = df_ml[df_ml['code'] == stock_code]
 
                             if len(row_5d) > 0 and len(row_10d) > 0 and len(row_20d) > 0:
                                 pred_5d = int(row_5d.iloc[0]['prediction'])
@@ -815,7 +815,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if three_horizon_models:
                     print(f"  ✅ 成功加载 {len([k for k in three_horizon_models.keys() if k != 'loaded'])} 个模型")
                     print("  🔄 进行三周期预测...")
-                    for stock_code in df_catboost['code'].tolist():
+                    for stock_code in df_ml['code'].tolist():
                         try:
                             pred_result = predict_three_horizons(stock_code, three_horizon_models)
                             if pred_result:
@@ -835,7 +835,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 try:
                     from data_services.technical_analysis import TechnicalAnalyzer
                     analyzer = TechnicalAnalyzer()
-                    for stock_code in df_catboost['code'].tolist():
+                    for stock_code in df_ml['code'].tolist():
                         try:
                             # 获取股票数据（60天）
                             stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=60)
@@ -852,7 +852,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             # ========== 计算网络洞察（用于邮件展示）==========
             network_insights = {}
-            stock_codes = df_catboost['code'].tolist()  # 提前定义，避免后续引用错误
+            stock_codes = df_ml['code'].tolist()  # 提前定义，避免后续引用错误
             try:
                 from data_services.network_features import get_network_calculator
                 calculator = get_network_calculator()
@@ -878,7 +878,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             import json as json_module
 
             llm_stock_list = []
-            for _, row in df_catboost_sorted.iterrows():
+            for _, row in df_ml_sorted.iterrows():
                 stock_code = row['code']
 
                 # 获取板块名称和类型
@@ -942,18 +942,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     })
 
             # 构建JSON格式文本
-            catboost_text_llm = "【机器学习预测结果（20天）- JSON格式】\n"
-            catboost_text_llm += f"预测日期: {date_str}\n\n"
-            catboost_text_llm += "```json\n"
-            catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
-            catboost_text_llm += "\n```\n\n"
-            catboost_text_llm += "**字段说明**：\n"
-            catboost_text_llm += "- `score_20d`: 20天**排序分数**（0-1 横截面分位目标；越高=池内越偏强；**不是概率/胜率/置信度**）\n"
-            catboost_text_llm += "- `rank_pct_display`: 该股在当池的横截面分位显示（如 82%分位），仅展示用\n"
-            catboost_text_llm += "- `prediction_20d`: 偏强/中性/偏弱（按当池横截面分位 ≥0.70 / ≤0.30 标注）\n"
-            catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
-            catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal），**仅作风险提示，不构成分数门槛**\n"
-            catboost_text_llm += "- **使用建议**：score_20d 高 + chip_resistance 低 = 更可靠信号；不得把 score_20d 写成概率/胜率/置信度\n"
+            ml_text_llm = "【机器学习预测结果（20天）- JSON格式】\n"
+            ml_text_llm += f"预测日期: {date_str}\n\n"
+            ml_text_llm += "```json\n"
+            ml_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
+            ml_text_llm += "\n```\n\n"
+            ml_text_llm += "**字段说明**：\n"
+            ml_text_llm += "- `score_20d`: 20天**排序分数**（0-1 横截面分位目标；越高=池内越偏强；**不是概率/胜率/置信度**）\n"
+            ml_text_llm += "- `rank_pct_display`: 该股在当池的横截面分位显示（如 82%分位），仅展示用\n"
+            ml_text_llm += "- `prediction_20d`: 偏强/中性/偏弱（按当池横截面分位 ≥0.70 / ≤0.30 标注）\n"
+            ml_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
+            ml_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal），**仅作风险提示，不构成分数门槛**\n"
+            ml_text_llm += "- **使用建议**：score_20d 高 + chip_resistance 低 = 更可靠信号；不得把 score_20d 写成概率/胜率/置信度\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
@@ -972,11 +972,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = "【机器学习三周期预测结果】（排序分数：横截面分位×100）\n"
-                catboost_text_email += f"数据日期: {date_str}\n"
-                catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
-                catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
-                catboost_text_email += "**分数口径**: 0-100 排序分数（越高=池内越偏强）；0.50=中位、0.55=买入档、0.60=强档；不是概率/胜率/置信度，无市场概率门槛\n"
+                ml_text_email = "【机器学习三周期预测结果】（排序分数：横截面分位×100）\n"
+                ml_text_email += f"数据日期: {date_str}\n"
+                ml_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
+                ml_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
+                ml_text_email += "**分数口径**: 0-100 排序分数（越高=池内越偏强）；0.50=中位、0.55=买入档、0.60=强档；不是概率/胜率/置信度，无市场概率门槛\n"
                 # 档位反事实记账（2026-10-11）：只记录不执行，供日后核对这套老规矩是否值得用。
                 # D73 后生产为 rank 排序分数（无方向概率语义），方向概率 0.70/0.65 门槛已不适用；
                 # 「行情差就少买」翻译为 rank-native：只采纳池内偏强档（rank ≥0.70 分位，与 L918 同源），
@@ -987,17 +987,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'weak': '弱震荡：优先池内偏强档信号，谨慎',
                     'normal': '正常市场：按排序分数择优',
                 }.get(market_layer, '正常市场：按排序分数择优')
-                catboost_text_email += (f"**仓位备忘**: {_layer_memo}"
+                ml_text_email += (f"**仓位备忘**: {_layer_memo}"
                                         f"（仅供记录；实际仓位按 DEPLOYMENT T2 低配纪律由人工定）\n")
-                catboost_text_email += "\n全部股票预测结果（按20天排序分数排序）:\n\n"
+                ml_text_email += "\n全部股票预测结果（按20天排序分数排序）:\n\n"
                 if d2_topk_target:
-                    catboost_text_email += (f"> 🎯 = 20d TopK（系统低配辅助信号，K={d2_topk_k}，"
-                                            f"基于当前 {len(df_catboost)} 只自选池）；按 raw prob 取前 K（D73），"
+                    ml_text_email += (f"> 🎯 = 20d TopK（系统低配辅助信号，K={d2_topk_k}，"
+                                            f"基于当前 {len(df_ml)} 只自选池）；按 raw prob 取前 K（D73），"
                                             f"与回测/月度护栏同口径。\n\n")
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5日强弱分 | 10日强弱分 | 20日强弱分 | 市场调整 | 模式* | 交易建议* | 历史相对命中率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
+                ml_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5日强弱分 | 10日强弱分 | 20日强弱分 | 市场调整 | 模式* | 交易建议* | 历史相对命中率* | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                ml_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
-                for _, row in df_catboost_sorted.iterrows():
+                for _, row in df_ml_sorted.iterrows():
                     stock_code = row['code']
 
                     # 获取涨跌幅
@@ -1093,10 +1093,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                                       else stock_code)
                         if stock_code in d2_topk_target:
                             _code_cell = f"🎯 {_code_cell}"
-                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p5d_str} | {p10d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        ml_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p5d_str} | {p10d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
-                catboost_text_email += f"\n**三周期模式统计**：\n"
+                ml_text_email += f"\n**三周期模式统计**：\n"
                 pattern_counts = {}
                 for pred in three_horizon_results.values():
                     pattern = pred.get('pattern')
@@ -1106,52 +1106,52 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 for pattern, count in sorted(pattern_counts.items(), key=lambda x: -x[1]):
                     pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {})
                     pattern_name = pattern_info.get('name', '未知')
-                    catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
+                    ml_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
 
-                catboost_text_email += "\n> *「模式/交易建议/历史相对命中率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
+                ml_text_email += "\n> *「模式/交易建议/历史相对命中率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
                 # 添加三周期分数说明
-                catboost_text_email += f"\n**三周期分数说明**：\n"
-                catboost_text_email += "- 三周期显示为 0-100 排序分数（横截面分位×100），越高=池内越偏强\n"
-                catboost_text_email += "- ≥60 池内偏强档；50-60 中等；<50 偏弱（交叉参考，仓位≤2%）\n"
-                catboost_text_email += "- 排序分数不是概率/胜率/置信度；不做概率校准，不显示「(置信xx%)」\n"
+                ml_text_email += f"\n**三周期分数说明**：\n"
+                ml_text_email += "- 三周期显示为 0-100 排序分数（横截面分位×100），越高=池内越偏强\n"
+                ml_text_email += "- ≥60 池内偏强档；50-60 中等；<50 偏弱（交叉参考，仓位≤2%）\n"
+                ml_text_email += "- 排序分数不是概率/胜率/置信度；不做概率校准，不显示「(置信xx%)」\n"
 
                 # 添加市场调整说明
-                catboost_text_email += f"\n**市场调整说明**：\n"
-                catboost_text_email += "- 排序口径不做概率门槛，市场调整列恒为 '-'\n"
-                catboost_text_email += "- 🔴极端熊市/🟠熊市/🟡弱震荡：仅作风险提示（收紧止损、降低总仓位），不改变分数分档\n"
+                ml_text_email += f"\n**市场调整说明**：\n"
+                ml_text_email += "- 排序口径不做概率门槛，市场调整列恒为 '-'\n"
+                ml_text_email += "- 🔴极端熊市/🟠熊市/🟡弱震荡：仅作风险提示（收紧止损、降低总仓位），不改变分数分档\n"
 
                 # 添加交易规则说明
-                catboost_text_email += f"\n**三周期交易规则说明**：\n"
-                catboost_text_email += "- 模式标注 = 5日 + 10日 + 20日强弱分（1 = 分数≥当日池内中位数，0 = 低于中位数；0.50 只是分位映射后的中位点，不是涨跌分界）\n"
-                catboost_text_email += "- ⚠️ 模式名只表示「哪几个周期在池内偏强」，**不表示未来会涨**；历史相对命中率为历史统计，未经显著性验证\n"
-                catboost_text_email += "- ⚠️ D68 实测：三周期皆偏强只提高方向命中率（+3~4pp，折 t≈4.5），**不提高净超额**（毛 +0.4%/期，扣 0.5% 成本为负）⇒ 一致 ≠ 更赚钱，只作不确定性标记\n"
-                catboost_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"
-                catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
+                ml_text_email += f"\n**三周期交易规则说明**：\n"
+                ml_text_email += "- 模式标注 = 5日 + 10日 + 20日强弱分（1 = 分数≥当日池内中位数，0 = 低于中位数；0.50 只是分位映射后的中位点，不是涨跌分界）\n"
+                ml_text_email += "- ⚠️ 模式名只表示「哪几个周期在池内偏强」，**不表示未来会涨**；历史相对命中率为历史统计，未经显著性验证\n"
+                ml_text_email += "- ⚠️ D68 实测：三周期皆偏强只提高方向命中率（+3~4pp，折 t≈4.5），**不提高净超额**（毛 +0.4%/期，扣 0.5% 成本为负）⇒ 一致 ≠ 更赚钱，只作不确定性标记\n"
+                ml_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"
+                ml_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
 
                 # 添加筹码分布说明
-                catboost_text_email += f"\n**筹码阻力说明**：\n"
-                catboost_text_email += "- ✅低：上方筹码 < 30%，拉升容易\n"
-                catboost_text_email += "- ⚠️中：上方筹码 30-60%，注意风险\n"
-                catboost_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
+                ml_text_email += f"\n**筹码阻力说明**：\n"
+                ml_text_email += "- ✅低：上方筹码 < 30%，拉升容易\n"
+                ml_text_email += "- ⚠️中：上方筹码 30-60%，注意风险\n"
+                ml_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
 
                 # 添加盈亏比说明
-                catboost_text_email += f"\n**历史盈亏比说明**（基于滚动回测验证）：\n"
-                catboost_text_email += "- 盈亏比 = 正确预测平均盈利 / 错误预测平均亏损\n"
-                catboost_text_email += "- 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损\n"
-                catboost_text_email += "- ⭐⭐⭐：盈亏比 ≥ 3:1，优秀\n"
-                catboost_text_email += "- ⭐⭐：盈亏比 2-3:1，良好\n"
-                catboost_text_email += "- ⭐：盈亏比 1.5-2:1，一般\n"
-                catboost_text_email += "- ⚠️：盈亏比 < 1.5:1，较差\n"
-                catboost_text_email += "- 💡 使用建议：优先选择盈亏比 ≥ 2:1 且期望收益 > 0 的股票\n"
+                ml_text_email += f"\n**历史盈亏比说明**（基于滚动回测验证）：\n"
+                ml_text_email += "- 盈亏比 = 正确预测平均盈利 / 错误预测平均亏损\n"
+                ml_text_email += "- 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损\n"
+                ml_text_email += "- ⭐⭐⭐：盈亏比 ≥ 3:1，优秀\n"
+                ml_text_email += "- ⭐⭐：盈亏比 2-3:1，良好\n"
+                ml_text_email += "- ⭐：盈亏比 1.5-2:1，一般\n"
+                ml_text_email += "- ⚠️：盈亏比 < 1.5:1，较差\n"
+                ml_text_email += "- 💡 使用建议：优先选择盈亏比 ≥ 2:1 且期望收益 > 0 的股票\n"
 
                 # 添加风险回报率说明
-                catboost_text_email += f"\n**风险回报率说明**（稳健型模式）：\n"
-                catboost_text_email += "- 综合得分 = 风险得分 × 50% + 回报得分 × 50%\n"
-                catboost_text_email += "- ⭐ 优选：综合得分 ≥ 75，风险回报率最佳\n"
-                catboost_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
-                catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
-                catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
+                ml_text_email += f"\n**风险回报率说明**（稳健型模式）：\n"
+                ml_text_email += "- 综合得分 = 风险得分 × 50% + 回报得分 × 50%\n"
+                ml_text_email += "- ⭐ 优选：综合得分 ≥ 75，风险回报率最佳\n"
+                ml_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
+                ml_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
+                ml_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
 
                 # 添加网络洞察统计表格
                 if network_insights and '_meta' in network_insights:
@@ -1159,7 +1159,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     net_calc = get_network_calculator()
                     insights_table = net_calc.generate_insights_table(network_insights)
                     if insights_table:
-                        catboost_text_email += insights_table
+                        ml_text_email += insights_table
 
                 # 添加波动率网络密度预警
                 if volatility_density_info and volatility_density_info.get('current_density', 0) > 0:
@@ -1167,18 +1167,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     vol_calc = get_volatility_density_calculator()
                     density_table = vol_calc.generate_warning_table(volatility_density_info)
                     if density_table:
-                        catboost_text_email += f"\n{density_table}\n"
+                        ml_text_email += f"\n{density_table}\n"
 
                 # ========== LSTM-GARCH 混合波动率分析 ==========
                 if HYBRID_VOL_MODEL_AVAILABLE:
                     try:
-                        catboost_text_email += "\n**📊 混合波动率预测**\n"
-                        catboost_text_email += "| 股票代码 | 预测波动率 | 不确定性 | 趋势信号 | 风险建议 |\n"
-                        catboost_text_email += "|----------|-----------|----------|---------|----------|\n"
+                        ml_text_email += "\n**📊 混合波动率预测**\n"
+                        ml_text_email += "| 股票代码 | 预测波动率 | 不确定性 | 趋势信号 | 风险建议 |\n"
+                        ml_text_email += "|----------|-----------|----------|---------|----------|\n"
 
                         # 获取波动率最高的前10只股票
                         vol_data = []
-                        for _, row in df_catboost_sorted.head(20).iterrows():
+                        for _, row in df_ml_sorted.head(20).iterrows():
                             stock_code = row['code']
                             try:
                                 # 获取股票历史数据（需要足够数据训练LSTM）
@@ -1236,34 +1236,34 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             else:
                                 trend_signal = "➡️ 波动稳定"
 
-                            catboost_text_email += f"| {item['code']} | {item['vol']:.2%} | {item['uncertainty']:.4f} | {trend_signal} | {risk_advice} |\n"
+                            ml_text_email += f"| {item['code']} | {item['vol']:.2%} | {item['uncertainty']:.4f} | {trend_signal} | {risk_advice} |\n"
 
-                        catboost_text_email += "\n**波动率说明**：\n"
-                        catboost_text_email += "- 预测波动率：LSTM-GARCH 混合模型预测的日波动率\n"
-                        catboost_text_email += "- 趋势信号：波动率短期趋势，用于判断风险变化\n"
-                        catboost_text_email += "- 🔴 高风险：日波动率 > 4%，建议减仓或观望\n"
-                        catboost_text_email += "- 🟡 中等风险：日波动率 2.5%-4%，正常交易\n"
-                        catboost_text_email += "- 🟢 低风险：日波动率 < 2.5%，可适当加仓\n"
+                        ml_text_email += "\n**波动率说明**：\n"
+                        ml_text_email += "- 预测波动率：LSTM-GARCH 混合模型预测的日波动率\n"
+                        ml_text_email += "- 趋势信号：波动率短期趋势，用于判断风险变化\n"
+                        ml_text_email += "- 🔴 高风险：日波动率 > 4%，建议减仓或观望\n"
+                        ml_text_email += "- 🟡 中等风险：日波动率 2.5%-4%，正常交易\n"
+                        ml_text_email += "- 🟢 低风险：日波动率 < 2.5%，可适当加仓\n"
 
                     except Exception as e:
                         print(f"  ⚠️ 混合波动率分析失败: {e}")
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
-                catboost_text_email = catboost_text_llm
+                ml_text_email = ml_text_llm
 
             # 极端熊市警告
             if market_layer == 'extreme_bear':
-                catboost_text_email += """
+                ml_text_email += """
 
 ⚠️ **极端熊市警告**
 今日市场上涨比例极低（<20%），根据历史验证，此类市场环境下看涨信号准确率极低。
 建议：暂停所有看涨操作，等待市场企稳。
 """
 
-            result['ensemble'] = catboost_text_llm
-            result['ensemble_email'] = catboost_text_email
+            result['ensemble'] = ml_text_llm
+            result['ensemble_email'] = ml_text_email
         else:
-            print(f"⚠️ CatBoost 预测文件不存在: {catboost_csv}")
+            print(f"⚠️ LightGBM 预测文件不存在: {pred_csv}")
 
             result['ensemble'] = ''
             result['ensemble_email'] = ''
@@ -4108,9 +4108,9 @@ def generate_stock_section_html(stock_data: dict) -> str:
         risk_warnings = []
 
     # ML 分数（直填后可能为 None=无预测 → 显示"-"，不再 or 0 假装 0%）
-    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d'))
-    prob_10d = stock_data.get('ml_prob_10d', stock_data.get('catboost_prob_10d'))
-    prob_5d = stock_data.get('ml_prob_5d', stock_data.get('catboost_prob_5d'))
+    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('ml_prob_20d'))
+    prob_10d = stock_data.get('ml_prob_10d', stock_data.get('ml_prob_10d'))
+    prob_5d = stock_data.get('ml_prob_5d', stock_data.get('ml_prob_5d'))
 
     # 样式（排序分位；无概率/置信度语义）
     if prob_20d is None:
@@ -4716,17 +4716,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
             print(f"❌ 大模型建议文件不存在: {llm_filepath}")
             return None
         
-        # 检查CatBoost单模型预测文件是否存在
+        # 检查LightGBM单模型预测文件是否存在
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
-        catboost_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
+        pred_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
         
-        if not os.path.exists(catboost_csv):
-            print(f"❌ CatBoost预测文件不存在: {catboost_csv}")
+        if not os.path.exists(pred_csv):
+            print(f"❌ LightGBM预测文件不存在: {pred_csv}")
             return None
         
         print(f"📊 大模型建议文件: {llm_filepath}")
-        print(f"📊 CatBoost预测文件: {catboost_csv}")
+        print(f"📊 LightGBM预测文件: {pred_csv}")
         print("")
         
         # 提取大模型建议

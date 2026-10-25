@@ -488,7 +488,7 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
                 'prediction_probability': float(pred.get('probability', 0.5)),
                 'confidence_level': 'high' if pred.get('probability', 0) > 0.6 else ('medium' if pred.get('probability', 0) > 0.5 else 'low'),
                 'entry_price': float(pred.get('current_price', 0)),
-                'model_type': 'catboost',
+                'model_type': 'lightgbm',
                 'data_date': data_date,
                 'target_date': target_date,
                 'outcome': None,
@@ -641,7 +641,7 @@ def _stale_metric_warn(learner: str, horizon: int, field: str, value) -> None:
     if value is None:
         return
     # 键名→模型文件名映射：json 用 lgbm，生产 pkl 用 lightgbm（D10 命名）
-    _name = {'lgbm': 'lightgbm', 'gbdt': 'gbdt', 'catboost': 'catboost'}.get(learner, learner)
+    _name = {'lgbm': 'lightgbm', 'gbdt': 'gbdt', 'lightgbm': 'lightgbm'}.get(learner, learner)
     model_file = _os.path.join('data', f'ml_trading_model_{_name}_{horizon}d.pkl')
     if not _os.path.exists(model_file):
         logger.warning(
@@ -3926,10 +3926,10 @@ class BaseTradingModel:
         return X, y, feature_columns
 
 
-class CatBoostModel(BaseTradingModel):
-    """CatBoost 模型 - 基于 CatBoost 梯度提升算法的单一模型
+class TradingModel(BaseTradingModel):
+    """LightGBM 模型 - 基于 LightGBM 梯度提升算法的单一模型
     
-    CatBoost 是 Yandex 开发的梯度提升库，具有以下优势：
+    LightGBM 是 Yandex 开发的梯度提升库，具有以下优势：
     1. 自动处理分类特征，无需手动编码
     2. 更好的默认参数，减少调参工作量
     3. 更快的训练速度（GPU 支持）
@@ -3938,7 +3938,7 @@ class CatBoostModel(BaseTradingModel):
     _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False, fp_penalty=None):
-        """初始化 CatBoost 模型
+        """初始化 LightGBM 模型
 
         Args:
             class_weight: 类别权重策略
@@ -3953,7 +3953,7 @@ class CatBoostModel(BaseTradingModel):
                 - 效果：class_weights = {0: fp_penalty, 1: 1.0}，惩罚预测涨但实际跌的错误
         """
         super().__init__()  # 调用基类初始化
-        self.catboost_model = None
+        self.cb_model = None
         self.actual_n_estimators = 0
         self.learner = 'lightgbm'
         self.model_type = 'lightgbm'  # 模型类型标识
@@ -3963,11 +3963,11 @@ class CatBoostModel(BaseTradingModel):
         # 如果设置了 fp_penalty，覆盖 class_weight（非对称损失函数）
         if fp_penalty is not None:
             self.class_weight = {0: fp_penalty, 1: 1.0}
-            logger.info(f"CatBoostModel 使用非对称损失函数: FP惩罚={fp_penalty}x")
+            logger.info(f"TradingModel 使用非对称损失函数: FP惩罚={fp_penalty}x")
         else:
             self.class_weight = class_weight
 
-        logger.info(f"CatBoostModel 初始化: class_weight={self.class_weight}, use_dynamic_threshold={use_dynamic_threshold}, fp_penalty={fp_penalty}")
+        logger.info(f"TradingModel 初始化: class_weight={self.class_weight}, use_dynamic_threshold={use_dynamic_threshold}, fp_penalty={fp_penalty}")
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -4428,7 +4428,7 @@ class CatBoostModel(BaseTradingModel):
         return feature_columns
 
     def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None, label_mode='rank'):
-        """训练 CatBoost 模型（默认使用全量特征892个）
+        """训练 LightGBM 模型（默认使用全量特征892个）
 
         Args:
             codes: 股票代码列表
@@ -4446,12 +4446,12 @@ class CatBoostModel(BaseTradingModel):
             DataFrame: 特征重要性数据
         """
         # 检查是否需要显示特征选择提示
-        if use_feature_selection and not CatBoostModel._deprecation_warning_shown:
+        if use_feature_selection and not TradingModel._deprecation_warning_shown:
             print("💡 提示：使用特征选择，Walk-forward 验证显示夏普比率更优")
-            CatBoostModel._deprecation_warning_shown = True
+            TradingModel._deprecation_warning_shown = True
 
         print("\n" + "="*70)
-        logger.info("开始训练 CatBoost 模型")
+        logger.info("开始训练 LightGBM 模型")
         print("="*70)
         print(f"预测周期: {horizon} 天")
         print(f"股票数量: {len(codes)}")
@@ -4567,24 +4567,24 @@ class CatBoostModel(BaseTradingModel):
         for col in self.feature_columns:
             if df[col].dtype == 'object':
                 print(f"  检测到分类特征: {col}")
-                # 先填充NaN值为'unknown'，避免CatBoost分类特征NaN错误
+                # 先填充NaN值为'unknown'，避免LightGBM分类特征NaN错误
                 df[col] = df[col].fillna('unknown').astype(str)
                 encoder = LabelEncoder()
                 df[col] = encoder.fit_transform(df[col])
                 self.categorical_encoders[col] = encoder
-                # 记录分类特征的索引（用于CatBoost）
+                # 记录分类特征的索引（用于LightGBM）
                 categorical_features_indices.append(self.feature_columns.index(col))
 
         X = df[self.feature_columns].values
         y = df['Label'].values
 
         # 关键：分类特征已被LabelEncoder编码为整数，numpy会自动转为float
-        # 此时不应再传递cat_features参数，否则CatBoost会报错
+        # 此时不应再传递cat_features参数，否则LightGBM会报错
         # 因为cat_features参数要求数据中包含实际的字符串/分类类型
         # 但我们已将分类特征编码为数值，所以cat_features应为None
         categorical_features = None  # 不使用cat_features，因为数据已是数值型
 
-        # 唯一学习器 = LightGBM（2026-10-25；CatBoost 分支已删除）
+        # 唯一学习器 = LightGBM（2026-10-25；LightGBM 分支已删除）
         return self._train_lightgbm(df, use_feature_selection, selected_features, horizon, X, y)
 
     def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
@@ -4894,7 +4894,7 @@ class CatBoostModel(BaseTradingModel):
 
             # 确保所有基本面特征都存在（容错处理）
             # 当 create_fundamental_features 获取数据失败时，需要提供默认值
-            # 使用 NaN 表示缺失，让 CatBoost 自动学习缺失模式
+            # 使用 NaN 表示缺失，让 LightGBM 自动学习缺失模式
             fundamental_features_default = {
                 'PE': float('nan'), 'PB': float('nan'), 'Market_Cap': float('nan'),
                 'ROE': float('nan'), 'ROA': float('nan'), 'Dividend_Yield': 0.0,
@@ -4937,7 +4937,7 @@ class CatBoostModel(BaseTradingModel):
             for col, encoder in self.categorical_encoders.items():
                 if col in latest_data.columns:
                     try:
-                        # 先填充NaN值为'unknown'，避免CatBoost分类特征NaN错误
+                        # 先填充NaN值为'unknown'，避免LightGBM分类特征NaN错误
                         latest_data[col] = latest_data[col].fillna('unknown').astype(str)
                         latest_data[col] = encoder.transform(latest_data[col])
                     except ValueError:
@@ -5025,7 +5025,7 @@ class CatBoostModel(BaseTradingModel):
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
         self.horizon = model_data.get('horizon', 1)
-        self.model_type = model_data.get('model_type', 'catboost')
+        self.model_type = model_data.get('model_type', 'lightgbm')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         self.community_ids = model_data.get('community_ids', None)  # 恢复社区 ID 列表
         self.label_mode = model_data.get('label_mode', 'absolute')  # D59
@@ -5043,7 +5043,6 @@ class CatBoostModel(BaseTradingModel):
         Returns:
             numpy.ndarray: 预测概率数组
         """
-        from catboost import Pool
         import numpy as np
 
         # 确保 test_data 是 DataFrame
@@ -5070,7 +5069,7 @@ class CatBoostModel(BaseTradingModel):
         # 处理分类特征：填充 NaN 并使用 LabelEncoder 转换
         for col in self.categorical_encoders.keys():
             if col in test_df.columns:
-                # 先填充 NaN 值为 'unknown'，避免 CatBoost 分类特征 NaN 错误
+                # 先填充 NaN 值为 'unknown'，避免 LightGBM 分类特征 NaN 错误
                 test_df[col] = test_df[col].fillna('unknown').astype(str)
                 # 使用训练时保存的 encoder 转换（处理未见过的类别）
                 encoder = self.categorical_encoders[col]
@@ -5087,7 +5086,7 @@ class CatBoostModel(BaseTradingModel):
         return self.model.predict_proba(test_df)
 
     def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
-        """LightGBM 拟合（复用 CatBoost 管线的 prepare_data/特征选择/编码，仅换学习器）"""
+        """LightGBM 拟合（复用 LightGBM 管线的 prepare_data/特征选择/编码，仅换学习器）"""
         import lightgbm as lgb
         # n_jobs 过大（如 -1=32）在高负载下会因线程争用导致 40 倍反向劣化，
         # 可用 LGBM_N_JOBS 限制线程数（默认 -1 不变）
@@ -5121,7 +5120,7 @@ class CatBoostModel(BaseTradingModel):
         except Exception as e:
             logger.warning(f"保存 LightGBM 特征重要性失败: {e}")
 
-        # 时间序列交叉验证评估（与 CatBoost 管线同口径），写入 model_accuracy.json 供综合分析展示
+        # 时间序列交叉验证评估（与 LightGBM 管线同口径），写入 model_accuracy.json 供综合分析展示
         # rank 回归标签下准确率/F1 无意义 ⇒ 跳过（模型展示层不用置信度）
         if _reg:
             return feat_imp
@@ -5184,7 +5183,7 @@ class CatBoostModel(BaseTradingModel):
             float: 动态调整后的阈值
             
         示例:
-            >>> model = CatBoostModel(class_weight='balanced', use_dynamic_threshold=True)
+            >>> model = TradingModel(class_weight='balanced', use_dynamic_threshold=True)
             >>> threshold = model.get_dynamic_threshold(market_regime='bull')
             >>> print(f"牛市阈值: {threshold}")  # 0.52
             >>> threshold = model.get_dynamic_threshold(market_regime='bear')
@@ -5228,7 +5227,7 @@ class DynamicMarketStrategy:
     
     支持三种市场状态：
     1. 牛市 (bull)：激进融合，使用全部模型
-    2. 熊市 (bear)：保守策略，只使用 CatBoost
+    2. 熊市 (bear)：保守策略，只使用 LightGBM
     3. 震荡市 (normal)：智能融合，基于一致性
     
     特点：
@@ -5257,17 +5256,17 @@ class DynamicMarketStrategy:
                 self.model_stds = {
                     'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('std', 0.05),
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
-                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
+                    'lightgbm': data.get(f'lightgbm_{self.horizon}d', {}).get('std', 0.02)
                 }
                 for _m in self.model_stds:
                     _stale_metric_warn(_m, self.horizon, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning(f"未找到准确率文件: {accuracy_file}，使用默认值")
-                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
         except Exception as e:
             logger.warning(f"加载模型稳定性数据失败: {e}，使用默认值")
-            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
 
     def detect_market_regime(self, hsi_data):
         """
@@ -5319,7 +5318,7 @@ class DynamicMarketStrategy:
         计算模型一致性
         
         Args:
-            predictions: 三个模型的预测概率列表 [lgbm_pred, gbdt_pred, catboost_pred]
+            predictions: 三个模型的预测概率列表 [lgbm_pred, gbdt_pred, cb_pred]
         
         Returns:
             float: 一致性比例 (1.0/0.67/0.33)
@@ -5348,8 +5347,8 @@ class DynamicMarketStrategy:
         - 降低置信度阈值
         
         Args:
-            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
-            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, cb_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, cb_conf]
         
         Returns:
             tuple: (融合概率, 策略名称)
@@ -5357,7 +5356,7 @@ class DynamicMarketStrategy:
         # 基于稳定性加权（标准差倒数）
         stds = [self.model_stds.get('lgbm', 0.05), 
                 self.model_stds.get('gbdt', 0.05), 
-                self.model_stds.get('catboost', 0.02)]
+                self.model_stds.get('lightgbm', 0.02)]
         weights = [1/std for std in stds]
         weights = np.array(weights) / sum(weights)
         
@@ -5369,23 +5368,23 @@ class DynamicMarketStrategy:
         熊市策略：保守策略
         
         特点：
-        - 只使用 CatBoost 预测
+        - 只使用 LightGBM 预测
         - 提高置信度阈值
         - 观望优先
         
         Args:
-            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
-            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, cb_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, cb_conf]
         
         Returns:
             tuple: (融合概率, 策略名称)
         """
-        catboost_pred = predictions[2]  # CatBoost 预测
-        catboost_conf = confidences[2]  # CatBoost 置信度
+        cb_pred = predictions[2]  # LightGBM 预测
+        cb_conf = confidences[2]  # LightGBM 置信度
         
         # 提高置信度阈值到 0.65
-        if catboost_conf > 0.65:
-            return catboost_pred, 'bear_market_high_conf'
+        if cb_conf > 0.65:
+            return cb_pred, 'bear_market_high_conf'
         else:
             # 低置信度：观望（返回 0.5）
             return 0.5, 'bear_market_wait'
@@ -5397,11 +5396,11 @@ class DynamicMarketStrategy:
         特点：
         - 检查模型一致性
         - 高一致性时使用稳定性加权
-        - 低一致性时使用 CatBoost 主导
+        - 低一致性时使用 LightGBM 主导
         
         Args:
-            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
-            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, cb_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, cb_conf]
         
         Returns:
             tuple: (融合概率, 策略名称)
@@ -5409,34 +5408,34 @@ class DynamicMarketStrategy:
         # 计算一致性
         consistency = self.calculate_consistency(predictions)
         
-        # 检查 CatBoost 置信度
-        catboost_pred = predictions[2]
-        catboost_conf = confidences[2]
+        # 检查 LightGBM 置信度
+        cb_pred = predictions[2]
+        cb_conf = confidences[2]
         
-        # 情况1：CatBoost 高置信度 → 直接使用
-        if catboost_conf > 0.60:
-            return catboost_pred, 'normal_market_catboost_high'
+        # 情况1：LightGBM 高置信度 → 直接使用
+        if cb_conf > 0.60:
+            return cb_pred, 'normal_market_cb_high'
         
         # 情况2：高一致性 → 使用稳定性加权
         if consistency >= 0.67:
             stds = [self.model_stds.get('lgbm', 0.05), 
                     self.model_stds.get('gbdt', 0.05), 
-                    self.model_stds.get('catboost', 0.02)]
+                    self.model_stds.get('lightgbm', 0.02)]
             weights = [1/std for std in stds]
             weights = np.array(weights) / sum(weights)
             fused_prob = sum(pred * w for pred, w in zip(predictions, weights))
             return fused_prob, 'normal_market_high_consistency'
         
-        # 情况3：低一致性 → 使用 CatBoost
-        return catboost_pred, 'normal_market_catboost_dominant'
+        # 情况3：低一致性 → 使用 LightGBM
+        return cb_pred, 'normal_market_cb_dominant'
 
     def predict(self, predictions, confidences, hsi_data=None):
         """
         根据市场状态动态选择融合策略
         
         Args:
-            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
-            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, cb_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, cb_conf]
             hsi_data: 恒生指数数据（可选）
         
         Returns:
@@ -5462,7 +5461,7 @@ class AdvancedDynamicStrategy:
     特点：
     1. 多维度市场状态检测（收益率、波动率、成交量、情绪）
     2. 5种市场状态（强牛市、中牛市、震荡市、中熊市、强熊市）
-    3. CatBoost 主导（权重 75-100%）
+    3. LightGBM 主导（权重 75-100%）
     4. 动态置信度阈值
     5. 仓位管理
     
@@ -5485,17 +5484,17 @@ class AdvancedDynamicStrategy:
                 self.model_stds = {
                     'lgbm': data.get(f'lgbm_20d', {}).get('std', 0.05),
                     'gbdt': data.get(f'gbdt_20d', {}).get('std', 0.05),
-                    'catboost': data.get(f'catboost_20d', {}).get('std', 0.02)
+                    'lightgbm': data.get(f'lightgbm_20d', {}).get('std', 0.02)
                 }
                 for _m in self.model_stds:
                     _stale_metric_warn(_m, 20, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning("未找到准确率文件，使用默认值")
-                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
         except Exception as e:
             logger.warning(f"加载稳定性数据失败: {e}")
-            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
     
     def calculate_consistency(self, predictions):
         """
@@ -5566,34 +5565,34 @@ class AdvancedDynamicStrategy:
         
         Returns:
             dict: {
-                'catboost_weight': CatBoost 权重,
+                'cb_weight': LightGBM 权重,
                 'confidence_threshold': 置信度阈值,
                 'position_size': 仓位大小
             }
         """
         configs = {
             'strong_bull': {
-                'catboost_weight': 0.75,
+                'cb_weight': 0.75,
                 'confidence_threshold': 0.50,
                 'position_size': 1.2
             },
             'moderate_bull': {
-                'catboost_weight': 0.85,
+                'cb_weight': 0.85,
                 'confidence_threshold': 0.55,
                 'position_size': 1.0
             },
             'normal': {
-                'catboost_weight': 0.90,
+                'cb_weight': 0.90,
                 'confidence_threshold': 0.55,
                 'position_size': 0.9
             },
             'moderate_bear': {
-                'catboost_weight': 0.95,
+                'cb_weight': 0.95,
                 'confidence_threshold': 0.60,
                 'position_size': 0.7
             },
             'strong_bear': {
-                'catboost_weight': 1.00,
+                'cb_weight': 1.00,
                 'confidence_threshold': 0.65,
                 'position_size': 0.5
             }
@@ -5606,8 +5605,8 @@ class AdvancedDynamicStrategy:
         高级动态预测
         
         Args:
-            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
-            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, cb_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, cb_conf]
             hsi_data: 恒生指数数据（可选）
         
         Returns:
@@ -5620,18 +5619,18 @@ class AdvancedDynamicStrategy:
         # 获取策略配置
         config = self.get_strategy_config(regime)
         
-        # 检查 CatBoost 置信度
-        catboost_pred = predictions[2]
-        catboost_conf = confidences[2]
+        # 检查 LightGBM 置信度
+        cb_pred = predictions[2]
+        cb_conf = confidences[2]
         
-        # 如果 CatBoost 置信度低于阈值，观望
-        if catboost_conf < config['confidence_threshold']:
+        # 如果 LightGBM 置信度低于阈值，观望
+        if cb_conf < config['confidence_threshold']:
             return 0.5, f'advanced_{regime}_wait'
         
-        # 使用 CatBoost 主导权重
-        catboost_weight = config['catboost_weight']
-        remaining_weight = 1.0 - catboost_weight
-        weights = [remaining_weight/2, remaining_weight/2, catboost_weight]
+        # 使用 LightGBM 主导权重
+        cb_weight = config['cb_weight']
+        remaining_weight = 1.0 - cb_weight
+        weights = [remaining_weight/2, remaining_weight/2, cb_weight]
         
         # 融合
         fused_prob = sum(pred * w for pred, w in zip(predictions, weights))
@@ -5639,7 +5638,7 @@ class AdvancedDynamicStrategy:
         return fused_prob, f'advanced_{regime}'
 
 class EnsembleModel:
-    """融合模型 - 整合 LightGBM、GBDT、CatBoost 三个模型
+    """融合模型 - 整合 LightGBM、GBDT、LightGBM 三个模型
     
     支持多种融合方法：
     1. 简单平均：三个模型的概率平均
@@ -5655,7 +5654,7 @@ class EnsembleModel:
         """
         self.lgbm_model = LightGBMModel()
         self.gbdt_model = GBDTModel()
-        self.catboost_model = CatBoostModel()
+        self.cb_model = TradingModel()
         self.fusion_method = fusion_method
         self.model_accuracies = {}
         self.model_stds = {}  # 模型标准差（稳定性）
@@ -5673,17 +5672,17 @@ class EnsembleModel:
                 self.model_accuracies = {
                     'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('accuracy', 0.5),
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
-                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
+                    'lightgbm': data.get(f'lightgbm_{self.horizon}d', {}).get('accuracy', 0.5)
                 }
                 for _m in self.model_accuracies:
                     _stale_metric_warn(_m, self.horizon, 'accuracy', self.model_accuracies[_m])
                 logger.info(f"已加载模型准确率: {self.model_accuracies}")
             else:
                 logger.warning(r"未找到准确率文件，使用默认值")
-                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'lightgbm': 0.5}
         except Exception as e:
             logger.warning(f"加载准确率失败: {e}")
-            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'lightgbm': 0.5}
 
     def load_model_stds(self):
         """加载模型稳定性数据（标准差）"""
@@ -5696,17 +5695,17 @@ class EnsembleModel:
                 self.model_stds = {
                     'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('std', 0.05),
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
-                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
+                    'lightgbm': data.get(f'lightgbm_{self.horizon}d', {}).get('std', 0.02)
                 }
                 for _m in self.model_stds:
                     _stale_metric_warn(_m, self.horizon, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning(r"未找到稳定性数据文件，使用默认值")
-                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
         except Exception as e:
             logger.warning(f"加载稳定性数据失败: {e}")
-            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'lightgbm': 0.02}
         accuracy_file = 'data/model_accuracy.json'
         try:
             if os.path.exists(accuracy_file):
@@ -5716,17 +5715,17 @@ class EnsembleModel:
                 self.model_accuracies = {
                     'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('accuracy', 0.5),
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
-                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
+                    'lightgbm': data.get(f'lightgbm_{self.horizon}d', {}).get('accuracy', 0.5)
                 }
                 for _m in self.model_accuracies:
                     _stale_metric_warn(_m, self.horizon, 'accuracy', self.model_accuracies[_m])
                 logger.info(f"已加载模型准确率: {self.model_accuracies}")
             else:
                 logger.warning(r"未找到准确率文件，使用默认值")
-                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'lightgbm': 0.5}
         except Exception as e:
             logger.warning(f"加载准确率失败: {e}")
-            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'lightgbm': 0.5}
 
     def load_models(self, horizon=1):
         """加载三个模型"""
@@ -5753,13 +5752,13 @@ class EnsembleModel:
         else:
             logger.warning(f"GBDT 模型文件不存在: {gbdt_path}")
         
-        # 加载 CatBoost 模型
-        catboost_path = f'data/ml_trading_model_catboost{horizon_suffix}.pkl'
-        if os.path.exists(catboost_path):
-            self.catboost_model.load_model(catboost_path)
-            logger.info(f"CatBoost 模型已加载")
+        # 加载 LightGBM 模型
+        cb_path = f'data/ml_trading_model_cb{horizon_suffix}.pkl'
+        if os.path.exists(cb_path):
+            self.cb_model.load_model(cb_path)
+            logger.info(f"LightGBM 模型已加载")
         else:
-            logger.warning(f"CatBoost 模型文件不存在: {catboost_path}")
+            logger.warning(f"LightGBM 模型文件不存在: {cb_path}")
         
         # 加载模型准确率和稳定性数据
         self.load_model_accuracy()
@@ -5781,10 +5780,10 @@ class EnsembleModel:
         # 获取三个模型的预测结果
         lgbm_result = self.lgbm_model.predict(code, predict_date, self.horizon)
         gbdt_result = self.gbdt_model.predict(code, predict_date, self.horizon)
-        catboost_result = self.catboost_model.predict(code, predict_date, self.horizon)
+        cb_result = self.cb_model.predict(code, predict_date, self.horizon)
         
         # 检查是否有模型预测失败
-        results = {'lgbm': lgbm_result, 'gbdt': gbdt_result, 'catboost': catboost_result}
+        results = {'lgbm': lgbm_result, 'gbdt': gbdt_result, 'lightgbm': cb_result}
         valid_results = {k: v for k, v in results.items() if v is not None}
         
         if len(valid_results) == 0:
@@ -5938,94 +5937,91 @@ class EnsembleModel:
         lgbm_probs = self.lgbm_model.model.predict_proba(X)
         gbdt_probs = self.gbdt_model.gbdt_model.predict_proba(X)
 
-        # CatBoost 需要特殊处理分类特征
+        # LightGBM 需要特殊处理分类特征
         # 检查 X 是否包含所有需要的特征列
         if isinstance(X, pd.DataFrame):
             # 检查 X 是否包含所有特征列（按名称匹配）
-            if all(col in X.columns for col in self.catboost_model.feature_columns):
+            if all(col in X.columns for col in self.cb_model.feature_columns):
                 # X 包含所有特征列，按顺序提取
-                test_df = X[self.catboost_model.feature_columns].copy()
-            elif len(X.columns) == len(self.catboost_model.feature_columns):
+                test_df = X[self.cb_model.feature_columns].copy()
+            elif len(X.columns) == len(self.cb_model.feature_columns):
                 # X 的列数匹配但列名可能不同
                 # 假设 X 的列顺序与训练时一致（这是回测评估器的默认行为）
                 test_df = X.copy()
-                test_df.columns = self.catboost_model.feature_columns
+                test_df.columns = self.cb_model.feature_columns
             else:
                 # X 的列数不匹配，尝试提取存在的列
-                available_cols = [col for col in self.catboost_model.feature_columns if col in X.columns]
-                if len(available_cols) == len(self.catboost_model.feature_columns):
+                available_cols = [col for col in self.cb_model.feature_columns if col in X.columns]
+                if len(available_cols) == len(self.cb_model.feature_columns):
                     # 所有特征都存在，按顺序提取
-                    test_df = X[self.catboost_model.feature_columns].copy()
+                    test_df = X[self.cb_model.feature_columns].copy()
                 elif len(available_cols) > 0:
                     # 部分特征存在，补齐缺失的特征
                     test_df = X[available_cols].copy()
-                    for col in self.catboost_model.feature_columns:
+                    for col in self.cb_model.feature_columns:
                         if col not in test_df.columns:
                             test_df[col] = 0.0
-                    test_df = test_df[self.catboost_model.feature_columns]
+                    test_df = test_df[self.cb_model.feature_columns]
                 else:
                     # 无法提取特征列，假设列顺序一致
                     test_df = X.copy()
-                    if len(test_df.columns) >= len(self.catboost_model.feature_columns):
-                        test_df = test_df.iloc[:, :len(self.catboost_model.feature_columns)]
-                        test_df.columns = self.catboost_model.feature_columns
+                    if len(test_df.columns) >= len(self.cb_model.feature_columns):
+                        test_df = test_df.iloc[:, :len(self.cb_model.feature_columns)]
+                        test_df.columns = self.cb_model.feature_columns
                     else:
-                        raise ValueError(f"无法从输入数据中提取特征列: X 有 {len(X.columns)} 列，需要 {len(self.catboost_model.feature_columns)} 列")
+                        raise ValueError(f"无法从输入数据中提取特征列: X 有 {len(X.columns)} 列，需要 {len(self.cb_model.feature_columns)} 列")
         else:
             # 如果是 numpy 数组，转换为 DataFrame
-            test_df = pd.DataFrame(X, columns=self.catboost_model.feature_columns)
+            test_df = pd.DataFrame(X, columns=self.cb_model.feature_columns)
 
         # 获取分类特征索引
-        categorical_features = [self.catboost_model.feature_columns.index(col) for col in self.catboost_model.categorical_encoders.keys() if col in self.catboost_model.feature_columns]
+        categorical_features = [self.cb_model.feature_columns.index(col) for col in self.cb_model.categorical_encoders.keys() if col in self.cb_model.feature_columns]
 
         # 确保分类特征列是整数类型
         for cat_idx in categorical_features:
-            col_name = self.catboost_model.feature_columns[cat_idx]
+            col_name = self.cb_model.feature_columns[cat_idx]
             if col_name in test_df.columns:
                 test_df[col_name] = test_df[col_name].astype(np.int32)
 
-        # 使用 Pool 对象进行预测
-        from catboost import Pool
-        test_pool = Pool(data=test_df)
-        catboost_probs = self.catboost_model.catboost_model.predict_proba(test_pool)
+        cb_probs = self.cb_model.model.predict_proba(test_df)
 
         # 计算权重
         if self.fusion_method == 'weighted':
             lgbm_weight = self.model_accuracies.get('lgbm', 0.5)
             gbdt_weight = self.model_accuracies.get('gbdt', 0.5)
-            catboost_weight = self.model_accuracies.get('catboost', 0.5)
-            total_weight = lgbm_weight + gbdt_weight + catboost_weight
+            cb_weight = self.model_accuracies.get('lightgbm', 0.5)
+            total_weight = lgbm_weight + gbdt_weight + cb_weight
 
             if total_weight > 0:
                 lgbm_weight /= total_weight
                 gbdt_weight /= total_weight
-                catboost_weight /= total_weight
+                cb_weight /= total_weight
             else:
-                lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
+                lgbm_weight = gbdt_weight = cb_weight = 1.0 / 3.0
         elif self.fusion_method == 'advanced-dynamic':
-            # 高级动态策略：CatBoost 主导（90%权重）
+            # 高级动态策略：LightGBM 主导（90%权重）
             lgbm_weight = 0.05
             gbdt_weight = 0.05
-            catboost_weight = 0.90
+            cb_weight = 0.90
         elif self.fusion_method == 'dynamic-market':
-            # 动态市场策略：基于稳定性加权（CatBoost 权重约 2.4倍）
+            # 动态市场策略：基于稳定性加权（LightGBM 权重约 2.4倍）
             stds = [self.model_stds.get('lgbm', 0.05), 
                     self.model_stds.get('gbdt', 0.05), 
-                    self.model_stds.get('catboost', 0.02)]
+                    self.model_stds.get('lightgbm', 0.02)]
             weights = [1/std for std in stds]
             total = sum(weights)
             lgbm_weight = weights[0] / total
             gbdt_weight = weights[1] / total
-            catboost_weight = weights[2] / total
+            cb_weight = weights[2] / total
         else:
             # 简单平均
-            lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
+            lgbm_weight = gbdt_weight = cb_weight = 1.0 / 3.0
 
         # 加权融合
         probabilities = (
             lgbm_weight * lgbm_probs +
             gbdt_weight * gbdt_probs +
-            catboost_weight * catboost_probs
+            cb_weight * cb_probs
         )
 
         return probabilities
@@ -6118,7 +6114,7 @@ def main():
         logger.info("=" * 70)
         lgbm_model = None
         gbdt_model = None
-        catboost_model = None
+        cb_model = None
         ensemble_model = EnsembleModel(fusion_method=args.fusion_method)
     elif args.model_type == 'gbdt':
         logger.info("=" * 70)
@@ -6126,15 +6122,15 @@ def main():
         logger.info("=" * 70)
         lgbm_model = None
         gbdt_model = GBDTModel()
-        catboost_model = None
+        cb_model = None
         ensemble_model = None
     else:
         logger.info("=" * 70)
         logger.info("使用单一 LightGBM 模型")
         logger.info("=" * 70)
-        lgbm_model = MLTradingModel()
+        lgbm_model = LightGBMModel()
         gbdt_model = None
-        catboost_model = None
+        cb_model = None
         ensemble_model = None
 
     if args.mode == 'train':
@@ -6160,9 +6156,9 @@ def main():
             # 检查子模型文件是否存在
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
-            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+            cb_model_path = args.model_path.replace('.pkl', f'_lightgbm{horizon_suffix}.pkl')
             
-            all_submodels_exist = os.path.exists(lgbm_model_path) and os.path.exists(gbdt_model_path) and os.path.exists(catboost_model_path)
+            all_submodels_exist = os.path.exists(lgbm_model_path) and os.path.exists(gbdt_model_path) and os.path.exists(cb_model_path)
             
             if all_submodels_exist:
                 print("\n✅ 所有子模型已存在，直接加载")
@@ -6180,11 +6176,11 @@ def main():
                 gbdt_model.load_model(gbdt_model_path)
                 logger.info(f"GBDT 模型已从 {gbdt_model_path} 加载")
                 
-                # 加载 CatBoost 模型
-                print("\n📊 加载 CatBoost 模型...")
-                catboost_model = CatBoostModel()
-                catboost_model.load_model(catboost_model_path)
-                logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
+                # 加载 LightGBM 模型
+                print("\n📊 加载 LightGBM 模型...")
+                cb_model = TradingModel()
+                cb_model.load_model(cb_model_path)
+                logger.info(f"LightGBM 模型已从 {cb_model_path} 加载")
             else:
                 print("\n⚠️ 部分子模型不存在，开始训练缺失的子模型")
                 logger.info("部分子模型不存在，开始训练缺失的子模型")
@@ -6221,21 +6217,21 @@ def main():
                     logger.info(f"GBDT 模型已保存到 {gbdt_model_path}")
                     logger.info(f"特征重要性已保存到 {gbdt_importance_path}")
                 
-                # 训练或加载 CatBoost 模型
-                print("\n📊 处理 CatBoost 模型...")
-                catboost_model = CatBoostModel()
-                if os.path.exists(catboost_model_path):
-                    print(f"  ✅ CatBoost 模型已存在，直接加载")
-                    catboost_model.load_model(catboost_model_path)
-                    logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
+                # 训练或加载 LightGBM 模型
+                print("\n📊 处理 LightGBM 模型...")
+                cb_model = TradingModel()
+                if os.path.exists(cb_model_path):
+                    print(f"  ✅ LightGBM 模型已存在，直接加载")
+                    cb_model.load_model(cb_model_path)
+                    logger.info(f"LightGBM 模型已从 {cb_model_path} 加载")
                 else:
-                    print(f"  ⚠️ CatBoost 模型不存在，开始训练")
-                    catboost_feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
-                    catboost_model.save_model(catboost_model_path)
-                    catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
-                    catboost_feature_importance.to_csv(catboost_importance_path, index=False)
-                    logger.info(f"CatBoost 模型已保存到 {catboost_model_path}")
-                    logger.info(f"特征重要性已保存到 {catboost_importance_path}")
+                    print(f"  ⚠️ LightGBM 模型不存在，开始训练")
+                    cb_feature_importance = cb_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
+                    cb_model.save_model(cb_model_path)
+                    cb_importance_path = cb_model_path.replace('.pkl', '_importance.csv')
+                    cb_feature_importance.to_csv(cb_importance_path, index=False)
+                    logger.info(f"LightGBM 模型已保存到 {cb_model_path}")
+                    logger.info(f"特征重要性已保存到 {cb_importance_path}")
             
             print("\n" + "=" * 70)
             logger.info(r"融合模型的所有子模型已就绪！")
@@ -6247,11 +6243,11 @@ def main():
             importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
-        elif catboost_model:
-            feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
-            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
-            catboost_model.save_model(catboost_model_path)
-            importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
+        elif cb_model:
+            feature_importance = cb_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
+            cb_model_path = args.model_path.replace('.pkl', f'_lightgbm{horizon_suffix}.pkl')
+            cb_model.save_model(cb_model_path)
+            importance_path = cb_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         else:
@@ -6280,12 +6276,12 @@ def main():
             model = lgbm_model
             model_name = "LightGBM"
             model_file_suffix = "lgbm"
-        elif catboost_model:
-            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
-            catboost_model.load_model(catboost_model_path)
-            model = catboost_model
-            model_name = "CatBoost"
-            model_file_suffix = "catboost"
+        elif cb_model:
+            cb_model_path = args.model_path.replace('.pkl', f'_lightgbm{horizon_suffix}.pkl')
+            cb_model.load_model(cb_model_path)
+            model = cb_model
+            model_name = "LightGBM"
+            model_file_suffix = "lightgbm"
         else:
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.load_model(gbdt_model_path)
@@ -6489,11 +6485,11 @@ def main():
         sys.exit(1)
 
 
-class LightGBMModel(CatBoostModel):
-    """LightGBM 学习器（兼容存根）：复用 CatBoostModel 的 PIT 管线，仅 learner='lightgbm'
+class LightGBMModel(TradingModel):
+    """LightGBM 学习器（兼容存根）：复用 TradingModel 的 PIT 管线，仅 learner='lightgbm'
 
     原 1300 行旧实现（泄漏/非 PIT 的 prepare_data、无 predict_proba、无 selected_features）已删除，
-    统一走 CatBoostModel 的 learner 分支（见 docs/MODEL_IMPROVEMENT_PLAN.md §5.18）。
+    统一走 TradingModel 的 learner 分支（见 docs/MODEL_IMPROVEMENT_PLAN.md §5.18）。
     """
 
     def __init__(self, *args, **kwargs):
@@ -6501,7 +6497,7 @@ class LightGBMModel(CatBoostModel):
         self.learner = 'lightgbm'
 
 
-class GBDTModel(CatBoostModel):
+class GBDTModel(TradingModel):
     """GBDT 学习器（兼容存根）：旧 GBDTModel 实现即 LightGBM，统一 learner='lightgbm'"""
 
     def __init__(self, *args, **kwargs):
@@ -6509,8 +6505,6 @@ class GBDTModel(CatBoostModel):
         self.learner = 'lightgbm'
 
 
-# 向后兼容别名
-MLTradingModel = LightGBMModel
 
 
 if __name__ == '__main__':

@@ -23,7 +23,7 @@ import numpy as np
 
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import LightGBMModel
 from ml_services.logger_config import get_logger
 
 logger = get_logger('data_diagnostic')
@@ -178,7 +178,7 @@ def main():
     logger.info("开始数据诊断...")
 
     # 创建模型实例
-    model = MLTradingModel()
+    model = LightGBMModel()
 
     # 测试不同的配置
     configurations = [

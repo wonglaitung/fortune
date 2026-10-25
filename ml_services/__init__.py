@@ -7,9 +7,8 @@
 
 from .ml_trading_model import (
     LightGBMModel,
-    MLTradingModel,  # 向后兼容别名
     GBDTModel,
-    CatBoostModel,
+    TradingModel,
     EnsembleModel,
     FeatureEngineer,
     WATCHLIST,
@@ -20,9 +19,8 @@ from .base_model_processor import BaseModelProcessor
 
 __all__ = [
     'LightGBMModel',
-    'MLTradingModel',  # 向后兼容别名
     'GBDTModel',
-    'CatBoostModel',
+    'TradingModel',
     'EnsembleModel',
     'FeatureEngineer',
     'WATCHLIST',

@@ -14,7 +14,7 @@ import os
 import json
 from datetime import datetime
 from config import TRAINING_STOCKS
-from ml_services.ml_trading_model import CatBoostModel
+from ml_services.ml_trading_model import TradingModel
 
 def analyze_fold_feature_importance():
     """分析不同Fold的特征重要性"""
@@ -86,7 +86,7 @@ def analyze_fold_feature_importance():
 
         try:
             # 创建模型
-            model = CatBoostModel()
+            model = TradingModel()
 
             # 训练模型
             model.train(

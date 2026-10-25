@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import LightGBMModel
 from config import TRAINING_STOCKS
 from ml_services.logger_config import get_logger
 
@@ -57,7 +57,7 @@ def train_with_feature_selection(feature_list_path, n_features=100, horizon=5):
     feature_list = load_feature_list(feature_list_path, n_features)
 
     # 创建模型实例
-    model = MLTradingModel()
+    model = LightGBMModel()
     model.horizon = horizon
     model.use_feature_selection = True
     model.selected_features = feature_list
@@ -105,7 +105,7 @@ def compare_feature_sets(feature_list_path, horizon=5):
         logger.info(f"训练模型: {config['name']}")
         logger.info(f"{'='*70}")
 
-        model = MLTradingModel()
+        model = LightGBMModel()
         model.horizon = horizon
 
         if config['n_features']:
