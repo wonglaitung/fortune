@@ -4862,6 +4862,16 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 文档：`docs/DECISIONS.md` D72、`docs/BASELINES.md` 新增扩池节、`lessons.md` 三.88（预注册必须含安慰剂）。
 - 未提交：本轮所有脚本与 config 改动仍在工作区。
 
+## 2026-10-25 全部学习器切换为 LightGBM（D75）
+
+- 港股个股 / A股 / 恒指统一 LightGBM；rank 标签走 LGBMRegressor；模型按各自池重训
+  （港股 310 池 5/10/20d、A股 5/10/20d、恒指 5/10/20d）。
+- 生产加载：港股 `ml_trading_model_lgbm_{h}d.pkl`；A股 `trading_model_lightgbm_{h}d.pkl`；
+  恒指 `hsi_lightgbm_*.pkl`（pickle）。旧 catboost pkl/cbm 不再被任何入口引用。
+- 修复：港股 `_train_lightgbm` 返回 None 导致保存 importance 崩溃；港股单只预测分支
+  把 LGBM 模型塞进 CatBoost `Pool`（顺序错）；A股 LGBM 在 rank 标签下误用分类器。
+- 定性：D74 A/B 已证 LGBM 不优于 CatBoost ⇒ **非 alpha 提升**。
+
 ## 2026-10-23 生产打分口径切换为 raw（D73，口径变更非提升）
 
 - **#3 门槛尺度修复（同夜）**：港股 rank 排序分数无方向概率语义，删除 `comprehensive_analysis.py:991`

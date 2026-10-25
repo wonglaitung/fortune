@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-恒生指数 CatBoost 预测模型
+恒生指数 LightGBM 预测模型
 
 与评分模型并行运行，对比预测效果
 
@@ -27,7 +27,7 @@ warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from catboost import CatBoostClassifier, Pool
+import lightgbm as lgb
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 
 # 导入南向资金服务
@@ -160,27 +160,23 @@ FEATURE_CONFIG = {
     'info_decay_features': INFO_DECAY_FEATURE_CONFIG['info_decay_features'],
 }
 
-# CatBoost 模型参数（恒指专用 - 优化版本）
-# 2026-04-16 优化：添加类别权重平衡、调整超参数
-CATBOOST_PARAMS = {
-    'iterations': 300,              # 增加迭代次数（200→300）
-    'learning_rate': 0.03,          # 降低学习率（0.05→0.03）
-    'depth': 4,                     # 增加深度（3→4）
-    'l2_leaf_reg': 5,               # 增加正则化（3→5）
-    'min_data_in_leaf': 5,
-    'random_seed': 42,
-    'loss_function': 'Logloss',
-    'eval_metric': 'AUC',
-    'early_stopping_rounds': 30,    # 增加早停耐心（20→30）
-    'use_best_model': True,
-    'auto_class_weights': 'Balanced',  # 新增：类别权重平衡
-    'verbose': 50,
-    'task_type': 'CPU'
+# LightGBM 模型参数（恒指专用；唯一学习器 = LightGBM，2026-10-25 切换）
+LGBM_PARAMS = {
+    'n_estimators': 300,
+    'learning_rate': 0.03,
+    'max_depth': 4,
+    'num_leaves': 16,
+    'min_child_samples': 5,
+    'reg_lambda': 5.0,
+    'random_state': 42,
+    'class_weight': 'balanced',
+    'n_jobs': int(os.environ.get('LGBM_N_JOBS', '-1')),
+    'verbose': -1,
 }
 
 
-class HSICatBoostModel:
-    """恒生指数 CatBoost 预测模型"""
+class HSIModel:
+    """恒生指数 LightGBM 预测模型"""
 
     def __init__(self, horizon=20):
         self.horizon = horizon
@@ -561,7 +557,7 @@ class HSICatBoostModel:
         - end_date: 训练结束日期
         """
         print("=" * 60)
-        print("🎯 恒指 CatBoost 模型训练")
+        print("🎯 恒指 LightGBM 模型训练")
         print("=" * 60)
 
         # 获取数据
@@ -585,16 +581,12 @@ class HSICatBoostModel:
         print(f"  训练集: {len(X_train)} 样本 ({X_train.index[0].strftime('%Y-%m-%d')} ~ {X_train.index[-1].strftime('%Y-%m-%d')})")
         print(f"  验证集: {len(X_val)} 样本 ({X_val.index[0].strftime('%Y-%m-%d')} ~ {X_val.index[-1].strftime('%Y-%m-%d')})")
 
-        # 创建 CatBoost 模型
-        self.model = CatBoostClassifier(**CATBOOST_PARAMS)
+        # 创建 LightGBM 模型
+        self.model = lgb.LGBMClassifier(**LGBM_PARAMS)
 
         # 训练
         print(f"\n🚀 开始训练...")
-        self.model.fit(
-            X_train, y_train,
-            eval_set=(X_val, y_val),
-            verbose=100
-        )
+        self.model.fit(X_train, y_train)
 
         # 评估
         y_pred = self.model.predict(X_val)
@@ -683,7 +675,7 @@ class HSICatBoostModel:
                 raise ValueError("模型未训练，请先运行 train()")
 
         print("=" * 60)
-        print("🎯 恒指 CatBoost 预测")
+        print("🎯 恒指 LightGBM 预测")
         print("=" * 60)
 
         if latest_data is None:
@@ -772,11 +764,8 @@ class HSICatBoostModel:
             y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
 
             # 训练模型（不使用 early stopping）
-            predict_params = CATBOOST_PARAMS.copy()
-            predict_params['use_best_model'] = False
-            predict_params['early_stopping_rounds'] = None
-            model = CatBoostClassifier(**predict_params)
-            model.fit(X_train, y_train, verbose=0)
+            model = lgb.LGBMClassifier(**LGBM_PARAMS)
+            model.fit(X_train, y_train)
 
             # 用最新数据预测
             latest_features = df.iloc[-1:][feature_names].dropna()
@@ -839,9 +828,10 @@ class HSICatBoostModel:
     def save_model(self):
         """保存模型"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        model_path = os.path.join(MODEL_DIR, f'hsi_catboost_{timestamp}.cbm')
+        model_path = os.path.join(MODEL_DIR, f'hsi_lightgbm_{timestamp}.pkl')
 
-        self.model.save_model(model_path)
+        with open(model_path, 'wb') as f:
+            pickle.dump(self.model, f)
 
         # 同时保存特征名称
         feature_path = os.path.join(MODEL_DIR, f'hsi_features_{timestamp}.json')
@@ -855,16 +845,16 @@ class HSICatBoostModel:
         if model_path is None:
             # 查找最新模型
             import glob
-            models = glob.glob(os.path.join(MODEL_DIR, 'hsi_catboost_*.cbm'))
+            models = glob.glob(os.path.join(MODEL_DIR, 'hsi_lightgbm_*.pkl'))
             if not models:
                 return False
             model_path = max(models, key=os.path.getmtime)
 
-        self.model = CatBoostClassifier()
-        self.model.load_model(model_path)
+        with open(model_path, 'rb') as f:
+            self.model = pickle.load(f)
 
         # 加载特征名称
-        feature_path = model_path.replace('.cbm', '.json').replace('hsi_catboost', 'hsi_features')
+        feature_path = model_path.replace('.pkl', '.json').replace('hsi_lightgbm', 'hsi_features')
         if os.path.exists(feature_path):
             with open(feature_path, 'r') as f:
                 self.feature_names = json.load(f)
@@ -922,11 +912,8 @@ class HSICatBoostModel:
             y_test = y.iloc[i:i + test_days]
 
             # 训练模型（Walk-forward 不使用 early stopping）
-            wf_params = CATBOOST_PARAMS.copy()
-            wf_params['use_best_model'] = False
-            wf_params['early_stopping_rounds'] = None
-            model = CatBoostClassifier(**wf_params)
-            model.fit(X_train, y_train, verbose=0)
+            model = lgb.LGBMClassifier(**LGBM_PARAMS)
+            model.fit(X_train, y_train)
 
             # 预测
             y_prob = model.predict_proba(X_test)[:, 1]
@@ -1002,7 +989,7 @@ class HSICatBoostModel:
         from datetime import datetime, timedelta
 
         print("=" * 60)
-        print(f"🎯 恒指 CatBoost 滚动窗口训练（最近 {window_months} 个月）")
+        print(f"🎯 恒指 LightGBM 滚动窗口训练（最近 {window_months} 个月）")
         print("=" * 60)
 
         # 计算开始日期
@@ -1050,16 +1037,12 @@ class HSICatBoostModel:
         print(f"  上涨: {train_up} ({train_up/len(y_train)*100:.1f}%)")
         print(f"  下跌: {train_down} ({train_down/len(y_train)*100:.1f}%)")
 
-        # 创建 CatBoost 模型
-        self.model = CatBoostClassifier(**CATBOOST_PARAMS)
+        # 创建 LightGBM 模型
+        self.model = lgb.LGBMClassifier(**LGBM_PARAMS)
 
         # 训练
         print(f"\n🚀 开始训练...")
-        self.model.fit(
-            X_train, y_train,
-            eval_set=(X_val, y_val),
-            verbose=100
-        )
+        self.model.fit(X_train, y_train)
 
         # 评估
         y_pred = self.model.predict(X_val)
@@ -1085,7 +1068,7 @@ class HSICatBoostModel:
 
 def main():
     """主函数"""
-    parser = argparse.ArgumentParser(description='恒指 CatBoost 预测模型')
+    parser = argparse.ArgumentParser(description='恒指 LightGBM 预测模型')
     parser.add_argument('--mode', type=str, default='train',
                         choices=['train', 'predict', 'validate', 'compare', 'rolling', 'multi'],
                         help='运行模式（multi=多周期预测）')
@@ -1103,7 +1086,7 @@ def main():
     args = parser.parse_args()
 
     # 创建模型
-    model = HSICatBoostModel(horizon=args.horizon)
+    model = HSIModel(horizon=args.horizon)
 
     if args.mode == 'train':
         model.train(start_date=args.start_date, end_date=args.end_date)

@@ -2528,19 +2528,19 @@ class HSI_Predictor:
         - score_model_trend: 评分模型趋势
 
         返回:
-        - dict: CatBoost 预测结果
+        - dict: LightGBM 预测结果
         """
         print("\n" + "=" * 80)
-        print("🤖 CatBoost 模型对比".center(80))
+        print("🤖 LightGBM 模型对比".center(80))
         print("=" * 80)
 
         try:
-            # 尝试加载已有的 CatBoost 模型
+            # 尝试加载已有的 LightGBM 模型
             import glob
-            model_files = glob.glob(os.path.join(data_dir, 'hsi_models', 'hsi_catboost_*.cbm'))
+            model_files = glob.glob(os.path.join(data_dir, 'hsi_models', 'hsi_lightgbm_*.pkl'))
 
             if not model_files:
-                print("⚠️ 未找到 CatBoost 模型，跳过对比")
+                print("⚠️ 未找到 LightGBM 模型，跳过对比")
                 print("   提示: 运行 python3 ml_services/hsi_ml_model.py --mode train 训练模型")
                 return None
 
@@ -2548,12 +2548,12 @@ class HSI_Predictor:
             latest_model = max(model_files, key=os.path.getmtime)
             print(f"📂 加载模型: {latest_model}")
 
-            from catboost import CatBoostClassifier
-            model = CatBoostClassifier()
-            model.load_model(latest_model)
+            import pickle
+            with open(latest_model, 'rb') as _f:
+                model = pickle.load(_f)
 
             # 加载特征名称
-            feature_file = latest_model.replace('.cbm', '.json').replace('hsi_catboost', 'hsi_features')
+            feature_file = latest_model.replace('.pkl', '.json').replace('hsi_lightgbm', 'hsi_features')
             if os.path.exists(feature_file):
                 with open(feature_file, 'r') as f:
                     feature_names = json.load(f)

@@ -12,7 +12,7 @@
 
 用法：
   # 预演（不改持仓）
-  python3 ml_services/live_topk.py --pred data/ml_trading_model_catboost_predictions_20d.csv --topk 10
+  python3 ml_services/live_topk.py --pred data/ml_trading_model_lgbm_predictions_20d.csv --topk 10
   # 调仓日确认执行（更新状态）
   python3 ml_services/live_topk.py --pred data/...csv --topk 10 --horizon 20 --commit
   # 查看当前持仓
@@ -137,7 +137,7 @@ def run(pred_csv, topk, horizon, commit=False):
 def main():
     ap = argparse.ArgumentParser(description='实盘 20d TopK 选股器（raw 打分）')
     ap.add_argument('--pred', type=str,
-                    default='data/ml_trading_model_catboost_predictions_20d.csv',
+                    default='data/ml_trading_model_lgbm_predictions_20d.csv',
                     help='预测 CSV（code, probability, ...）')
     ap.add_argument('--topk', type=int, default=10)
     ap.add_argument('--horizon', type=int, default=20)

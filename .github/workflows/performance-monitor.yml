@@ -47,7 +47,7 @@ jobs:
             grep "## 判定" "$LATEST" || true
           else
             echo "⚠️ 未找到 monthly_guardrail_*.md —— 请在本地重训后运行:"
-            echo "   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20"
+            echo "   python3 ml_services/walk_forward_validation.py --model-type lgbm --horizon 20"
             echo "   python3 ml_services/monthly_guardrail.py --horizon 20"
           fi
 

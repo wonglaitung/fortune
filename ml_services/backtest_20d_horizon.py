@@ -804,7 +804,7 @@ def main():
     # 加载模型
     print("\n🔧 加载 CatBoost 模型...")
     model = CatBoostModel()
-    model.load_model(f'data/ml_trading_model_catboost_{args.horizon}d.pkl')
+    model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
     print(f"✅ 模型已加载")
 
     # 准备测试数据

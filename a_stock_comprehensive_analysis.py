@@ -808,7 +808,7 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
 
     # 加载三个周期的模型
     for horizon in HORIZONS:
-        model_path = f'data/a_stock_models/trading_model_catboost_{horizon}d.pkl'
+        model_path = f'data/a_stock_models/trading_model_lightgbm_{horizon}d.pkl'
         if not os.path.exists(model_path):
             print(f"⚠️ 模型文件不存在: {model_path}")
             continue

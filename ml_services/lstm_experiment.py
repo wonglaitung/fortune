@@ -694,7 +694,7 @@ class LSTMExperiment:
         """与CatBoost模型对比"""
         try:
             # 尝试加载CatBoost模型
-            model_file = f'data/ml_trading_model_catboost_{self.horizon}d.pkl'
+            model_file = f'data/ml_trading_model_lgbm_{self.horizon}d.pkl'
             
             if not os.path.exists(model_file):
                 logger.warning(f"CatBoost模型不存在: {model_file}")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-恒生指数 CatBoost 模型 Walk-forward 验证
+恒生指数 LightGBM 模型 Walk-forward 验证
 
 业界标准的时序验证方法，每个fold重新训练模型，评估真实预测能力
 
@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 warnings.filterwarnings('ignore')
 
-from catboost import CatBoostClassifier, Pool
+import lightgbm as lgb
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score
 import yfinance as yf
 
@@ -551,43 +551,19 @@ class HSIWalkForwardValidator:
 
             print(f"  训练样本: {len(X_train)}, 测试样本: {len(X_test)}")
 
-            # 训练模型（原始参数配置）
-            # 单一类别则跳过（CatBoost 不接受）
+            # 训练模型（LightGBM 唯一学习器）
             if len(np.unique(y_train)) < 2 or len(X_train) < 20:
                 print(f"  ⚠️ 训练集类别单一或样本过少，跳过本折")
                 continue
 
             print(f"  🔄 训练模型...")
-            model = CatBoostClassifier(
-                iterations=300,
-                learning_rate=0.03,
-                depth=4,
-                l2_leaf_reg=5,
-                min_data_in_leaf=5,
-                random_seed=42,
-                loss_function='Logloss',
-                eval_metric='AUC',
-                auto_class_weights='Balanced',
-                verbose=0,
-                task_type='CPU'
+            model = lgb.LGBMClassifier(
+                n_estimators=300, learning_rate=0.03, max_depth=4, num_leaves=16,
+                min_child_samples=5, reg_lambda=5.0, random_state=42,
+                class_weight='balanced', n_jobs=int(os.environ.get('LGBM_N_JOBS', '-1')),
+                verbose=-1,
             )
-
-            # 时序分割验证集（注意：子集可能单类别，需分别处理）
-            val_idx = int(len(X_train) * 0.8)
-            y_tr_part = y_train.iloc[:val_idx]
-            y_val_part = y_train.iloc[val_idx:]
-            if len(np.unique(y_tr_part)) < 2:
-                print(f"  ⚠️ 训练子集单一类别，跳过本折")
-                continue
-            if len(np.unique(y_val_part)) >= 2:
-                model.fit(
-                    X_train.iloc[:val_idx], y_tr_part,
-                    eval_set=(X_train.iloc[val_idx:], y_val_part),
-                    early_stopping_rounds=30,
-                    verbose=0
-                )
-            else:
-                model.fit(X_train.iloc[:val_idx], y_tr_part, verbose=0)
+            model.fit(X_train, y_train)
 
             # 预测
             proba = model.predict_proba(X_test)[:, 1]

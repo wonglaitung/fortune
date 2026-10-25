@@ -5212,3 +5212,30 @@ LGBM 20d 的决策指标是否不劣于 CatBoost（D10 的「20d LGBM 优」限�
 
 **适用范围**：本池（310）/ 本窗口（2023-06→2026-09）/ 20d / rank / F1-off ·
 **WF 内部比较 ✓ / 外推生产 ✗**（未见段为负，见 D72）。
+
+## D75（2026-10-25）：**全部学习器切换为 LightGBM（港个股 / A股 / 恒指）——口径/架构变更，非 alpha 提升**
+
+**指令**：把项目内所有生产学习器从 CatBoost 切换到 LightGBM。
+
+**改动（`grep` 旧符号 0 命中）**
+- **港股个股**：`comprehensive_analysis.py` 生产加载改为 `ml_trading_model_lgbm_{5,10,20}d.pkl`；
+  模型按 310 池重训（rank → `LGBMRegressor`，567 列 = Top500 + FORCE）。
+- **A股**：`ASTockTradingModel` 默认 `learner='lightgbm'`；rank 走 `LGBMRegressor`；
+  模型文件改名 `trading_model_lightgbm_{h}d.pkl`（保存 / 加载 / 综合分析 / doc_gate 例外同步）。
+- **恒指**：`hsi_ml_model.py` 由 CatBoost 重写为 LightGBM（类 `HSIModel`，pickle `.pkl`），
+  `hsi_walk_forward.py` 同步；`hsi_prediction.py` 模型发现改 `hsi_lightgbm_*.pkl`。
+- **连带**：WF/回测/实验脚本的模型路径、预测 CSV 名（`*_lgbm_predictions_*`）、
+  `parity_check.py` 与 `test_pipeline_contract.py` 的生产 pkl 名全部改为 LGBM。
+
+**顺带修复的三个真实 bug**
+1. 港股 `_train_lightgbm` 返回 `None` → `main()` 保存特征重要性时 `None.to_csv` 崩溃（模型已存）。
+2. 港股单只预测分支把 `label_mode=='rank'` 排在 learner 判断之前 ⇒ 把 LGBM 模型塞进
+   CatBoost `Pool(data=X)`，30 只全部预测失败。已改为 learner 优先。
+3. A股 LGBM 在 rank 连续标签下仍用 `LGBMClassifier(objective='binary')`（与 D74 港股同源 bug）。
+
+**定性（不可包装成提升）**：D74 同窗口 A/B：全 310 池 LGBM 净IR 0.43 / 超额 +0.20 / PBO 0.34 / DSR 0.852；
+CatBoost 0.18 / −0.08 / 0.54 / 0.762。自选 30 池 LGBM 超额 −0.28 / DSR 0.946；CatBoost −0.32 / 0.937。
+**两臂 DSR 均 <0.95、超额 CI 跨 0** ⇒ 换学习器**不改变 alpha null**，本次属工程统一。
+
+**适用范围**：本池 / 本窗口 / 20d（A/B 证据）；恒指未做 A/B（CatBoost→LGBM 属实现替换）·
+**WF 内部比较 ✓ / 外推生产 ✗**。

@@ -407,42 +407,30 @@ def load_multi_horizon_models():
     data_dir = os.path.join(script_dir, 'data')
 
     models = {}
-    # 20d 优先使用 CatBoost F1-off（2026-10-10 同条件四格多数判 C1 夺魁，见 docs/DECISIONS.md D20 ⑦；
-    # LightGBM 回退位保留 F1-off pkl）
-    lgbm20 = os.path.join(data_dir, 'ml_trading_model_lightgbm_20d.pkl')
-    cat20 = os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl')
+    # 唯一学习器 = LightGBM（2026-10-25 切换；pkl 由 --model-type lgbm 训练）
     model_files = {
-        5: os.path.join(data_dir, 'ml_trading_model_catboost_5d.pkl'),
-        10: os.path.join(data_dir, 'ml_trading_model_catboost_10d.pkl'),
-        20: cat20 if os.path.exists(cat20) else lgbm20,
+        5: os.path.join(data_dir, 'ml_trading_model_lgbm_5d.pkl'),
+        10: os.path.join(data_dir, 'ml_trading_model_lgbm_10d.pkl'),
+        20: os.path.join(data_dir, 'ml_trading_model_lgbm_20d.pkl'),
     }
 
     missing_models = []
     for horizon, filepath in model_files.items():
-        # 20d 加载失败回退 lightgbm（对抗审计：主文件「存在但加载炸」同样须回退，不能直接缺 20d）
-        candidates = [filepath]
-        if horizon == 20 and filepath == cat20 and os.path.exists(lgbm20):
-            candidates.append(lgbm20)
         loaded = None
         last_err = None
-        for cand in candidates:
-            if not os.path.exists(cand):
-                if len(candidates) == 1:
-                    print(f"  ⚠️ {horizon}d 模型文件不存在: {cand}")
-                continue
+        if not os.path.exists(filepath):
+            print(f"  ⚠️ {horizon}d 模型文件不存在: {filepath}")
+        else:
             try:
-                m = CatBoostModel()
-                m.load_model(cand)
+                m = CatBoostModel()  # 通用加载器：learner 由 pkl 决定
+                m.load_model(filepath)
                 loaded = m
-                if cand != filepath:
-                    print(f"  ⚠️ {horizon}d 主模型加载失败，已回退: {cand}")
-                break
             except Exception as e:
                 last_err = e
-                print(f"  ⚠️ 加载 {horizon}d 模型失败({cand}): {e}")
+                print(f"  ⚠️ 加载 {horizon}d 模型失败({filepath}): {e}")
         if loaded is None:
             if last_err is not None:
-                print(f"  ⚠️ {horizon}d 主/回退模型均不可用: {last_err}")
+                print(f"  ⚠️ {horizon}d 模型不可用: {last_err}")
             missing_models.append(horizon)
             continue
         models[horizon] = loaded
@@ -739,7 +727,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             print(f"  ⚠️ 市场情绪过滤器初始化失败: {e}")
 
         # 读取 CatBoost 单模型预测结果
-        catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
+        catboost_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
 
         result = {
             'ensemble': '',
@@ -776,8 +764,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             three_horizon_results = {}
 
             # 如果指定使用缓存预测，尝试读取已有的三周期预测CSV文件
-            csv_5d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_5d.csv')
-            csv_10d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_10d.csv')
+            csv_5d = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_5d.csv')
+            csv_10d = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_10d.csv')
             csv_20d = catboost_csv  # 20d文件就是主文件
 
             if use_cached_predictions and all(os.path.exists(f) for f in [csv_5d, csv_10d]):
@@ -4731,7 +4719,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         # 检查CatBoost单模型预测文件是否存在
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
-        catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
+        catboost_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
         
         if not os.path.exists(catboost_csv):
             print(f"❌ CatBoost预测文件不存在: {catboost_csv}")

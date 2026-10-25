@@ -24,14 +24,15 @@ def _tiny_xy(n=600, k=8, seed=0):
     return X, y, w, cols
 
 
-def test_learner_defaults_to_catboost():
+def test_learner_defaults_to_lightgbm():
     m = AStockTradingModel(horizon=20)
-    assert getattr(m, 'learner', 'catboost') == 'catboost'
+    assert getattr(m, 'learner', '') == 'lightgbm'
 
 
 def test_lightgbm_train_and_predict():
     X, y, w, cols = _tiny_xy()
     m = AStockTradingModel(horizon=20, learner='lightgbm')
+    m.label_mode = 'absolute'   # 分类口径用于验证 classifier 分支
     m.feature_columns = cols
     m._save_accuracy = lambda *a, **k: None   # 不污染真实 model_accuracy.json
 
@@ -45,6 +46,21 @@ def test_lightgbm_train_and_predict():
     assert proba.shape == (len(y), 2)
     assert np.isfinite(proba[:, 1]).all()
     assert ((proba[:, 1] >= 0) & (proba[:, 1] <= 1)).all()
+
+
+def test_rank_label_uses_regressor():
+    """D59 rank 连续标签 ⇒ LGBMRegressor（与港股同源修复）。"""
+    X, _, w, cols = _tiny_xy()
+    y_cont = np.random.default_rng(1).random(len(X))
+    m = AStockTradingModel(horizon=20, learner='lightgbm')
+    m.label_mode = 'rank'
+    m.feature_columns = cols
+    m._save_accuracy = lambda *a, **k: None
+    m.train_with_weights(X, y_cont, sample_weights=w, horizon=20)
+    assert type(m.model).__name__ == 'LGBMRegressor'
+    proba = m.predict_proba(pd.DataFrame(X, columns=cols))
+    assert proba.shape == (len(X), 2)
+    assert np.isfinite(proba[:, 1]).all()
 
 
 def test_accuracy_key_separated_by_learner(tmp_path, monkeypatch):

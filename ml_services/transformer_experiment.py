@@ -974,7 +974,7 @@ class TransformerExperiment:
     def compare_with_catboost(self, stock_code: str) -> Dict:
         """与CatBoost模型对比"""
         try:
-            model_file = f'data/ml_trading_model_catboost_{self.horizon}d.pkl'
+            model_file = f'data/ml_trading_model_lgbm_{self.horizon}d.pkl'
             
             if not os.path.exists(model_file):
                 logger.warning(f"CatBoost模型不存在: {model_file}")

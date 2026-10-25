@@ -320,7 +320,7 @@ def main():
         data_prep_model = model
     elif args.model_type == 'catboost':
         model = CatBoostModel()
-        model.load_model(f'data/ml_trading_model_catboost_{args.horizon}d.pkl')
+        model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
         data_prep_model = model
     elif args.model_type == 'ensemble':
         # 使用 EnsembleModel.load_models() 方法自动加载三个子模型和准确率

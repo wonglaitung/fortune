@@ -80,7 +80,7 @@ def main():
 
         print(f"\n✅ 训练完成！")
         print(f"⏱️  训练耗时: {training_time:.2f} 秒")
-        print(f"📈 模型保存路径: data/ml_trading_model_catboost_{args.horizon}d_*.pkl")
+        print(f"📈 模型保存路径: data/ml_trading_model_lgbm_{args.horizon}d_*.pkl")
 
         # 保存模型准确率到独立文件
         accuracy_file = f'data/model_accuracy_{args.sector}_{args.horizon}d.json'

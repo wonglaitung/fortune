@@ -95,9 +95,9 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
-| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
-| **生产 CatBoost 20d** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **20d 信号默认学习器（D20 ⑦ 四格多数判：C1 夺魁，2026-10-10 切换）**；5d/10d 仍 CatBoost（D10；1d 已停用 D59）；LGBM pkl 降级为回退留档；⚠️ F1 与 HIBOR **均例外默认开且均配 FORCE**（D23/D22/D24，各自 env 独立回退）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列，**不是**「统计选择 Top500 保留」） |
-| **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
+| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection` | - |
+| **生产 LightGBM（5/10/20d）** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **唯一学习器（2026-10-25 全量切换，D75）**；pkl = `data/ml_trading_model_lgbm_{h}d.pkl`；rank 标签走 `LGBMRegressor`；⚠️ D74 A/B：LGBM 并不优于 CatBoost（DSR 均<0.95、超额 CI 跨 0）⇒ **口径选择、非 alpha 提升**；F1/HIBOR 均默认开且配 FORCE（D23/D22/D24）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列） |
+| **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
@@ -180,7 +180,7 @@ python hsi_email.py --no-email
 | **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致。**能力 IC 只认部署口径（逐日 + 部署打分：raw prob，D73 起行业中性已删除、无开关）**——池化值天然偏高、A 闸 C1 的 t 是**阈值命中率**不是 IC（D64 / lessons 三.81） |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | ~~CatBoost 1天模型~~ | ❌ **已停用（D59）**：周期改 5/10/20，1d 不再生产 |
-| **学习器不可全局替换** | LightGBM 并非全面更优：20d LGBM 赢、**5d CatBoost 更优**（lift/IR/PBO/DSR 六项全占优、2026 转负）、1d 两者净IR≤0 双停 → 换学习器必须按周期分别 A/B（D10） |
+| **学习器已统一 LightGBM（D75）** | 2026-10-25 按指令把港股 / A股 / 恒指全部切到 LightGBM（rank → `LGBMRegressor`）。⚠️ **D74 A/B 显示 310 池 20d LGBM 不优于 CatBoost**（全 310 DSR 0.852 vs 0.762、自选 30 DSR 0.946 vs 0.937，两者均<0.95、超额 CI 跨 0）⇒ 这是**口径/架构选择，不是 alpha 提升**。D10「按周期 A/B」保留为历史证据 |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
 | **恒指 vs 个股** | 恒指 5/10/20d 57.3%/58.5%/52.4%（折聚类后均不显著）vs 个股 20d 51.8%（不显著）；**恒指三周期八模式、个股三周期模式折聚类后均不显著（效应 ≤±2.7pp），均不可交易** |
@@ -241,7 +241,7 @@ python hsi_email.py --no-email
 - `prediction_analysis.csv` - 所有预测详情（用于 Fold 盈亏比分析）
 - `validation_summary.json` - 总体验证结果
 
-### CatBoost 配置
+### LightGBM 配置（生产唯一学习器）
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
@@ -249,16 +249,19 @@ python hsi_email.py --no-email
 | 特征数量 | ~1450 → 500（F1-off 生产口径；F1-on 复验时 507） | 推荐使用 Top 500 特征选择 |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
-**20天模型参数**（超参数优化后）：
+**个股模型参数**（`_train_lightgbm`，5/10/20 同一套）：
 
 | 参数 | 值 |
 |------|-----|
+| objective | rank 标签 → `regression` |
 | n_estimators | 400 |
-| depth | 8 |
+| num_leaves / max_depth | 64 / 8 |
 | learning_rate | 0.06 |
-| l2_leaf_reg | 2 |
-| subsample | 0.75 |
-| colsample_bylevel | 0.8 |
+| reg_lambda | 2.0 |
+| subsample / colsample_bytree | 0.75 / 0.8 |
+| min_child_samples | 50 |
+
+**恒指模型**（`hsi_ml_model.py`）：LGBMClassifier，n_estimators 300 / lr 0.03 / depth 4 / class_weight balanced。
 
 ### 新特征上线验证清单
 

@@ -90,7 +90,7 @@ def test_embargo_defaults_to_horizon():
 def test_production_pkl_contains_f1_and_hibor():
     """生产 pkl 必须真正着装 F1 与 HIBOR 列（K4「不得静默丢弃」的回归护栏）。"""
     import glob
-    pkls = sorted(glob.glob(str(ROOT / 'data' / 'ml_trading_model_catboost_20d.pkl')))
+    pkls = sorted(glob.glob(str(ROOT / 'data' / 'ml_trading_model_lgbm_20d.pkl')))
     if not pkls:
         pytest.skip('catboost_20d.pkl 未生成（gitignore）')
     cols = pickle.load(open(pkls[0], 'rb')).get('feature_columns') or []
@@ -376,7 +376,7 @@ def test_wf_and_production_share_same_community_set():
     assert comm is not None and len(comm) > 1, '社区集合解析异常'
     # 生产 pkl 内保存的集合须与当前解析一致（否则模型与数据面已漂移）
     import pickle
-    p = ROOT / 'data' / 'ml_trading_model_catboost_20d.pkl'
+    p = ROOT / 'data' / 'ml_trading_model_lgbm_20d.pkl'
     if not p.exists():
         pytest.skip('catboost_20d.pkl 未生成（gitignore）')
     pkl = pickle.load(open(p, 'rb'))

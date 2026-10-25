@@ -5209,8 +5209,25 @@ class CatBoostModel(BaseTradingModel):
             # 转换回 numpy 数组
             X = df_temp.values
 
-            if getattr(self, 'label_mode', 'absolute') == 'rank':
-                # D59：回归 score（≈横截面百分位）；无概率语义
+            if getattr(self, 'learner', 'lightgbm') == 'lightgbm':
+                # LightGBM（唯一学习器）：rank 回归输出连续分数
+                import numpy as _np
+                if getattr(self, 'label_mode', 'absolute') == 'rank':
+                    score = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
+                    return {
+                        'code': code,
+                        'name': STOCK_NAMES.get(code, code),
+                        'prediction': int(score >= 0.5),
+                        'probability': score,
+                        'score': score,
+                        'label_mode': 'rank',
+                        'current_price': float(latest_data['Close'].values[0]),
+                        'date': latest_data.index[0]
+                    }
+                proba = self.model.predict_proba(X)[0]
+                prediction = int(proba[1] >= 0.5)
+            elif getattr(self, 'label_mode', 'absolute') == 'rank':
+                # 旧 CatBoost rank 路径（非生产；保留给历史 pkl）
                 from catboost import Pool
                 score = float(self.catboost_model.predict(Pool(data=X))[0])
                 return {
@@ -5223,15 +5240,6 @@ class CatBoostModel(BaseTradingModel):
                     'current_price': float(latest_data['Close'].values[0]),
                     'date': latest_data.index[0]
                 }
-            elif getattr(self, 'learner', 'catboost') == 'lightgbm':
-                # LightGBM 直接预测（复用同一特征管线）；rank 回归输出连续分数
-                import numpy as _np
-                if getattr(self, 'label_mode', 'absolute') == 'rank':
-                    _s = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
-                    proba = [1 - _s, _s]
-                else:
-                    proba = self.model.predict_proba(X)[0]
-                prediction = int(proba[1] >= 0.5)
             else:
                 # 使用 CatBoost 模型直接预测
                 from catboost import Pool
@@ -5392,6 +5400,7 @@ class CatBoostModel(BaseTradingModel):
         self.model.fit(X, y)
         self.actual_n_estimators = self.model.n_estimators
         print(f"✅ LightGBM 训练完成 (learner=lightgbm, n_estimators={self.actual_n_estimators})")
+        feat_imp = pd.DataFrame()
         try:
             imp = self.model.feature_importances_
             feat_imp = pd.DataFrame({'Feature': list(self.feature_columns), 'Importance': imp})
@@ -5406,7 +5415,7 @@ class CatBoostModel(BaseTradingModel):
         # 时间序列交叉验证评估（与 CatBoost 管线同口径），写入 model_accuracy.json 供综合分析展示
         # rank 回归标签下准确率/F1 无意义 ⇒ 跳过（模型展示层不用置信度）
         if _reg:
-            return None
+            return feat_imp
         try:
             from sklearn.model_selection import TimeSeriesSplit
             tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
@@ -5444,7 +5453,7 @@ class CatBoostModel(BaseTradingModel):
         except Exception as e:
             logger.warning(f"评估/保存 LightGBM 准确率失败（不影响训练）: {e}")
 
-        return None
+        return feat_imp
 
     def get_dynamic_threshold(self, market_regime=None, vix_level=None, base_threshold=0.55):
         """获取动态阈值（基于市场环境调整）

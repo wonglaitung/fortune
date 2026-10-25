@@ -20,7 +20,7 @@
 
 用法：
     python3 scripts/parity_check.py
-    python3 scripts/parity_check.py --horizon 20 --model data/ml_trading_model_catboost_20d.pkl
+    python3 scripts/parity_check.py --horizon 20 --model data/ml_trading_model_lgbm_20d.pkl
 """
 
 from __future__ import annotations
@@ -147,7 +147,7 @@ def main():
     ap.add_argument("--model", default="")
     args = ap.parse_args()
     model_path = Path(args.model) if args.model else \
-        ROOT / f"data/ml_trading_model_catboost_{args.horizon}d.pkl"
+        ROOT / f"data/ml_trading_model_lgbm_{args.horizon}d.pkl"
 
     print("=" * 74)
     print("⓪ 同一性闸 —— 可执行检查（scripts/parity_check.py）")

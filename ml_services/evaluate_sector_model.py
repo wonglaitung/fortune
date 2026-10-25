@@ -165,10 +165,10 @@ def main():
     # 加载模型
     model = CatBoostModel()
     # 尝试加载板块特定的模型
-    model_path = f'data/ml_trading_model_catboost_{args.sector}_{args.horizon}d.pkl'
+    model_path = f'data/ml_trading_model_lgbm_{args.sector}_{args.horizon}d.pkl'
     # 如果不存在，尝试加载通用模型
     if not os.path.exists(model_path):
-        model_path = f'data/ml_trading_model_catboost_{args.horizon}d.pkl'
+        model_path = f'data/ml_trading_model_lgbm_{args.horizon}d.pkl'
 
     if not os.path.exists(model_path):
         print(f"❌ 模型文件不存在: {model_path}")

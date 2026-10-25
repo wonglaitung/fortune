@@ -895,7 +895,7 @@ class AStockTradingModel(CatBoostModel):
     4. 标签标准化（除以滚动波动率）
     """
 
-    def __init__(self, horizon=20, learner='catboost'):
+    def __init__(self, horizon=20, learner='lightgbm'):
         # 应用 A股数据源替换（延迟执行）
         _apply_a_stock_patch()
 
@@ -1476,12 +1476,14 @@ class AStockTradingModel(CatBoostModel):
         from sklearn.model_selection import TimeSeriesSplit
         from sklearn.metrics import accuracy_score, f1_score
 
+        _reg = getattr(self, 'label_mode', 'absolute') == 'rank'
         if sample_weights is None:
             sample_weights = np.ones(len(y))
         # 线程数受 LGBM_N_JOBS 控制（lessons 三.12：-1 满载在高负载下反向劣化）
         lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))
         lgb_params = dict(
-            objective='binary', learning_rate=0.06, num_leaves=2 ** 6,
+            objective='regression' if _reg else 'binary',
+            learning_rate=0.06, num_leaves=2 ** 6,
             max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
             colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
             random_state=2020, n_jobs=lgb_n_jobs, verbose=-1,
@@ -1492,29 +1494,33 @@ class AStockTradingModel(CatBoostModel):
         logger.info("开始时间序列交叉验证（LightGBM）...")
         tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         cv_scores, cv_f1_scores = [], []
-        for fold, (tr_idx, va_idx) in enumerate(tscv.split(X), 1):
-            fold_model = lgb.LGBMClassifier(**lgb_params)
-            fold_model.fit(X[tr_idx], y[tr_idx], sample_weight=sample_weights[tr_idx])
-            y_pred_fold = fold_model.predict(X[va_idx])
-            acc = accuracy_score(y[va_idx], y_pred_fold)
-            f1 = f1_score(y[va_idx], y_pred_fold, zero_division=0)
-            cv_scores.append(acc)
-            cv_f1_scores.append(f1)
-            print(f"   Fold {fold} 验证准确率: {acc:.4f}, F1分数: {f1:.4f}")
+        if _reg:
+            # rank 回归：准确率/F1 无意义 ⇒ 跳过 CV（与港股 _train_lightgbm 同处理）
+            mean_accuracy = std_accuracy = mean_f1 = std_f1 = float('nan')
+        else:
+            for fold, (tr_idx, va_idx) in enumerate(tscv.split(X), 1):
+                fold_model = lgb.LGBMClassifier(**lgb_params)
+                fold_model.fit(X[tr_idx], y[tr_idx], sample_weight=sample_weights[tr_idx])
+                y_pred_fold = fold_model.predict(X[va_idx])
+                acc = accuracy_score(y[va_idx], y_pred_fold)
+                f1 = f1_score(y[va_idx], y_pred_fold, zero_division=0)
+                cv_scores.append(acc)
+                cv_f1_scores.append(f1)
+                print(f"   Fold {fold} 验证准确率: {acc:.4f}, F1分数: {f1:.4f}")
+            mean_accuracy, std_accuracy = float(np.mean(cv_scores)), float(np.std(cv_scores))
+            mean_f1, std_f1 = float(np.mean(cv_f1_scores)), float(np.std(cv_f1_scores))
 
-        mean_accuracy, std_accuracy = float(np.mean(cv_scores)), float(np.std(cv_scores))
-        mean_f1, std_f1 = float(np.mean(cv_f1_scores)), float(np.std(cv_f1_scores))
-
-        self.model = lgb.LGBMClassifier(**lgb_params)
+        self.model = lgb.LGBMRegressor(**lgb_params) if _reg else lgb.LGBMClassifier(**lgb_params)
         self.model.fit(X, y, sample_weight=sample_weights)
         # 与 CatBoost 路径共用 self.catboost_model 句柄，predict/feature_importance 无需改动
         self.catboost_model = self.model
         self.learner = 'lightgbm'
         self.actual_n_estimators = self.model.n_estimators
-        print(f"✅ LightGBM 训练完成 (n_estimators={self.actual_n_estimators}, "
-              f"CV acc={mean_accuracy:.4f}±{std_accuracy:.4f})")
+        print(f"✅ LightGBM 训练完成 (n_estimators={self.actual_n_estimators})"
+              + ("" if _reg else f", CV acc={mean_accuracy:.4f}±{std_accuracy:.4f}"))
 
-        self._save_accuracy(mean_accuracy, std_accuracy, mean_f1, std_f1, horizon)
+        if not _reg:
+            self._save_accuracy(mean_accuracy, std_accuracy, mean_f1, std_f1, horizon)
         return {
             'accuracy': mean_accuracy, 'accuracy_std': std_accuracy,
             'f1': mean_f1, 'f1_std': std_f1,
@@ -2042,7 +2048,7 @@ def main():
 
     # 模型保存路径
     os.makedirs(args.model_dir, exist_ok=True)
-    model_path = os.path.join(args.model_dir, f'trading_model_catboost_{args.horizon}d.pkl')
+    model_path = os.path.join(args.model_dir, f'trading_model_lightgbm_{args.horizon}d.pkl')
 
     if args.mode == 'train':
         # 训练模型
