@@ -66,3 +66,24 @@ def test_absolute_label_uses_classifier(monkeypatch):
     _bare(False)._train_lightgbm(pd.DataFrame(X), False, None, 20, X, y)
     assert used and used[0][0] == "clf", f"absolute 标签应保留分类器：{used}"
     assert used[0][1]["objective"] == "binary"
+
+
+def test_no_catboost_kwargs_passed_to_lgbm():
+    """LGBMClassifier 的 CatBoost 参数会被静默忽略（不报错）——禁止复活。"""
+    import pathlib
+    import re
+    forbidden = re.compile(
+        r"(auto_class_weights|l2_leaf_reg|colsample_bylevel|one_hot_max_size"
+        r"|\biterations\s*=|\bdepth\s*=)"
+    )
+    offenders = []
+    for p in pathlib.Path('.').rglob('*.py'):
+        parts = set(p.parts)
+        if '__pycache__' in parts or 'output' in parts:
+            continue
+        src = p.read_text(encoding='utf-8', errors='ignore')
+        for m in re.finditer(r'LGBMClassifier\((.*?)\)', src, re.S):
+            if forbidden.search(m.group(1)):
+                line = src[:m.start()].count('\n') + 1
+                offenders.append(f'{p}:{line}')
+    assert not offenders, f'LGBMClassifier 收到 CatBoost 参数: {offenders}'

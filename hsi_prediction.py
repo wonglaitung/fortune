@@ -2736,8 +2736,8 @@ class HSI_Predictor:
 
                 # 训练模型
                 model = LGBMClassifier(
-                    iterations=200, learning_rate=0.05, depth=3,
-                    auto_class_weights='Balanced', verbose=0
+                    n_estimators=200, learning_rate=0.05, max_depth=3,
+                    class_weight='balanced', verbose=-1
                 )
                 model.fit(X_train, y_train)
 

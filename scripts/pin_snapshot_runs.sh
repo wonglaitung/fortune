@@ -43,11 +43,9 @@ PY
 
 # ---------- 阶段2：产出可引用的 20d 完整基线 ----------
 for h in 20 5 1; do
-  extra=""
-  [ "$h" = "20" ] && extra="--learner lightgbm"
   echo "[$(date '+%F %T')] 冻结快照 abs${h}d 完整基线开始" >> $L/repro.log
   bash scripts/run_walk_forward.sh --model-type lgbm --horizon $h \
-       --use-feature-selection $extra --label-mode absolute \
+       --use-feature-selection --label-mode absolute \
        --start-date 2019-06-01 --end-date 2026-07-31 \
        > output/pin${h}d_abs.log 2>&1
   echo "[$(date '+%F %T')] abs${h}d 完成 rc=$?" >> $L/repro.log

@@ -19,11 +19,9 @@ echo "[$(date '+%F %T')] 1d 完成 rc=$?" >> $L/queue.log
 
 # 2) 用修复后代码重跑绝对标签 walk-forward → 新 CSV（GATE_SNAPSHOT 数据源）
 for h in 20 5 1; do
-  extra=""
-  [ "$h" = "20" ] && extra="--learner lightgbm"
   echo "[$(date '+%F %T')] abs${h}d walk-forward 开始" >> $L/queue.log
   bash scripts/run_walk_forward.sh --model-type lgbm --horizon $h \
-       --use-feature-selection $extra --label-mode absolute \
+       --use-feature-selection --label-mode absolute \
        --start-date 2019-06-01 --end-date 2026-07-31 \
        > output/wf${h}d_abs.log 2>&1
   echo "[$(date '+%F %T')] abs${h}d 完成 rc=$?" >> $L/queue.log
