@@ -4909,3 +4909,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   DSR 0.852→0.800（点估计略升、稳健性变差）。
 - 工程：恒指生产改为按周期加载 pkl（D77）；`CatBoostModel → TradingModel` 改名；
   恒指多周期 CatBoost 参数名被 LGBM 静默忽略的 bug 已修；pytest 358 passed。
+
+## 2026-10-26（晚）：CatBoost vs 调参 LGBM 三周期对比（D80 / BASELINES B5）
+
+- 同池同窗同折重跑 CatBoost 5d/10d（pre-D75 worktree `1acd1155`），20d 用既有基线。
+- 结果：两算法三周期超额 CI 全跨 0、DSR<0.95 ⇒ 均无 alpha。
+  LGBM 超额点估计好 0.15~0.32，但 MDE≈1.55、10d/20d 的 PBO 反而更差（0.54→1.00/0.77）。
+- 20d 分解：CatBoost 0.18/−0.08 → LGBM 默认 0.43/+0.20 → LGBM 调参 0.48/+0.24；
+  改善主要来自换学习器，调参仅 +0.04~0.05 且稳健性变差。
