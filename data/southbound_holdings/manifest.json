@@ -1,16 +1,384 @@
 {
-  "updated_at": "2026-10-23T23:59:39+08:00",
-  "rows": 23554,
-  "stocks": 54,
-  "date_min": "2024-10-23",
-  "date_max": "2026-10-22",
+  "updated_at": "2026-10-27T01:55:59+08:00",
+  "rows": 117098,
+  "stocks": 262,
+  "date_min": "2024-10-28",
+  "date_max": "2026-10-23",
   "failed": [
     {
-      "code": "1257.HK",
+      "code": "0493.HK",
       "error": "TypeError: 'NoneType' object is not subscriptable"
     },
     {
-      "code": "1257.HK",
+      "code": "0493.HK",
+      "error": "empty"
+    },
+    {
+      "code": "6051.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "6051.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0813.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0813.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1873.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1873.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1995.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1995.HK",
+      "error": "empty"
+    },
+    {
+      "code": "6169.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "6169.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0302.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0302.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0884.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0884.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1813.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1813.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2342.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2342.HK",
+      "error": "empty"
+    },
+    {
+      "code": "9996.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "9996.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0708.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0708.HK",
+      "error": "empty"
+    },
+    {
+      "code": "3883.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "3883.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1717.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1717.HK",
+      "error": "empty"
+    },
+    {
+      "code": "3662.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "3662.HK",
+      "error": "empty"
+    },
+    {
+      "code": "3383.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "3383.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2500.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2500.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2168.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2168.HK",
+      "error": "empty"
+    },
+    {
+      "code": "6823.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "6823.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1765.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1765.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1233.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1233.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0242.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0242.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1753.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1753.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0305.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0305.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0520.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0520.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1317.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1317.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2638.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2638.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1728.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1728.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1521.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1521.HK",
+      "error": "empty"
+    },
+    {
+      "code": "6158.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "6158.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0799.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0799.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1755.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1755.HK",
+      "error": "empty"
+    },
+    {
+      "code": "9928.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "9928.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1638.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1638.HK",
+      "error": "empty"
+    },
+    {
+      "code": "0357.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "0357.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2163.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2163.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1243.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1243.HK",
+      "error": "empty"
+    },
+    {
+      "code": "9983.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "9983.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1913.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1913.HK",
+      "error": "empty"
+    },
+    {
+      "code": "9939.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "9939.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1636.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1636.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1628.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1628.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1472.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1472.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2001.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2001.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1622.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1622.HK",
+      "error": "empty"
+    },
+    {
+      "code": "2772.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "2772.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1966.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1966.HK",
       "error": "empty"
     },
     {
