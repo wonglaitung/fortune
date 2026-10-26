@@ -249,17 +249,19 @@ python hsi_email.py --no-email
 | 特征数量 | ~1450 → 500（F1-off 生产口径；F1-on 复验时 507） | 推荐使用 Top 500 特征选择 |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
-**个股模型参数**（`_train_lightgbm`，5/10/20 同一套）：
+**个股模型参数**（`_train_lightgbm`；**唯一来源** `data/lgbm_best_params.json`，缺键回退默认）：
 
-| 参数 | 值 |
-|------|-----|
-| objective | rank 标签 → `regression` |
-| n_estimators | 400 |
-| num_leaves / max_depth | 64 / 8 |
-| learning_rate | 0.06 |
-| reg_lambda | 2.0 |
-| subsample / colsample_bytree | 0.75 / 0.8 |
-| min_child_samples | 50 |
+| 参数 | 5d | 10d | 20d | 默认（回退） |
+|------|----|-----|-----|------|
+| objective | rank → `regression` | 同左 | 同左 | — |
+| n_estimators | 800 | 800 | 300 | 400 |
+| num_leaves / max_depth | 31 / −1 | 127 / −1 | 127 / 8 | 64 / 8 |
+| learning_rate | 0.03 | 0.08 | 0.06 | 0.06 |
+| reg_lambda | 2.0 | 5.0 | 5.0 | 2.0 |
+| subsample / colsample_bytree | 1.0 / 1.0 | 0.85 / 1.0 | 1.0 / 0.6 | 0.75 / 0.8 |
+| min_child_samples | 30 | 30 | 30 | 50 |
+
+生产训练与 Walk-forward 都经 `load_lgbm_params(horizon)` 取参（D76/D78/D79）。
 
 **恒指模型**（`hsi_ml_model.py`）：LGBMClassifier，n_estimators 300 / lr 0.03 / depth 4 / class_weight balanced。
 
