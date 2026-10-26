@@ -221,9 +221,10 @@ flowchart TD
 
 ```
 训练池 310 只 = data/hk_broad/universe_310.json（300 冻结池 ∪ 原 49 池）
-      │  CatBoost 5/10/20d 训练
+      │  LightGBM 5/10/20d 训练（rank 标签）
       ▼
-模型 pkl（data/ml_trading_model_catboost_{5,10,20}d.pkl）
+模型 pkl（data/ml_trading_model_lgbm_{5,10,20}d.pkl）
+      │  参数：data/lgbm_best_params.json（生产与 WF 同源）
       │  逐只推理
       ▼
 预测池 30 只 = config.WATCHLIST
@@ -383,7 +384,7 @@ rm -rf data/a_stock_cache/*.pkl
 
 ## 12. 依赖 · 许可 · 联系
 
-**依赖**：`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `networkx`
+**依赖**：`yfinance` `lightgbm`（生产）`catboost`（仅研究脚本）`akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `networkx`
 
 **许可**：MIT License
 
