@@ -23,3 +23,26 @@ def test_parse_rows_basic():
 
 def test_parse_rows_empty_when_no_table():
     assert parse_rows('<html></html>').empty
+
+
+def test_compact_strips_name_address(tmp_path):
+    import pandas as pd
+    from scripts.compact_ccass import compact_date
+
+    src = tmp_path / 'src' / '20260101'
+    src.mkdir(parents=True)
+    pd.DataFrame({
+        'participant_id': ['C00019', 'A00003'],
+        'name': ['HSBC', 'CSDC'],
+        'address': ['KOWLOON', 'BEIJING'],
+        'shares': [10, 20],
+        'pct': [1.5, 3.0],
+    }).to_csv(src / '00700.csv', index=False)
+
+    dst = tmp_path / 'dst' / '20260101'
+    n, p = compact_date(str(src), str(dst))
+    assert n == 1 and p == 2
+    out = pd.read_csv(dst / '00700.csv')
+    assert list(out.columns) == ['participant_id', 'shares', 'pct']
+    parts = pd.read_csv(dst / '_participants.csv')
+    assert set(parts['participant_id']) == {'C00019', 'A00003'}

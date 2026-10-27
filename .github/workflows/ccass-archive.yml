@@ -1,12 +1,17 @@
-name: CCASS 日归档（自托管）
+name: CCASS 日归档（提交到私有数据仓）
 
-# ⚠️ 必须跑在**自托管 runner**：
-# HKEX 数据「仅供个人非商业使用、禁止再分发」，不能落到 GitHub 托管 runner /
-# artifact / 仓库。自托管 runner 的工作区在本机，`data/ccass/`（gitignore）可长期保留。
+# HKEX 许可：仅供个人非商业使用、禁止向第三方再分发。
+# 因此本 workflow **只允许推送到私有数据仓**（运行时用 API 校验 private=true），
+# 不提交到本仓库、不上传 artifact。数据按日打包成 tar.gz，控制体积。
+#
+# 需要两个 Secrets：
+#   CCASS_DATA_REPO  = <owner>/<private-repo>   （例：yourname/fortune-ccass）
+#   CCASS_DATA_TOKEN = fine-grained PAT，仅对该私有仓有 Contents: Read/Write
+#
+# 体积：压缩后仅存 participant_id/shares/pct + 参与者字典 ⇒ 约 0.4 MB/日（≈100 MB/年）。
 on:
   schedule:
-    # 每交易日 12:00 UTC = 20:00 HKT（收市后）
-    - cron: '0 12 * * 1-5'
+    - cron: '0 12 * * 1-5'   # 20:00 HKT
   workflow_dispatch:
     inputs:
       backfill_weeks:
@@ -26,11 +31,39 @@ concurrency:
 
 jobs:
   archive:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 180
+    env:
+      TZ: Asia/Hong_Kong
+      CCASS_DATA_REPO: ${{ secrets.CCASS_DATA_REPO }}
+      CCASS_DATA_TOKEN: ${{ secrets.CCASS_DATA_TOKEN }}
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install deps (minimal)
+        run: pip install pandas requests beautifulsoup4 lxml
+
+      - name: Verify secrets and private data repo
+        run: |
+          set -euo pipefail
+          if [ -z "${CCASS_DATA_REPO:-}" ] || [ -z "${CCASS_DATA_TOKEN:-}" ]; then
+            echo "::error::缺少 CCASS_DATA_REPO / CCASS_DATA_TOKEN secrets"
+            exit 1
+          fi
+          vis=$(curl -fsS -H "Authorization: Bearer $CCASS_DATA_TOKEN" \
+                "https://api.github.com/repos/$CCASS_DATA_REPO" \
+                | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('private'))")
+          if [ "$vis" != "True" ]; then
+            echo "::error::$CCASS_DATA_REPO 不是私有仓库（private=$vis）——HKEX 数据禁止公开再分发"
+            exit 1
+          fi
 
       - name: Fetch CCASS
         run: |
@@ -42,8 +75,36 @@ jobs:
           if [ "${{ inputs.retry_failed }}" = "true" ]; then
             ARGS="$ARGS --retry-failed"
           fi
-          echo "python3 scripts/fetch_ccass.py $ARGS"
           python3 scripts/fetch_ccass.py $ARGS
+
+      - name: Checkout private data repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CCASS_DATA_REPO }}
+          token: ${{ env.CCASS_DATA_TOKEN }}
+          path: ccass-repo
+
+      - name: Pack and commit
+        run: |
+          set -euo pipefail
+          mkdir -p ccass-repo/data/ccass
+          rm -rf ccass-compact
+          python3 scripts/compact_ccass.py --src data/ccass --dst ccass-compact
+          for d in ccass-compact/20*/; do
+            day=$(basename "$d")
+            tar -czf "ccass-repo/data/ccass/${day}.tar.gz" -C ccass-compact "$day"
+          done
+          cp data/ccass/manifest.json ccass-repo/data/ccass/manifest.json
+          cd ccass-repo
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add data/ccass
+          if git diff --staged --quiet; then
+            echo "无新增归档"
+            exit 0
+          fi
+          git commit -m "ccass: 归档 $(date '+%Y-%m-%d')"
+          git push
 
       - name: Summary
         if: always()
