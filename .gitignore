@@ -173,3 +173,6 @@ data/hk_broad/*
 
 # CCASS 原始/派生数据仅本地（HKEX 许可禁止再分发）
 data/ccass/
+
+# HKEX 公告缓存（本地研究；不批量入库）
+data/hkex_announcements/
