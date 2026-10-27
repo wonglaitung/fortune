@@ -1,0 +1,47 @@
+name: 月度模型重训（港股 5/10/20）
+
+on:
+  schedule:
+    # 每月 1 日 10:00 UTC = 18:00 HKT（收市后；避开每日 16:30 综合分析）
+    - cron: '0 10 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Retrain 5/10/20
+        run: bash scripts/monthly_retrain.sh
+
+      - name: Commit updated models
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/ml_trading_model_lgbm_5d.pkl \
+                  data/ml_trading_model_lgbm_10d.pkl \
+                  data/ml_trading_model_lgbm_20d.pkl
+          if git diff --staged --quiet; then
+            echo "模型未变化，无需提交"
+            exit 0
+          fi
+          git commit -m "月度重训：港股 5/10/20 模型 $(date '+%Y-%m') [skip ci]"
+          git fetch origin main
+          git pull --rebase origin main
+          git push

@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Hong_Kong
+      # 日常不再重训：模型由 .github/workflows/monthly-retrain.yml 每月更新
+      RETRAIN_MODELS: '0'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

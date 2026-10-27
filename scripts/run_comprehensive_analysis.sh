@@ -3,7 +3,7 @@
 # 综合分析自动化脚本
 # ⚠️ 建议在港股收市后（16:00 HKT）运行
 # 0. 计算网络特征（供训练和预测使用）
-# 1. 训练 CatBoost 三周期模型（5d, 10d, 20d；D59 rank 标签）
+# 1. 检查模型（默认不训练；月度重训见 scripts/monthly_retrain.sh）
 # 2. 生成 CatBoost 三周期预测
 # 3. 调用 hsi_email.py 生成大模型建议（使用force参数）
 # 4. 调用 comprehensive_analysis.py 进行综合分析（含三周期预测）
@@ -93,32 +93,50 @@ else
 fi
 echo ""
 
-# 步骤1: 训练 CatBoost 三周期模型（5d, 10d, 20d）
+# 步骤1: 模型（月度重训；日常只加载，不重训）
 echo "=========================================="
-echo "📊 步骤 1/6: 训练 CatBoost 三周期模型（5d, 10d, 20d）"
+echo "📊 步骤 1/6: 检查/训练三周期模型（5d, 10d, 20d）"
 echo "=========================================="
 echo ""
 
-TRAIN_SUCCESS=0
-TRAIN_FAILED=0
-for horizon in 5 10 20; do
-    echo "  🔄 训练 ${horizon}d 模型..."
-    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type lgbm --use-feature-selection
-    if [ $? -ne 0 ]; then
-        echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
-        TRAIN_FAILED=$((TRAIN_FAILED + 1))
-    else
-        echo "  ✅ ${horizon}d 模型训练完成"
-        TRAIN_SUCCESS=$((TRAIN_SUCCESS + 1))
+RETRAIN_MODELS="${RETRAIN_MODELS:-0}"
+if [ "$RETRAIN_MODELS" = "1" ]; then
+    TRAIN_SUCCESS=0
+    TRAIN_FAILED=0
+    for horizon in 5 10 20; do
+        echo "  🔄 训练 ${horizon}d 模型..."
+        python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type lgbm --use-feature-selection
+        if [ $? -ne 0 ]; then
+            echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
+            TRAIN_FAILED=$((TRAIN_FAILED + 1))
+        else
+            echo "  ✅ ${horizon}d 模型训练完成"
+            TRAIN_SUCCESS=$((TRAIN_SUCCESS + 1))
+        fi
+    done
+    if [ $TRAIN_SUCCESS -eq 0 ]; then
+        echo "❌ 步骤1失败: 所有模型训练失败"
+        exit 1
     fi
-done
-
-if [ $TRAIN_SUCCESS -eq 0 ]; then
-    echo "❌ 步骤1失败: 所有模型训练失败"
-    exit 1
+    echo "✅ 步骤1完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
+else
+    echo "⏭️  跳过训练（RETRAIN_MODELS=$RETRAIN_MODELS）：使用已有模型"
+    MISSING=0
+    for horizon in 5 10 20; do
+        f="data/ml_trading_model_lgbm_${horizon}d.pkl"
+        if [ -f "$f" ]; then
+            echo "  ✅ ${horizon}d: $f"
+        else
+            echo "  ❌ 缺少 ${horizon}d 模型: $f"
+            MISSING=1
+        fi
+    done
+    if [ $MISSING -ne 0 ]; then
+        echo "❌ 缺少模型文件；先运行: bash scripts/monthly_retrain.sh"
+        exit 1
+    fi
+    echo "✅ 步骤1完成: 模型齐全（未重训）"
 fi
-echo ""
-echo "✅ 步骤1完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
 echo ""
 
 # 步骤2: 生成 CatBoost 三周期预测

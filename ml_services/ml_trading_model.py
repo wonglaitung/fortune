@@ -5041,8 +5041,13 @@ class TradingModel(BaseTradingModel):
             'learner': getattr(self, 'learner', 'lightgbm'),
             'label_mode': getattr(self, 'label_mode', 'absolute'),  # D59
         }
-        with open(filepath, 'wb') as f:
+        # 原子写：先写临时文件再替换，训练/序列化中断不会破坏旧模型
+        tmp = f"{filepath}.tmp"
+        with open(tmp, 'wb') as f:
             pickle.dump(model_data, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, filepath)
         print(f"LightGBM 模型已保存到 {filepath}")
 
     def load_model(self, filepath):

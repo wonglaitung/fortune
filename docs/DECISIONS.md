@@ -5448,3 +5448,32 @@ H1：<6/8 项相同，且最优 IC 差 ≤1 个折间标准误（噪声主导）
 现有 `data/lgbm_best_params.json` 保持不变（它不构成提升，只是口径选择，D78/D79）。
 
 **适用范围**：310 池 / 2018-06→2023-05 训练期 / 20 组随机搜索邻域 · **WF 内部比较 ✓ / 外推生产 ✗**。
+
+
+## D82（2026-10-27）：**模型改为月度重训，日常只加载不重训**
+
+**问题**：每日综合分析（`comprehensive-analysis.yml`，16:30 HKT）第一步会重训 5/10/20
+三个 310 池模型，单次耗时 ~1 小时；而模型是 3 年滚动窗口、参数已确认在平台区（D81），
+日频重训既不改变信号，又拖长任务、增加失败面。
+
+**改动**
+- `scripts/run_comprehensive_analysis.sh`：`RETRAIN_MODELS` 默认 **0**（只校验
+  `data/ml_trading_model_lgbm_{5,10,20}d.pkl` 存在；缺失即非零退出并提示月度脚本）。
+  设 `RETRAIN_MODELS=1` 可临时恢复当日重训。
+- 新增 `scripts/monthly_retrain.sh`：串行重训 5/10/20（310 池 / rank / Top500+FORCE），
+  每周期单独日志 + 立即校验（`LGBMRegressor` / horizon / label_mode / 特征数），
+  `flock` 防并发；任一周期失败即非零退出。
+- 新增 `.github/workflows/monthly-retrain.yml`：每月 1 日 10:00 UTC（18:00 HKT）重训并提交
+  三个 pkl（`[skip ci]`）；`contents: write`。
+- **港股 pkl 入库**：`.gitignore` 加例外 `!data/ml_trading_model_lgbm_*d.pkl`，
+  `doc_gate` 加 `HK_MODEL_PKL` 例外 —— 否则 CI 日常 checkout 没有模型可加载。
+- `TradingModel.save_model` 改**原子写**（`.tmp` + `fsync` + `os.replace`）：
+  训练/序列化中断不会破坏旧模型，满足「重训失败保留旧模型」。
+
+**影响**
+- 日常任务少 3 次训练（约省 1 小时）；模型新鲜度 = 月级。
+- 失败模式：月度重训失败 → 旧 pkl 保留（原子写）→ 日常继续用旧模型；需在 CI 日志可见。
+- **不改变 alpha**（仍 null）；这是运维节奏调整，不是模型改进。
+
+**回滚**：`RETRAIN_MODELS=1` 恢复每日训练；或删除 monthly workflow。
+**适用范围**：港股 5/10/20 · 生产运维口径。

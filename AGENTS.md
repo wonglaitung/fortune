@@ -95,7 +95,8 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
-| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection` | - |
+| **模型训练（手动）** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection` | 需手动重训时 |
+| **⭐ 月度重训（生产）** | `bash scripts/monthly_retrain.sh` | 每月 1 日 CI（`monthly-retrain.yml`）；日常综合分析**只加载模型不重训**（`RETRAIN_MODELS=0`，D82） |
 | **生产 LightGBM（5/10/20d）** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **唯一学习器（2026-10-25 全量切换，D75）**；pkl = `data/ml_trading_model_lgbm_{h}d.pkl`；rank 标签走 `LGBMRegressor`；⚠️ D74 A/B：LGBM 并不优于 CatBoost（DSR 均<0.95、超额 CI 跨 0）⇒ **口径选择、非 alpha 提升**；F1/HIBOR 均默认开且配 FORCE（D23/D22/D24）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列） |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
