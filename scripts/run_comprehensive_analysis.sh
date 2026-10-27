@@ -21,6 +21,9 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # D59：切换为 rank 标签（横截面百分位回归）；输出 score 而非概率
 export LABEL_MODE=rank
 
+# D82/D87：0 = 日常只加载模型（不训练、不做特征选择）；1 = 月度重训
+RETRAIN_MODELS="${RETRAIN_MODELS:-0}"
+
 # 切换到项目目录
 cd "$PROJECT_DIR"
 
@@ -79,16 +82,20 @@ echo "=========================================="
 echo "📊 步骤 0.5/6: 运行特征选择（统计方法，Top 500）"
 echo "=========================================="
 echo ""
-python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20
-if [ $? -ne 0 ]; then
-    echo "⚠️ 特征选择失败，使用已有特征文件"
+if [ "$RETRAIN_MODELS" != "1" ]; then
+    echo "⏭️  跳过特征选择（RETRAIN_MODELS=$RETRAIN_MODELS）：预测直接读模型内置特征列"
 else
-    # 将生成的特征文件复制为 latest（⚠️ 查目录须与 feature_selection.py 的 --output-dir 一致，
-    # 否则 cp 是死代码；D45 同一性闸修复）
-    LATEST_FEATURE_FILE=$(ls -t data/feature_selection/statistical_features_*.txt 2>/dev/null | head -1)
-    if [ -n "$LATEST_FEATURE_FILE" ]; then
-        cp "$LATEST_FEATURE_FILE" data/feature_selection/statistical_features_latest.txt
-        echo "✅ 特征选择完成: data/feature_selection/statistical_features_latest.txt"
+    python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20
+    if [ $? -ne 0 ]; then
+        echo "⚠️ 特征选择失败，使用已有特征文件"
+    else
+        # 将生成的特征文件复制为 latest（⚠️ 查目录须与 feature_selection.py 的 --output-dir 一致，
+        # 否则 cp 是死代码；D45 同一性闸修复）
+        LATEST_FEATURE_FILE=$(ls -t data/feature_selection/statistical_features_*.txt 2>/dev/null | head -1)
+        if [ -n "$LATEST_FEATURE_FILE" ]; then
+            cp "$LATEST_FEATURE_FILE" data/feature_selection/statistical_features_latest.txt
+            echo "✅ 特征选择完成: data/feature_selection/statistical_features_latest.txt"
+        fi
     fi
 fi
 echo ""
@@ -99,7 +106,6 @@ echo "📊 步骤 1/6: 检查/训练三周期模型（5d, 10d, 20d）"
 echo "=========================================="
 echo ""
 
-RETRAIN_MODELS="${RETRAIN_MODELS:-0}"
 if [ "$RETRAIN_MODELS" = "1" ]; then
     TRAIN_SUCCESS=0
     TRAIN_FAILED=0

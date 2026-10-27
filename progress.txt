@@ -4956,3 +4956,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 本地 cron（未自动安装）：`0 20 * * 1-5 cd /data/fortune && bash scripts/run_ccass_archive.sh`
 
 - 新增 .github/workflows/ccass-archive.yml（**仅自托管 runner**；GitHub 托管 runner 临时盘 + 再分发违规）。
+
+## 2026-10-27：综合分析 Action 超时分析（D87）
+
+- #210（10-26）cancelled：分析步骤 359 分钟后被 6h 上限杀死；commit 步骤 skipped。
+- 根因：日常脚本仍训练 3 个 310 池模型（800 树/2 核/冷缓存/n_jobs=-1）> 6h。
+- 修复：非重训日跳过特征选择；workflow 加 150min 上限、LGBM_N_JOBS=2、concurrency、
+  commit 步骤 if: always()。预期日常 30–60 分钟。
+- 附带：定时任务长期延迟约 5 小时（cron 08:30Z → 实际 13:30–15:45Z）。

@@ -15,13 +15,22 @@ on:
         required: false
         default: '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK'
 
+concurrency:
+  group: comprehensive-analysis
+  cancel-in-progress: false
+
 jobs:
   send-email:
     runs-on: ubuntu-latest
+    # D87：日常不训练，正常 60–90 分钟；150 分钟硬上限，避免再次 6 小时静默挂死
+    timeout-minutes: 150
     env:
       TZ: Asia/Hong_Kong
       # 日常不再重训：模型由 .github/workflows/monthly-retrain.yml 每月更新
       RETRAIN_MODELS: '0'
+      # 2 核 runner 上 n_jobs=-1 会线程争用（AGENTS：可 40x 劣化）
+      LGBM_N_JOBS: '2'
+      OMP_NUM_THREADS: '2'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,6 +58,7 @@ jobs:
           bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK' }}"
 
       - name: Commit prediction history
+        if: always()
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"

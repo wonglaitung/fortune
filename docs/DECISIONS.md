@@ -5590,3 +5590,38 @@ H1 = 未见段（2021-06→2023-05）dropout=2 超额 IR>0、CI 下界>0、DSR�
   可改回自托管 runner + 本地持久盘（workflow 只需换 `runs-on`）。
 
 **适用范围**：港股 310 池 · 数据积累（本地）· **不构成 alpha 结论；6–12 个月内不得外推生产**。
+
+## D87（2026-10-27）：**综合分析 Action 超时取消 —— 根因是日常路径仍训练 3 个模型**
+
+**现象**：`综合分析邮件提醒` #210（2026-10-26）结论 **cancelled**，不是 failure。
+- 运行区间 15:19:53Z → 21:20:29Z，**6 小时 00 分 36 秒**；
+- 唯一长步骤 `Run comprehensive analysis script` **359.1 分钟**后被取消；
+- 后续 `Commit prediction history` 被 **skipped** ⇒ 预测历史/两个 ledger 当天未更新，
+  邮件步骤也没跑到。
+
+**对照**：#209（10-23）同 workflow 成功，整步 **68.8 分钟**。
+
+**根因链（推断，未取得 CI 逐行日志；依据 step 时长 + 配置变更 + 本地实测）**
+1. 日常脚本每天训练 5/10/20 三个模型；
+2. 10-24 起默认训练池 56 → **310**，10-25 学习器切 LGBM 并调参（5d/10d **800 棵树**）；
+3. CI 是 2 核 + 冷缓存（`feature_cache` 不入库）⇒ 首轮要抓 310 只 + 算全量特征；
+4. `LGBM_N_JOBS` 未设 ⇒ `n_jobs=-1` 在 2 核上线程争用（AGENTS 记录可劣化 40 倍）；
+5. 以上叠加超过 GitHub **默认 job 上限 6 小时** ⇒ 被取消。
+   （本地 32 核热缓存训练：5d 8.0 / 10d 8.5 / 20d 8.2 分钟；CI 冷缓存 + 2 核约放大 10–20 倍。）
+
+**附带发现**：定时任务长期延迟 ~5 小时（cron 08:30Z，实际启动 13:23–15:46Z），
+所以邮件实际在 ~21:30 HKT 发出。属 GitHub 调度延迟，不在代码控制内。
+
+**修复**
+- D82（已合并）：日常 `RETRAIN_MODELS=0` + 模型 pkl 入库；训练移到月度 workflow。
+- D87：**非重训日跳过特征选择**（预测直接读 pkl 的 `feature_columns`；该文件仅训练用）。
+- Workflow 加固：
+  - `timeout-minutes: 150`（失败要可见，不再静默挂 6 小时）；
+  - `LGBM_N_JOBS=2`、`OMP_NUM_THREADS=2`（2 核无争用）；
+  - `concurrency: comprehensive-analysis`（防跨日重叠）；
+  - `Commit prediction history` 改 `if: always()`（即使分析失败也保留已产出历史）。
+
+**预期**：日常耗时 = 网络特征 + 3×预测 + LLM + 邮件 ≈ **30–60 分钟**。
+**验证**：下一次定时运行 conclusion=success，且 commit 步骤实际执行。
+
+**适用范围**：GitHub Actions 日常流水线 · 运维口径（不涉及 alpha 结论）。
