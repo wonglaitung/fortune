@@ -170,3 +170,6 @@ data/a_stock_rank_models/
 # 训练池定义是生产依赖（同 lessons 三.51：被 gitignore 的生产依赖 = 生产端不存在）
 data/hk_broad/*
 !data/hk_broad/universe_310.json
+
+# CCASS 原始/派生数据仅本地（HKEX 许可禁止再分发）
+data/ccass/

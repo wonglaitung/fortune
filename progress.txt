@@ -4942,3 +4942,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   ⇒ 主窗 +0.81 不复现，低换手路径关闭。
 - SFC 卖空探索（scripts/sfc_signal.py，310 池，周频）：lag=10 低空头多头超额 +0.46%/4周（t 1.67），
   但 lag=5（更接近真实公布滞后）+0.33%（t 1.10）、lag=15 +0.14%；信号衰减快、集中于低流动性 ⇒ 不立项。
+
+## 2026-10-27：启动 CCASS 日归档（D86）
+
+- HKEX 只保留约 12 个月 → 必须每日归档；许可禁止再分发 ⇒ data/ccass/ gitignore。
+- 新增 scripts/fetch_ccass.py（幂等/失败哨兵/原子 manifest/派生 issued_shares）
+  与 scripts/run_ccass_archive.sh（本地 cron）。
+- 用途：补规模维度（市值）、持股集中度/席位变化；6–12 个月后才评估，不构成 alpha 结论。
