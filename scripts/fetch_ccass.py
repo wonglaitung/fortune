@@ -248,9 +248,14 @@ def main():
         else:
             d, stats, issued = run_date(_session(), date_str, codes, args.out, args.sleep)
         if issued:
-            pd.Series(issued, name='issued_shares_est').rename_axis('code').to_csv(
-                os.path.join(args.out, d, '_issued_shares.csv'), header=True,
-                quoting=csv.QUOTE_NONNUMERIC)
+            path = os.path.join(args.out, d, '_issued_shares.csv')
+            new = pd.Series(issued, name='issued_shares_est')
+            new.index = new.index.astype(str).str.zfill(5)
+            new.index.name = 'code'
+            if os.path.exists(path):
+                old = pd.read_csv(path, dtype={'code': str}).set_index('code')['issued_shares_est']
+                new = new.combine_first(old)  # 新值优先，保留其余
+            new.sort_index().to_csv(path, header=True, quoting=csv.QUOTE_NONNUMERIC)
         update_manifest(d, stats, args.out)
         print(f"{date_str} → {d}: {stats}（{time.time()-t0:.0f}s）")
 

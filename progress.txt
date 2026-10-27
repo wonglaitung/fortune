@@ -4949,3 +4949,8 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 新增 scripts/fetch_ccass.py（幂等/失败哨兵/原子 manifest/派生 issued_shares）
   与 scripts/run_ccass_archive.sh（本地 cron）。
 - 用途：补规模维度（市值）、持股集中度/席位变化；6–12 个月后才评估，不构成 alpha 结论。
+
+- CCASS 回填最近 5 个交易日（09-25/10-02/10-09/10-16/10-22）：各 310/310；
+  每期 308 只有股本估计（2 只无百分比字段）。
+- 修复：部分重试时 `_issued_shares.csv` 被覆盖 → 改为新值优先合并；新增 `--rebuild-issued`。
+- 本地 cron（未自动安装）：`0 20 * * 1-5 cd /data/fortune && bash scripts/run_ccass_archive.sh`
