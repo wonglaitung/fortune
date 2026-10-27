@@ -1,0 +1,67 @@
+name: CCASS 日归档（自托管）
+
+# ⚠️ 必须跑在**自托管 runner**：
+# HKEX 数据「仅供个人非商业使用、禁止再分发」，不能落到 GitHub 托管 runner /
+# artifact / 仓库。自托管 runner 的工作区在本机，`data/ccass/`（gitignore）可长期保留。
+on:
+  schedule:
+    # 每交易日 12:00 UTC = 20:00 HKT（收市后）
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      backfill_weeks:
+        description: '回填最近 N 个周五（0 = 只抓最近交易日）'
+        default: '0'
+      retry_failed:
+        description: '重试已有 .failed 哨兵'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ccass-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch CCASS
+        run: |
+          set -euo pipefail
+          ARGS="--workers 4"
+          if [ -n "${{ inputs.backfill_weeks }}" ] && [ "${{ inputs.backfill_weeks }}" != "0" ]; then
+            ARGS="$ARGS --backfill-weeks ${{ inputs.backfill_weeks }}"
+          fi
+          if [ "${{ inputs.retry_failed }}" = "true" ]; then
+            ARGS="$ARGS --retry-failed"
+          fi
+          echo "python3 scripts/fetch_ccass.py $ARGS"
+          python3 scripts/fetch_ccass.py $ARGS
+
+      - name: Summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          p = 'data/ccass/manifest.json'
+          out = os.environ.get('GITHUB_STEP_SUMMARY', '/dev/stdout')
+          if not os.path.exists(p):
+              with open(out, 'a') as f:
+                  f.write('manifest 未生成（抓取失败或未运行）\n')
+          else:
+              m = json.load(open(p))
+              lines = ['| 日期 | ok | fail |', '|---|---|---|']
+              for d, s in sorted(m.get('dates', {}).items())[-14:]:
+                  lines.append(f"| {d} | {s.get('ok', 0)} | {s.get('fail', 0)} |")
+              with open(out, 'a') as f:
+                  f.write('最近归档：\n\n' + '\n'.join(lines) + '\n')
+          PY

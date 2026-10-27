@@ -5580,4 +5580,10 @@ H1 = 未见段（2021-06→2023-05）dropout=2 超额 IR>0、CI 下界>0、DSR�
 
 **记录**：`output/_logs/ccass_first_run.log`；manifest 结构见 `data/ccass/manifest.json`（本地）。
 
+
+**自动化（2026-10-27 补充）**：新增 `.github/workflows/ccass-archive.yml`，定时 HKT 20:00 抓取。
+**必须跑在自托管 runner**：GitHub 托管 runner 是临时盘（跑完即丢），且 artifact/仓库会造成再分发，
+违反 HKEX 许可。自托管 runner 工作区在本机，`data/ccass/`（gitignore）可长期保留。
+未配置 self-hosted runner 时该 workflow 会排队不执行 —— 此时退回本地 cron 亦可。
+
 **适用范围**：港股 310 池 · 数据积累（本地）· **不构成 alpha 结论；6–12 个月内不得外推生产**。

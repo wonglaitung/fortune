@@ -4954,3 +4954,5 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   每期 308 只有股本估计（2 只无百分比字段）。
 - 修复：部分重试时 `_issued_shares.csv` 被覆盖 → 改为新值优先合并；新增 `--rebuild-issued`。
 - 本地 cron（未自动安装）：`0 20 * * 1-5 cd /data/fortune && bash scripts/run_ccass_archive.sh`
+
+- 新增 .github/workflows/ccass-archive.yml（**仅自托管 runner**；GitHub 托管 runner 临时盘 + 再分发违规）。
