@@ -1716,11 +1716,14 @@ class FeatureEngineer:
         except Exception:
             pass
         # 基本面三表：6 个无量纲比率（固定滞后 PIT）
+        # 只抓当前股票：原实现为 310 池每只股票都预抓 6 张表（310×6 次网络），
+        # 日常 5d 预测因此多花 ~30 分钟；单股结果与全池构建完全一致。
         try:
-            if not hasattr(self, '_f1_fund') or self._f1_fund is None:
-                import config as _cfg
-                self._f1_fund = build_fundamental_features(list(_cfg.TRAINING_STOCKS))
-            fund = fundamental_feature_frame(code, idx, self._f1_fund)
+            if not hasattr(self, '_f1_fund_cache'):
+                self._f1_fund_cache = {}
+            if code not in self._f1_fund_cache:
+                self._f1_fund_cache[code] = build_fundamental_features([code])
+            fund = fundamental_feature_frame(code, idx, self._f1_fund_cache[code])
             keep = ['Net_Margin', 'ROE', 'ROA', 'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
             for c in keep:
                 if c in fund.columns:
