@@ -14,6 +14,10 @@ on:
         description: '股票代码（逗号分隔，如 2318.HK,0700.HK）'
         required: false
         default: '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK'
+  # D91 临时测试钩子：仅 action-test 分支推送触发（验证后删除分支）
+  push:
+    branches:
+      - action-test
 
 concurrency:
   group: comprehensive-analysis
