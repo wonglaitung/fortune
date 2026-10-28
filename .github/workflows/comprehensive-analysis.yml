@@ -21,7 +21,7 @@ on:
 
 concurrency:
   group: comprehensive-analysis
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   send-email:
