@@ -5749,3 +5749,29 @@ H1 = 前 100 宇宙超额 IR>0 且 CI 下界>0，且不低于 30 只；主窗与
 **未决**：PIT 文件在 CI 中从未入库，月度重训因此回退静态网络特征（潜在穿越风险，另行评估）。
 
 **适用范围**：GitHub Actions 日常流水线 · 运维口径（不涉及 alpha 结论）。
+
+## D92（2026-10-28）：**DeepSeek v4-flash 下线 + 预测缺列导致个股静默丢弃**
+
+**现象（Action 测试 #212）**：D91 修复后网络步骤 107 秒、总时长 105 分钟（未再撞 150 分钟上限），
+但仍以失败结束。日志暴露两个独立问题：
+1. **7/30 只股票预测失败**：`['Debt_Equity','OCF_Quality','Asset_Turnover'] not in index`；
+   `1347.HK` 另缺一批利率/网络交叉列。它们被 `predict()` 的缺列 KeyError 整只丢弃，
+   当日只有 23 只进入报告。
+2. **LLM 410 Gone**：`deepseek-v4-flash` 已被 opencode zen 下线
+   （`{"type":"ModelDeprecated","message":"Model deepseek-v4-flash has been deprecated."}`）。
+   同一 run 内部分调用成功、部分 410，属弃用过渡期；最终 `comprehensive_analysis.py`
+   在第二次 LLM 调用处失败退出。
+
+**修复**
+- `create_f1_alternative_features()`：先为 7 个 F1 列写入 NaN 占位，数据源失败也不缺列。
+- `predict()`：模型 `feature_columns` 中本次缺失的列统一补 0.0（与既有数值 NaN→0 口径一致），
+  并 warning 记录列名；**不得整只股票丢弃**。
+- `chat_with_llm()`：410/429/5xx 重试 3 次（5s/10s），仍失败才抛错。
+- 模型迁移：全部 workflow / `qwen_engine` 默认 / 本地 `set_key.sh` 改为 `deepseek-v4.1-flash`
+  （实测 200；`deepseek-v4-flash` 稳定返回 410）。
+- 新增 `tests/test_ci_prediction_robustness.py`（F1 占位 + 410 重试）。
+
+**预期**：30/30 只股票进入预测；LLM 不再因模型弃用直接终止。
+**验证**：重跑 Action 测试，分析步骤成功且 commit 步骤有新报告。
+
+**适用范围**：GitHub Actions 日常流水线 / LLM 配置 · 运维口径（不涉及 alpha 结论）。

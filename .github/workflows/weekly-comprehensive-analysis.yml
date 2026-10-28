@@ -36,7 +36,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
-          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+          QWEN_CHAT_MODEL: deepseek-v4.1-flash
         run: |
           chmod +x scripts/run_comprehensive_analysis.sh
           ./scripts/run_comprehensive_analysis.sh '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK'

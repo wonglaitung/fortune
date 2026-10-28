@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import requests
 import json
 from datetime import datetime
@@ -7,7 +8,7 @@ from datetime import datetime
 # Configuration
 api_key = os.getenv('QWEN_API_KEY', '').strip()
 chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
-chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
+chat_model = os.getenv('QWEN_CHAT_MODEL', 'deepseek-v4.1-flash')
 max_tokens = int(os.getenv('MAX_TOKENS', 32768))
 
 # <think>...</think>（含未闭合的截断形式）——部分模型把思考写进 content
@@ -184,10 +185,19 @@ def chat_with_llm(query, enable_thinking=True):
         log_message(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm payload: {payload}")  # 打印完整的输入
         
-        response = requests.post(chat_url, headers=headers, json=payload, timeout=300)
-        log_message(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
-        log_message(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
-        log_message(f"[DEBUG] chat_with_llm response text: {response.text[:500] if response.text else 'EMPTY'}")  # 打印输出（截断）
+        # 410/429/5xx 可能是上游瞬时故障（2026-10-28 CI 实测 410 间歇出现：
+        # 同一 run 内部分调用成功、部分 Gone）。重试 3 次，仍失败才抛给调用方。
+        response = None
+        for _attempt in range(1, 4):
+            response = requests.post(chat_url, headers=headers, json=payload, timeout=300)
+            log_message(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
+            log_message(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
+            log_message(f"[DEBUG] chat_with_llm response text: {response.text[:500] if response.text else 'EMPTY'}")  # 打印输出（截断）
+            if response.status_code not in (410, 429, 500, 502, 503, 504):
+                break
+            log_message(f"[WARN] chat_with_llm HTTP {response.status_code}，第 {_attempt}/3 次")
+            if _attempt < 3:
+                time.sleep(5 * _attempt)
 
         response.raise_for_status()  # Raise an exception for bad status codes
 

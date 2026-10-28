@@ -42,7 +42,7 @@ jobs:
       env:
         QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
-        QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+        QWEN_CHAT_MODEL: deepseek-v4.1-flash
       run: |
         python3 -c "
         import os
@@ -56,7 +56,7 @@ jobs:
         # 读取配置
         api_key = os.getenv('QWEN_API_KEY', '').strip()
         chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
-        chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
+        chat_model = os.getenv('QWEN_CHAT_MODEL', 'deepseek-v4.1-flash')
 
         # 已知鉴权/套餐错误码 -> 中文处置指引（与 llm_services/qwen_engine.py 保持一致）
         AUTH_ERROR_HINTS = {

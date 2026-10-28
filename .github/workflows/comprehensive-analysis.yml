@@ -53,7 +53,7 @@ jobs:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
-          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+          QWEN_CHAT_MODEL: deepseek-v4.1-flash
         run: |
           bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK' }}"
 

@@ -33,6 +33,6 @@ jobs:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
-          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+          QWEN_CHAT_MODEL: deepseek-v4.1-flash
         run: |
           python gold_analyzer.py

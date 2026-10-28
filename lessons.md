@@ -3500,3 +3500,17 @@ LightGBM 的 sklearn 包装器**接受未知 kwarg 且不报错**，于是静默
 不读就应在日常路径关闭（`--skip-pit`），而不是让它跟着每天跑。
 
 **副产品**：PIT 文件不入库 ⇒ CI 月度重训实际回退静态网络特征（后续单独立项）。
+
+### 三.95 外部模型下线是「410 Gone」，不是代码 bug（2026-10-28，D92）
+
+**现象**：Action 日志里 `comprehensive_analysis` 抛 `HTTPError: 410 Client Error: Gone`，
+同一 run 内 `hsi_email` 的部分 LLM 调用却成功，容易误判为网络抖动。
+
+**判别**：直接 POST 最小 payload，读响应体：
+`{"type":"ModelDeprecated","message":"Model deepseek-v4-flash has been deprecated."}`。
+**判定式**：LLM 4xx 先看 body 的 `error.type`；`ModelDeprecated` 必须换模型 ID，
+重试无意义。配置项（workflow env / 本地 env / 代码默认）必须三处同源，别只改一处。
+
+**另一并发现象**：模型 `feature_columns` 缺列时，`predict()` 直接 KeyError 丢掉整只股票，
+日志只留一行 `预测失败`。判定式：推理前必须检查 `feature_columns ⊆ 当前列`，
+缺列补 0/NaN 并告警；**「少数股票失败」不是可接受的降级**，它会让报告样本悄悄缩水。

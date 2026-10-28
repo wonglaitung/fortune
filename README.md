@@ -170,7 +170,7 @@ python3 hsi_prediction.py --no-email            # 港股：恒指三周期
 ### 4.3 其它模块
 
 - **异常检测**：Z-Score + Isolation Forest 双层；「异常 + 当日下跌 → 抄底」（z ≤ −3）净IR 5d/10d/20d = 1.73/1.60/1.23（CI>0），但**仅在大盘上行期（恒指 > MA200）战术使用**，非稳健 edge。
-- **大模型分析**：经 OpenAI 兼容端点（opencode zen，`deepseek-v4-flash`）做「解释 / 上下文」，**不作 alpha**。
+- **大模型分析**：经 OpenAI 兼容端点（opencode zen，`deepseek-v4.1-flash`）做「解释 / 上下文」，**不作 alpha**。
 - **风险回报 / 模拟交易**：辅助工具（仓位 / 止损 / 日志），**非预测信号**。
 
 > 以上所有「预测 / 信号」均**未发现可交易 edge**——按「研究 / 展示 / 风控」使用。
@@ -256,7 +256,7 @@ flowchart LR
     ROOT --> ML["ml_services/：ml_trading_model / walk_forward_validation / hsi_ml_model / market_regime / performance_monitor"]
     ROOT --> DS["data_services/：技术指标 / 基本面 / 日历 / 波动率 / regime"]
     ROOT --> AN["anomaly_detector/：Z-Score + Isolation Forest"]
-    ROOT --> LLM["llm_services/：opencode zen (deepseek-v4-flash)"]
+    ROOT --> LLM["llm_services/：opencode zen (deepseek-v4.1-flash)"]
     ROOT --> MSG["message_services/：邮件 / 企业微信 / WxPusher"]
     ROOT --> DOC["docs/：DECISIONS / BASELINES / REVIEW_GATES / DEPLOYMENT …"]
     ROOT --> DAT["data/：缓存 / 模型 / 训练池 / 网络特征"]

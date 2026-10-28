@@ -1703,6 +1703,11 @@ class FeatureEngineer:
             return None
         idx = stock_df.index
         out = pd.DataFrame(index=idx)
+        # 先占位：数据源失败时这些列仍必须存在（模型 feature_columns 含它们）；
+        # 否则 predict 会因缺列整只股票被丢弃（2026-10-28 CI：7/30 只失败）。
+        for _c in ('SFC_short_z', 'Net_Margin', 'ROE', 'ROA',
+                   'Debt_Equity', 'OCF_Quality', 'Asset_Turnover'):
+            out[_c] = np.nan
         # SFC 卖空：仅取逐股 trailing z（PIT t-7 前向填充）
         try:
             sfc = sfc_feature_frame(code, idx)
@@ -4962,6 +4967,16 @@ class TradingModel(BaseTradingModel):
             # 准备特征
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
+
+            # 模型要求但本次数据缺失的列：补 0.0（与下方数值 NaN→0 口径一致），
+            # 不得整只股票丢弃。CI 实测 1347.HK 缺利率/网络交叉列、若干新股缺 F1 列。
+            missing_model_cols = [c for c in self.feature_columns if c not in latest_data.columns]
+            if missing_model_cols:
+                logger.warning(
+                    f"警告: {code} 缺少 {len(missing_model_cols)} 个模型特征，补 0.0: "
+                    f"{missing_model_cols[:12]}{'...' if len(missing_model_cols) > 12 else ''}")
+                for c in missing_model_cols:
+                    latest_data[c] = 0.0
 
             # 处理分类特征（使用训练时的编码器）
             for col, encoder in self.categorical_encoders.items():
