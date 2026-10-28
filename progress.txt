@@ -5016,3 +5016,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 正文构建不再依赖 `send_email_flag`；`--no-email` 可预览/归档完整正文。
 - MD 归档改为完整 text_content，不再只存 response。
 - 新增 layout / assembly 两组测试；不改任何信号口径。
+
+## 2026-10-28：市场广度改批量行情（D94）
+
+- 新增 get_hk_batch_quotes（qt.gtimg.cn，50/请求，GBK）；310 只实测 310/310 覆盖，
+  ratio 0.448 与直接计算一致。
+- comprehensive_analysis 优先批量，覆盖<80% 回退逐只；单测 2 条。
+- 日常市场情绪请求 310 → ~7；网络特征（310×10y）仍是下一个耗时点。

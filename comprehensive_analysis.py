@@ -680,28 +680,47 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         # 参考 walk_forward_validation.py 的方案：使用所有股票的收益率计算上涨比例
         try:
             from config import TRAINING_STOCKS as STOCK_LIST
-            from data_services.tencent_finance import get_hk_stock_data_tencent
+            from data_services.tencent_finance import get_hk_stock_data_tencent, get_hk_batch_quotes
             from ml_services.market_regime import MarketSentimentFilter
 
             # STOCK_LIST 是字典，取 keys 作为股票代码列表
             stock_codes = list(STOCK_LIST.keys()) if isinstance(STOCK_LIST, dict) else STOCK_LIST
             print(f"  🔄 获取 {len(stock_codes)} 只股票数据用于市场情绪计算...")
 
-            # 收集所有股票的收益率数据
-            all_returns = []
-            for stock_code in stock_codes:
-                try:
-                    stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=90)
-                    if not stock_df.empty and len(stock_df) >= 2:
-                        stock_df['Return_1d'] = stock_df['Close'].pct_change()
-                        stock_df['Date'] = pd.to_datetime(stock_df.index).tz_localize(None)
-                        all_returns.append(stock_df[['Date', 'Return_1d']])
-                except Exception:
-                    pass
+            # ===== 优先：批量快照（一次约 50 只，310 只 ≈7 请求）=====
+            returns_df = None
+            try:
+                q = get_hk_batch_quotes(stock_codes)
+                if not q.empty:
+                    q = q[q['price'] > 0].copy()
+                    cover = len(q) / max(1, len(stock_codes))
+                    if cover >= 0.8:
+                        q['Return_1d'] = q['pct'] / 100.0
+                        q['Date'] = pd.to_datetime(date_str)
+                        returns_df = q[['Date', 'Return_1d']]
+                        print(f"  ✅ 批量行情: {len(q)} 只（覆盖 {cover:.0%}）")
+                    else:
+                        print(f"  ⚠️ 批量行情覆盖不足 {cover:.0%}，回退逐只获取")
+            except Exception as e:
+                print(f"  ⚠️ 批量行情失败，回退逐只: {str(e)[:80]}")
 
-            if all_returns:
-                returns_df = pd.concat(all_returns, ignore_index=True)
-                print(f"  ✅ 收益率数据获取成功，共 {len(returns_df)} 条记录")
+            # ===== 回退：逐只历史（旧路径，仅批量失败时）=====
+            if returns_df is None:
+                all_returns = []
+                for stock_code in stock_codes:
+                    try:
+                        stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=90)
+                        if not stock_df.empty and len(stock_df) >= 2:
+                            stock_df['Return_1d'] = stock_df['Close'].pct_change()
+                            stock_df['Date'] = pd.to_datetime(stock_df.index).tz_localize(None)
+                            all_returns.append(stock_df[['Date', 'Return_1d']])
+                    except Exception:
+                        pass
+                if all_returns:
+                    returns_df = pd.concat(all_returns, ignore_index=True)
+                    print(f"  ✅ 逐只行情回退成功，共 {len(returns_df)} 条")
+
+            if returns_df is not None:
 
                 # 初始化市场情绪过滤器
                 # 收市后预测使用 lookback_days=0，因为当日收盘价已知，可计算当日市场上涨比例

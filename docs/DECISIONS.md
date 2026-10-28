@@ -5805,3 +5805,23 @@ H1 = 前 100 宇宙超额 IR>0 且 CI 下界>0，且不低于 30 只；主窗与
 - 不改 LLM prompt / 模型 / 特征 / 阈值 / 仓位；建议、仓位、止损、目标价逐项不变。
 
 **适用范围**：港股综合分析邮件 · 内容编排（不涉及 alpha 结论）。
+
+## D94（2026-10-28）：**市场广度改用批量行情 —— 310 次请求 → 约 7 次**
+
+**背景**：D87 指出日常 Action 仍在跑 310 只 × 90 天逐只取数（市场情绪/广度），是主要耗时之一。
+
+**改动**
+- 新增 `data_services/tencent_finance.get_hk_batch_quotes(codes, chunk_size=50)`：
+  `qt.gtimg.cn` 批量快照（GBK），返回 code/name/price/prev_close/change/pct/volume/amount/ts。
+- `comprehensive_analysis.extract_ml_predictions`：优先批量；**覆盖 ≥80% 才采用**，
+  否则回退旧逐只路径（保留可观测的 warning）。
+- 口径不变：`lookback_days=0`，广度 = 当日 `pct>0` 占比；仍用 `MarketSentimentFilter` 分层。
+
+**验证**
+- 310 只实测：**310/310 覆盖**，`ratio=0.448` 与直接 `mean(pct>0)` 完全一致。
+- 单测 `tests/test_tencent_batch_quotes.py`（解析/分片/坏行跳过）。
+
+**效果**：市场情绪取数从 310 次串行请求降到 **≈7 次**。
+**未改**：网络特征仍是 310 只 × 10 年（yfinance 串行），是下一个耗时点。
+
+**适用范围**：港股日常综合分析 · 运维口径（不涉及 alpha）。

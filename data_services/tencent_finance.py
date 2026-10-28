@@ -106,6 +106,48 @@ def _load_hk_snapshot(formatted_code, period_days):
     return df
 
 
+def get_hk_batch_quotes(codes, chunk_size=50, timeout=15):
+    """批量获取港股当日快照（qt.gtimg.cn，GBK），用于市场广度等轻量场景。
+
+    返回列：code, name, price, prev_close, change, pct, volume, amount, ts
+    - 一次请求可查多只（默认 50），失败的分片跳过并在返回中缺省。
+    """
+    norm = [str(c).split('.')[0].zfill(5) for c in codes]
+    rows = []
+    for i in range(0, len(norm), chunk_size):
+        part = norm[i:i + chunk_size]
+        url = 'https://qt.gtimg.cn/q=' + ','.join(f'hk{c}' for c in part)
+        try:
+            r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=timeout)
+            r.raise_for_status()
+            text = r.content.decode('gbk', errors='ignore')
+        except Exception as e:
+            print(f"  ⚠️ 批量行情失败（第 {i // chunk_size + 1} 片）: {str(e)[:80]}")
+            continue
+        for line in text.splitlines():
+            if '="' not in line:
+                continue
+            body = line.split('="', 1)[1].rstrip('";')
+            f = body.split('~')
+            if len(f) < 33:
+                continue
+            try:
+                rows.append({
+                    'code': f[2].zfill(5),
+                    'name': f[1],
+                    'price': float(f[3]) if f[3] else float('nan'),
+                    'prev_close': float(f[4]) if f[4] else float('nan'),
+                    'change': float(f[31]) if f[31] else float('nan'),
+                    'pct': float(f[32]) if f[32] else float('nan'),
+                    'volume': float(f[6]) if f[6] else float('nan'),
+                    'amount': float(f[37]) if len(f) > 37 and f[37] else float('nan'),
+                    'ts': f[30],
+                })
+            except (ValueError, IndexError):
+                continue
+    return pd.DataFrame(rows)
+
+
 def get_hk_stock_data_tencent(stock_code, period_days=90):
     """
     通过腾讯财经接口获取港股股票数据
