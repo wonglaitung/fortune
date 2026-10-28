@@ -13,7 +13,7 @@ on:
       stock_codes:
         description: '股票代码（逗号分隔，如 2318.HK,0700.HK）'
         required: false
-        default: '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK'
+        default: '2318.HK,0728.HK,1288.HK,3968.HK'
 
 concurrency:
   group: comprehensive-analysis
@@ -55,7 +55,7 @@ jobs:
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
           QWEN_CHAT_MODEL: deepseek-v4.1-flash
         run: |
-          bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK' }}"
+          bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK' }}"
 
       - name: Commit prediction history
         if: always()
