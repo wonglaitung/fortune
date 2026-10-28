@@ -1304,6 +1304,22 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         }
 
 
+def apply_email_placeholders(full_content, html_content, detailed_html='', detailed_text=''):
+    """把个股卡/风险面板占位符替换到文本与 HTML；保证两者章节顺序一致（D93）。"""
+    html_content = html_content.replace(
+        '<!--DETAILED_STOCKS_HTML-->',
+        ('<h2>重点个股分析</h2>' + detailed_html) if detailed_html else '')
+    html_content = html_content.replace('<!--DETAILED_STOCKS_TEXT-->', '')
+
+    text_content = full_content.replace('<!--DETAILED_STOCKS_HTML-->', '')
+    text_content = text_content.replace(
+        '<!--DETAILED_STOCKS_TEXT-->',
+        ('## 重点个股分析\n\n' + detailed_text) if detailed_text else '')
+    text_content = text_content.replace(
+        '<!--RISK_PANEL-->', '> 风险面板（同步轴 D55）见 HTML 邮件\n')
+    return text_content, html_content
+
+
 def generate_html_email(content, date_str):
     """
     生成HTML格式的邮件内容
@@ -3160,7 +3176,7 @@ def save_comprehensive_report_md(content, date_str):
     保存综合分析报告为 MD 文档（用于知识库）
 
     参数:
-    - content: 报告内容
+    - content: 完整正文（D93 起为 text_content，含信息参考与附录，不再只存 response）
     - date_str: 日期字符串 (YYYY-MM-DD)
     """
     try:
@@ -4184,14 +4200,14 @@ def generate_stock_section_html(stock_data: dict) -> str:
     anomaly_reason = stock_data.get('anomaly_reason') or ''
     if anomaly_alert == '是':
         anomaly_section = f"""
-            <h3>七、异常检测</h3>
+            <h3>异常检测</h3>
             <div class="warning-box">
                 ⚠️ 检测到异常：{anomaly_reason}
             </div>
         """
     else:
         anomaly_section = """
-            <h3>七、异常检测</h3>
+            <h3>异常检测</h3>
             <p>当日无异常检测警报</p>
         """
 
@@ -4199,7 +4215,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
     dividend_info = stock_data.get('dividend_info')
     if dividend_info:
         dividend_section = f"""
-            <h3>八、股息提醒</h3>
+            <h3>股息提醒</h3>
             <div class="info-box">
                 📅 {dividend_info}
             </div>
@@ -4211,35 +4227,35 @@ def generate_stock_section_html(stock_data: dict) -> str:
     if operation_advice:
         if "强烈买入" in recommendation:
             operation_box = f"""
-                <h3>九、操作建议</h3>
+                <h3>操作建议</h3>
                 <div class="success-box">
                     {operation_advice}
                 </div>
             """
         elif "买入" in recommendation:
             operation_box = f"""
-                <h3>九、操作建议</h3>
+                <h3>操作建议</h3>
                 <div class="info-box">
                     {operation_advice}
                 </div>
             """
         elif "观望" in recommendation:
             operation_box = f"""
-                <h3>九、操作建议</h3>
+                <h3>操作建议</h3>
                 <div class="info-box">
                     {operation_advice}
                 </div>
             """
         else:
             operation_box = f"""
-                <h3>九、操作建议</h3>
+                <h3>操作建议</h3>
                 <div class="warning-box">
                     {operation_advice}
                 </div>
             """
     else:
         operation_box = """
-            <h3>九、操作建议</h3>
+            <h3>操作建议</h3>
             <div class="info-box">
                 <strong>操作建议</strong>：暂时观望，等待更明确的信号。
             </div>
@@ -4258,7 +4274,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
         holder_action_class = style_info[0]
 
         holder_advice_section = f"""
-            <h3>十、持货人操作建议</h3>
+            <h3>持货人操作建议</h3>
             <div class="{holder_action_class}">
                 <strong>建议操作</strong>：{holder_action}<br>
                 <strong>风险等级</strong>：{risk_level} | <strong>适用周期</strong>：{time_horizon}
@@ -4273,7 +4289,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
     if risk_warnings:
         risk_warnings_list = "".join([f"<li>{w}</li>" for w in risk_warnings])
         risk_warnings_section = f"""
-            <h3>十一、风险提示</h3>
+            <h3>风险提示</h3>
             <ul>
                 {risk_warnings_list}
             </ul>
@@ -4302,7 +4318,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
 
             {radar_cid_html}
 
-            <h3>一、核心指标</h3>
+            <h3>核心指标</h3>
             <table>
                 <tr><th>指标</th><th>数值</th><th>说明</th></tr>
                 <tr><td>{_ml_label_20d}</td><td class="{prob_class}">{prob_20d_txt}</td><td>{prob_desc}</td></tr>
@@ -4312,7 +4328,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
                 <tr><td>目标价</td><td>{target_price}</td><td></td></tr>
             </table>
 
-            <h3>二、三周期预测</h3>
+            <h3>三周期预测</h3>
             <table>
                 <tr><th>周期</th><th>{_ml_col}</th><th>方向</th></tr>
                 <tr><td>5天</td><td>{prob_5d_txt}</td><td class="{dir_5d_class}">{dir_5d}</td></tr>
@@ -4321,14 +4337,14 @@ def generate_stock_section_html(stock_data: dict) -> str:
             </table>
             <p><strong>三周期模式</strong>：{stock_data.get('three_period_pattern') or "-"}</p>
 
-            <h3>三、大模型建议</h3>
+            <h3>大模型建议</h3>
             <ul>
                 <li><strong>短期建议</strong>：{stock_data.get('short_term_advice') or "观察"}</li>
                 <li><strong>中期建议</strong>：{stock_data.get('mid_term_advice') or "观察"}</li>
                 <li><strong>一致性</strong>：{consistency}</li>
             </ul>
 
-            <h3>四、技术指标</h3>
+            <h3>技术指标</h3>
             <table>
                 <tr><th>指标</th><th>数值</th><th>状态</th></tr>
                 <tr><td>RSI（相对强弱指数）</td><td>{format_value_default(rsi, "-")}</td><td>{rsi_status_display}</td></tr>
@@ -4338,7 +4354,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
                 <tr><td>筹码阻力</td><td>-</td><td>{stock_data.get('chip_resistance') or "-"}</td></tr>
             </table>
 
-            <h3>五、风险评分</h3>
+            <h3>风险评分</h3>
             <table>
                 <tr><th>指标</th><th>得分</th></tr>
                 <tr><td>风险得分</td><td>{format_value_default(stock_data.get('risk_score'), "-")}</td></tr>
@@ -4347,14 +4363,14 @@ def generate_stock_section_html(stock_data: dict) -> str:
                 <tr><td>风险建议</td><td>{stock_data.get('risk_advice') or "-"}</td></tr>
             </table>
 
-            <h3>六、网络洞察</h3>
+            <h3>网络洞察</h3>
             <ul>
                 <li><strong>社区归属</strong>：{stock_data.get('community') or "-"}</li>
                 <li><strong>枢纽类型</strong>：{stock_data.get('hub_type') or "-"}</li>
                 <li><strong>是否桥梁股</strong>：{stock_data.get('is_bridge') or "-"}</li>
             </ul>
 
-            <h3>七、板块表现</h3>
+            <h3>板块表现</h3>
             <ul>
                 <li><strong>所属板块</strong>：{stock_data.get('sector') or "-"}</li>
                 <li><strong>板块排名</strong>：第{format_value_default(stock_data.get('sector_rank'), "-")}名</li>
@@ -4374,12 +4390,44 @@ def generate_stock_section_html(stock_data: dict) -> str:
     """
 
 
+def generate_stock_sections_html(stock_results: list) -> str:
+    """只生成个股卡片 HTML（不含独立报告的 H1/免责声明）。"""
+    return "".join(generate_stock_section_html(sd) for sd in stock_results)
+
+
+def generate_stock_sections_text(stock_results: list) -> str:
+    """纯文本邮件的个股卡片摘要（与 HTML 卡片同源、同顺序）。"""
+    lines = []
+    for sd in stock_results:
+        code = sd.get('stock_code') or sd.get('code') or ''
+        name = sd.get('stock_name') or sd.get('name') or code
+        analysis = sd.get('analysis') or {}
+        rec = analysis.get('recommendation') or '观望'
+        pos = sd.get('position_advice', 0)
+        cur = format_value_default(sd.get('current_price'), '-')
+        stop = format_value_default(sd.get('stop_loss'), '-')
+        target = format_value_default(sd.get('target_price'), '-')
+        def _score(key):
+            v = sd.get(key)
+            return f"{v:.0f}" if isinstance(v, (int, float)) else "-"
+        lines.append(f"### {name}（{code}）")
+        lines.append(f"- 综合建议：{rec}｜建议仓位：{pos}%")
+        lines.append(f"- 价格：现价 HK${cur}｜止损 HK${stop}｜目标 HK${target}")
+        lines.append(f"- 三周期：5d {_score('ml_prob_5d')} / 10d {_score('ml_prob_10d')} / 20d {_score('ml_prob_20d')}")
+        short = sd.get('short_term_advice') or '-'
+        mid = sd.get('mid_term_advice') or '-'
+        lines.append(f"- 短期：{short}｜中期：{mid}")
+        risk = sd.get('risk_warnings') or analysis.get('risk_warnings') or []
+        if isinstance(risk, list) and risk:
+            lines.append(f"- 风险：{'；'.join(str(x) for x in risk[:3])}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def generate_detailed_stock_email(stock_results: list, market_info: dict, date_str: str) -> str:
     """生成完整的详细个股分析 HTML 邮件"""
     # 生成每只股票的分析部分
-    stock_sections = ""
-    for stock_data in stock_results:
-        stock_sections += generate_stock_section_html(stock_data)
+    stock_sections = generate_stock_sections_html(stock_results)
 
     return f"""<!DOCTYPE html>
 <html>
@@ -4990,11 +5038,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
             
             print(f"✅ 综合建议已保存到 {output_filepath}")
             
-            # 发送邮件通知
-            if send_email_flag:
-                print("\n📧 准备发送邮件通知...")
+            # D93：正文无论是否发送邮件都构建（--no-email 可预览/归档完整报告）
+            if True:  # 保留原缩进层级，避免搬动 600 行拼接代码
+                print("\n📧 准备构建邮件正文...")
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
-                email_content = response
                 
                 # 构建板块分析、股息信息、恒生指数分析
                 print("📊 获取板块分析...")
@@ -5286,7 +5333,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     _grd_block = _guardrail_block()
                 except Exception:
                     _grd_block = ""
-                full_content = banner_line + f"""{response}
+                full_content = banner_line + f"""**本文导航**：今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
+
+<!--RISK_PANEL-->
+
+{response}
+
+---
+
+<!--DETAILED_STOCKS_HTML-->
+
+<!--DETAILED_STOCKS_TEXT-->
 
 ---
 
@@ -5311,14 +5368,32 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                 # 添加异常检测结果
                 full_content += generate_anomaly_report_content(anomaly_data)
-                
+
                 full_content += f"""
 
 ## 四、板块分析（5日涨跌幅排名）
 
 {sector_text}
 
-## 五、大模型建议
+## 五、股息信息（即将除净）
+
+{dividend_text}
+
+## 六、股票技术指标详情
+
+{technical_indicators_table}
+
+## 七、最近48小时模拟交易记录
+
+{recent_transactions_text}
+
+---
+
+# 附录
+
+## 附录 A：大模型原始建议（短期/中期）
+
+> 与顶部「今日综合买卖建议」同源，保留用于追溯；日常阅读不必重复查看。
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
@@ -5326,23 +5401,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
 
-## 六、股息信息（即将除净）
-
-{dividend_text}
-
-## 七、股票技术指标详情
-
-{technical_indicators_table}
-
-## 八、最近48小时模拟交易记录
-
-{recent_transactions_text}
-
-"""
-                
-                # 继续添加其他内容
-                full_content += f"""
-## 九、技术指标说明
+## 附录 B：技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -5365,9 +5424,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 十、**决策框架**
-
-
+## 附录 C：决策框架
 
 ### ✦ 主判据（先看）
 
@@ -5392,16 +5449,14 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **必须设置止损位，单只股票最大亏损不超过-8%**
 
 ### ✦ 强烈买入信号
-**强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
+**强烈买入信号**是主结论的第一部分，包含：
 - **股票代码和名称**：如"0700.HK 腾讯控股"
 - **推荐理由**：详细的分析，说明短期建议+中期建议+机器学习20天排序分数
 - **操作建议**：明确的买入/持有/卖出建议
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
 
-<!--RISK_PANEL-->
-
-## 十一、风险提示
+## 附录 D：风险提示
 
 1. **模型口径**：
    - 本系统为**排序模型**（D59）：输出 0-100 排序分数（横截面分位×100），不输出概率/胜率/置信度
@@ -5420,7 +5475,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - 分数偏弱不构成自动否决，但必须写明分歧
    - 总仓位控制在45%-55%，分散风险
 
-## 十二、数据来源
+## 附录 E：数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：三周期排序模型（横截面分位×100，无概率语义）
@@ -5463,7 +5518,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     _panel = ''
                 html_content = html_content.replace('<!--RISK_PANEL-->', _panel)
 
-                # 如果指定了股票代码，在邮件最前面插入详细个股分析
+                # D93：个股卡占位符填充（只覆盖 --stocks 指定的股票）
+                stock_results = []
+                radar_attachments = {}
+                detailed_html = ''
+                detailed_text = ''
+
                 if _stock_codes_for_detail:
                     print(f"\n📊 生成详细个股分析: {', '.join(_stock_codes_for_detail)}")
 
@@ -5471,7 +5531,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     report_path = f'output/comprehensive_reports/{date_str}.md'
 
                     # 提取个股数据
-                    stock_results = []
                     market_info = {}
                     for stock_code in _stock_codes_for_detail:
                         # 构建精简文本（从已计算数据提取，避免大模型超时）
@@ -5543,7 +5602,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                     if stock_results:
                         # 生成六边形雷达图（嵌入个股卡片）
-                        radar_attachments = {}
                         for sd in stock_results:
                             code = sd.get('code', '')
                             if code in three_horizon_results:
@@ -5562,36 +5620,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                 except Exception as e:
                                     print(f"  [radar] Warning: {code} radar chart failed: {e}")
 
-                        # 生成详细个股分析 HTML
-                        detailed_html = generate_detailed_stock_email(stock_results, market_info, date_str)
+                        # 只生成卡片内容；由占位符决定插入位置（D93）
+                        detailed_html = generate_stock_sections_html(stock_results)
+                        detailed_text = generate_stock_sections_text(stock_results)
+                        print(f"✅ 已生成 {len(stock_results)} 只股票的详细分析，含 {len(radar_attachments)} 张雷达图")
 
-                        # 从详细个股分析 HTML 中提取 body 内容
-                        import re
-                        body_match = re.search(r'<body[^>]*>(.*?)</body>', detailed_html, re.DOTALL)
-                        if body_match:
-                            detailed_body = body_match.group(1)
-                            # 提取 container div
-                            container_match = re.search(r'<div class="container">(.*?)</div>\s*</body>', detailed_html, re.DOTALL)
-                            if container_match:
-                                detailed_content = container_match.group(1)
-                                # 在综合报告 HTML 的 container 开头插入详细个股分析
-                                # 找到 <div class="container"> 的位置
-                                container_start = html_content.find('<div class="container">')
-                                if container_start != -1:
-                                    # 插入详细个股分析
-                                    insert_pos = container_start + len('<div class="container">')
-                                    html_content = html_content[:insert_pos] + detailed_content + html_content[insert_pos:]
+                # D93：用占位符替换，不再插到 HTML 容器最前面
+                text_content, html_content = apply_email_placeholders(
+                    full_content, html_content, detailed_html, detailed_text)
 
-                        print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析，含 {len(radar_attachments)} 张雷达图")
+                # 先归档完整正文（不再只存 response）
+                save_comprehensive_report_md(text_content, date_str)
 
-                    # 根据是否有内嵌图片选择发送方式
+                if send_email_flag:
                     if stock_results and radar_attachments:
-                        send_email_with_images(email_subject, full_content, html_content, inline_images=radar_attachments)
+                        send_email_with_images(email_subject, text_content, html_content, inline_images=radar_attachments)
                     else:
-                        send_email(email_subject, full_content, html_content)
-
-            # 保存 MD 文档（用于知识库）- 无论是否发送邮件都保存
-            save_comprehensive_report_md(response, date_str)
+                        send_email(email_subject, text_content, html_content)
+                else:
+                    print("⏭️  --no-email：已生成正文，跳过发送")
 
             return response
         else:

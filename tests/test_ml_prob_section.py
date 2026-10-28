@@ -56,7 +56,7 @@ def test_section_missing_prob_shows_dash_not_zero():
     assert '看跌，<50%硬约束禁止买入' not in html
     assert '<td class="metric-neutral">-</td>' in html
     # 三周期表方向也显示 "-"
-    assert '>↑ 上涨<' not in html.split('二、三周期预测')[1].split('</table>')[0]
+    assert '>↑ 上涨<' not in html.split('三周期预测')[1].split('</table>')[0]
 
 
 def test_section_with_rank_score_shows_value():
@@ -64,7 +64,7 @@ def test_section_with_rank_score_shows_value():
         'ml_prob_20d': 56.6, 'ml_prob_10d': 41.0, 'ml_prob_5d': 43.2})
     assert '<td class="metric-neutral">57</td>' in html
     assert '相对强弱分位（高=池内偏强，低=偏弱）' in html
-    assert '看跌，<50%硬约束禁止买入' not in html.split('一、核心指标')[1].split('</table>')[0]
+    assert '看跌，<50%硬约束禁止买入' not in html.split('核心指标')[1].split('</table>')[0]
 
 
 # ---------- _stock_chart_url（腾讯自选股 K 线链接） ----------
