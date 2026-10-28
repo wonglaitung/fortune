@@ -65,16 +65,22 @@ fi
 echo ""
 
 # 步骤0: 计算网络特征（供训练和预测使用）
+# ⚠️ D91：日常只导出**静态最新快照**（predict 只读 network_features_for_ml.json）。
+#    PIT 导出（--skip-pit 关闭）在 310 池下是 O(股票数²)×~120 个滚动窗口，
+#    实测 >2 小时/次，是 2026-10-26/27 Action 超时的真正根因。
+#    PIT 特征仅训练/WF 使用，不属于日常预测路径。
 echo "=========================================="
-echo "📊 步骤 0/6: 计算网络特征"
+echo "📊 步骤 0/6: 计算网络特征（静态快照；跳过 PIT 导出）"
 echo "=========================================="
+echo "⏱️ 开始: $(date '+%F %T')"
 echo ""
-python3 ml_services/stock_network_analysis.py --skip-pmfg
+python3 ml_services/stock_network_analysis.py --skip-pmfg --skip-pit
 if [ $? -ne 0 ]; then
     echo "⚠️ 网络特征计算失败（继续执行，模型将跳过网络特征）"
 else
-    echo "✅ 网络特征计算完成: output/network_features_for_ml.json"
+    echo "✅ 网络特征计算完成: data/network_features/network_features_for_ml.json"
 fi
+echo "⏱️ 结束: $(date '+%F %T')"
 echo ""
 
 # 步骤 0.5: 运行特征选择（统计方法，生成 Top 300 特征）
@@ -161,6 +167,7 @@ PREDICT_SUCCESS=0
 PREDICT_FAILED=0
 for horizon in 5 10 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
+    echo "  ⏱️ 开始: $(date '+%F %T')"
     python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type lgbm --use-feature-selection
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 生成 ${horizon}d 预测失败（继续执行其他周期）"
@@ -169,6 +176,7 @@ for horizon in 5 10 20; do
         echo "  ✅ ${horizon}d 预测完成"
         PREDICT_SUCCESS=$((PREDICT_SUCCESS + 1))
     fi
+    echo "  ⏱️ 结束: $(date '+%F %T')"
 done
 
 if [ $PREDICT_SUCCESS -eq 0 ]; then
@@ -196,19 +204,21 @@ echo ""
 echo "=========================================="
 echo "📊 步骤 4/6: 生成大模型建议"
 echo "=========================================="
-echo ""
+echo "⏱️ 开始: $(date '+%F %T')"
 python3 hsi_email.py --force --no-email
 if [ $? -ne 0 ]; then
     echo "❌ 步骤3失败: 生成大模型建议失败"
     exit 1
 fi
 echo "✅ 步骤3完成: 大模型建议已生成"
+echo "⏱️ 结束: $(date '+%F %T')"
 echo ""
 
 # 步骤4: 调用comprehensive_analysis.py进行综合分析
 echo "=========================================="
 echo "📊 步骤 5/6: 综合分析"
 echo "=========================================="
+echo "⏱️ 开始: $(date '+%F %T')"
 echo ""
 # 获取步骤3生成的大模型建议文件（使用最新日期）
 LLM_FILE=$(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)
