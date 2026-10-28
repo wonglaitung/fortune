@@ -26,6 +26,8 @@ concurrency:
 jobs:
   send-email:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # D87：日常不训练，正常 60–90 分钟；150 分钟硬上限，避免再次 6 小时静默挂死
     timeout-minutes: 150
     env:
@@ -59,7 +61,22 @@ jobs:
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
           QWEN_CHAT_MODEL: deepseek-v4.1-flash
         run: |
-          bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK' }}"
+          set -o pipefail
+          bash scripts/run_comprehensive_analysis.sh "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK' }}" 2>&1 | tee /tmp/analysis.log
+
+      - name: Analysis stage summary
+        if: always()
+        run: |
+          {
+            echo "## 分析阶段日志（超时/失败定位）"
+            echo '```text'
+            if [ -f /tmp/analysis.log ]; then
+              grep -aE "⏱️|步骤|❌|⚠️|预测失败|Traceback|Error|error" /tmp/analysis.log | tail -200 || true
+            else
+              echo "no /tmp/analysis.log"
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit prediction history
         if: always()
