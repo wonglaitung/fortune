@@ -5017,7 +5017,7 @@ class TradingModel(BaseTradingModel):
             # 唯一学习器 = LightGBM：rank 回归输出连续分数
             import numpy as _np
             if getattr(self, 'label_mode', 'absolute') == 'rank':
-                score = float(_np.clip(_np.asarray(self.model.predict(X)).ravel()[0], 0.0, 1.0))
+                score = float(_np.clip(self._bag_predict(X).ravel()[0], 0.0, 1.0))
                 return {
                     'code': code,
                     'name': STOCK_NAMES.get(code, code),
@@ -5028,7 +5028,7 @@ class TradingModel(BaseTradingModel):
                     'current_price': float(latest_data['Close'].values[0]),
                     'date': latest_data.index[0]
                 }
-            proba = self.model.predict_proba(X)[0]
+            proba = self._bag_predict_proba(X)[0]
             prediction = int(proba[1] >= 0.5)
 
             return {
@@ -5058,6 +5058,7 @@ class TradingModel(BaseTradingModel):
             'community_ids': self.community_ids,  # 保存社区 ID 列表
             'learner': getattr(self, 'learner', 'lightgbm'),
             'label_mode': getattr(self, 'label_mode', 'absolute'),  # D59
+            'models': getattr(self, 'models', None),  # D95 多 seed bagging
         }
         # 原子写：先写临时文件再替换，训练/序列化中断不会破坏旧模型
         tmp = f"{filepath}.tmp"
@@ -5074,6 +5075,7 @@ class TradingModel(BaseTradingModel):
             model_data = pickle.load(f)
         learner = model_data.get('learner', 'lightgbm')
         self.model = model_data['model']
+        self.models = model_data.get('models') or [self.model]
         self.learner = learner
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
@@ -5134,9 +5136,22 @@ class TradingModel(BaseTradingModel):
         # 唯一学习器 = LightGBM
         if getattr(self, 'label_mode', 'absolute') == 'rank':
             import numpy as _np
-            p = _np.clip(_np.asarray(self.model.predict(test_df)).ravel(), 0.0, 1.0)
+            p = _np.clip(self._bag_predict(test_df).ravel(), 0.0, 1.0)
             return _np.column_stack([1 - p, p])
-        return self.model.predict_proba(test_df)
+        return self._bag_predict_proba(test_df)
+
+    def _bag_models(self):
+        return getattr(self, 'models', None) or [self.model]
+
+    def _bag_predict(self, X):
+        import numpy as _np
+        preds = [_np.asarray(m.predict(X)).ravel() for m in self._bag_models()]
+        return _np.mean(preds, axis=0)
+
+    def _bag_predict_proba(self, X):
+        import numpy as _np
+        probs = [_np.asarray(m.predict_proba(X)) for m in self._bag_models()]
+        return _np.mean(probs, axis=0)
 
     def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
         """LightGBM 拟合（复用 LightGBM 管线的 prepare_data/特征选择/编码，仅换学习器）"""
@@ -5155,13 +5170,23 @@ class TradingModel(BaseTradingModel):
         )
         if lgb_n_jobs > 0:
             print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS，避免高负载线程争用）")
-        self.model = lgb.LGBMRegressor(**lgb_params) if _reg else lgb.LGBMClassifier(**lgb_params)
-        self.model.fit(X, y)
+        # D95：多 seed bagging（默认单 seed，行为不变；LGBM_BAG_SEEDS=42,7,2024 开启）
+        seeds = [int(x) for x in str(os.environ.get('LGBM_BAG_SEEDS', '42')).split(',') if x.strip()]
+        self.models = []
+        for seed in seeds:
+            p = dict(lgb_params)
+            p.update(random_state=seed, bagging_seed=seed + 1, feature_fraction_seed=seed + 2)
+            mdl = lgb.LGBMRegressor(**p) if _reg else lgb.LGBMClassifier(**p)
+            mdl.fit(X, y)
+            self.models.append(mdl)
+        self.model = self.models[0]
         self.actual_n_estimators = self.model.n_estimators
-        print(f"✅ LightGBM 训练完成 (learner=lightgbm, n_estimators={self.actual_n_estimators})")
+        print(f"✅ LightGBM 训练完成 (learner=lightgbm, n_estimators={self.actual_n_estimators}, "
+              f"bag={len(self.models)})")
         feat_imp = pd.DataFrame()
         try:
-            imp = self.model.feature_importances_
+            imps = [m.feature_importances_ for m in self._bag_models()]
+            imp = np.mean(imps, axis=0)
             feat_imp = pd.DataFrame({'Feature': list(self.feature_columns), 'Importance': imp})
             feat_imp = feat_imp.sort_values('Importance', ascending=False)
             feat_imp['Impact_Direction'] = 'Unknown'
