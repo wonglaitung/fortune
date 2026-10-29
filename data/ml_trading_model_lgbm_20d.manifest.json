@@ -1,0 +1,21 @@
+{
+  "bag_spec": "42,7,2024",
+  "file": "ml_trading_model_lgbm_20d.pkl",
+  "horizon": 20,
+  "label_mode": "rank",
+  "n_estimators": 300,
+  "n_features": 567,
+  "n_models": 3,
+  "params": {
+    "colsample_bytree": 0.6,
+    "learning_rate": 0.06,
+    "max_depth": 8,
+    "min_child_samples": 30,
+    "n_estimators": 300,
+    "num_leaves": 127,
+    "reg_lambda": 5.0,
+    "subsample": 1.0
+  },
+  "sha256": "9fd1face9951ad5cd5fe3f2e0ec4963f2c8703cf02e8e5b47592069d73e0b704",
+  "trained_at": "2026-10-29T23:32:34"
+}
