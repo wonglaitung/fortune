@@ -27,10 +27,10 @@ sys.path.insert(0, ROOT)
 from ml_services.overlap_stats import block_bootstrap_se  # noqa: E402
 from ml_services.portfolio_backtest import load_panel  # noqa: E402
 
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 
 
-def run_config(df, horizon, topk, cap, dropout, costs=COST):
+def run_config(df, horizon, topk, cap, dropout, costs=COST_ROUND_TRIP):
     dates = sorted(df['date'].unique())
     rb = dates[::horizon]
     rows, prev, held = [], set(), []

@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ml_services.feature_cache_utils import latest_feature_cache_files
 
 CACHE_DIR = 'data/feature_cache'
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 WINDOW = 30
 HORIZONS = [5, 10, 20]
 THRESHOLDS = [-2.5, -3.0, -4.0]
@@ -77,13 +77,13 @@ def eval_strategy(sig, base, horizon):
     if n == 0:
         return dict(n=0, win=np.nan, base_win=np.nan, lift=np.nan, mean=np.nan,
                     lo=np.nan, hi=np.nan, ir=np.nan)
-    net = sig[col] - COST
+    net = sig[col] - COST_ROUND_TRIP
     win = (net > 0).mean()
     mean = net.mean()
     std = net.std(ddof=1)
     ir = mean / std * np.sqrt(252.0 / horizon) if std > 0 else np.nan
     lo, hi = boot_mean(net)
-    base_win = (base[col] > COST).mean()
+    base_win = (base[col] > COST_ROUND_TRIP).mean()
     return dict(n=n, win=win, base_win=base_win, lift=win - base_win, mean=mean,
                 lo=lo, hi=hi, ir=ir)
 
@@ -91,7 +91,7 @@ def eval_strategy(sig, base, horizon):
 def run_horizon(panel, horizon, L):
     base = panel  # 无条件买入基准 = 全样本
     L.append(f"## 持有 {horizon} 日\n")
-    L.append(f"- 触发: 当日收益 30日z-score ≤ 阈值（价格异常+当日下跌）；买入持 {horizon} 日，成本 {COST:.3f}")
+    L.append(f"- 触发: 当日收益 30日z-score ≤ 阈值（价格异常+当日下跌）；买入持 {horizon} 日，成本 {COST_ROUND_TRIP:.3f}")
     L.append(f"- 基准: 无条件买入（全样本）\n")
     L.append("| 阈值(z≤) | 信号数 | 信号胜率 | 基准胜率 | 超额lift | 净均收益/期 | 净IR | 净IR 95%CI |")
     L.append("|---------|--------|---------|---------|---------|------------|------|-----------|")
@@ -127,7 +127,7 @@ def main(out_md=None, horizons=None):
     L.append(f"# 异常大跌抄底策略复核（{'/'.join(str(h) for h in horizons)}d）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 原文档口径（2026-05）：价格异常+当日下跌 → 5日 +4.12% / 胜率 72%")
-    L.append(f"- 口径：收盘买入、扣双边成本 {COST:.3f}、30日 z-score 触发的非重叠持有\n")
+    L.append(f"- 口径：收盘买入、扣双边成本 {COST_ROUND_TRIP:.3f}、30日 z-score 触发的非重叠持有\n")
     for h in horizons:
         run_horizon(panel, h, L)
     L.append("## 说明\n")

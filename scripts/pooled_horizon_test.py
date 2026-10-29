@@ -31,7 +31,7 @@ from ml_services.portfolio_backtest import backtest, load_panel, bootstrap, _sta
 
 HORIZONS = [1, 3, 5, 10, 15, 20]
 TOPK = 10
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 
 
 def latest_csv(h):
@@ -49,7 +49,7 @@ def main():
             print(f"[H={h}] 无 CSV，跳过")
             continue
         df = load_panel(csv, market='hk')
-        bt = backtest(df, h, TOPK, cost=COST)
+        bt = backtest(df, h, TOPK, cost=COST_ROUND_TRIP)
         ex = (bt['top_net'] - bt['bench']).values
         ex = ex[np.isfinite(ex)]
         st = _stats(ex, h)

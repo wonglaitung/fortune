@@ -3,7 +3,7 @@
 """
 港股题材小宇宙 —— 题材内横截面 alpha 测试（D51 §六，先登记后跑）
 
-口径与部署一致（20d、raw 打分、COST 与 WF 一致）。
+口径与部署一致（20d、raw 打分、COST_ROUND_TRIP 与 WF 一致）。
 分三层，**诚实标注功效**：
 
   A. 合并题材池（3 题材并集 ∩ 有预测）      —— 标准 `backtest`（≥20 只）
@@ -34,7 +34,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import hk_themes_config as cfg  # noqa: E402
-from ml_services.portfolio_backtest import load_panel, backtest, _stats, COST  # noqa: E402
+from ml_services.portfolio_backtest import load_panel, backtest, _stats  # noqa: E402
+from ml_services.costs import COST_ROUND_TRIP  # noqa: E402
 from ml_services.monthly_guardrail import min_detectable_ir, vs_baseline  # noqa: E402
 
 HORIZON = 20
@@ -51,7 +52,7 @@ def add_theme(panel):
     return panel
 
 
-def relaxed_backtest(df_theme, horizon=HORIZON, topk=5, cost=COST):
+def relaxed_backtest(df_theme, horizon=HORIZON, topk=5, cost=COST_ROUND_TRIP):
     """逐题材放宽版回测（无『每期≥20只』硬门槛）。
 
     与 `portfolio_backtest.backtest` 同净口径：top_net = 毛 − 换手×成本；
@@ -115,14 +116,14 @@ def run(pred_csv, topk_combined=5, topk_theme=3, out_dir=ROOT / "data" / "hk_the
     universe = set(panel["code"].unique())
     theme_universe = [c for c in cfg.get_all_stocks() if c in universe]
 
-    report = {"pred_csv": pred_csv, "horizon": HORIZON, "cost": COST,
+    report = {"pred_csv": pred_csv, "horizon": HORIZON, "cost": COST_ROUND_TRIP,
               "universe_theme": sorted(theme_universe), "themes": {}}
 
     # ---- A. 合并题材池 ----
     df_th = panel[panel["code"].isin(theme_universe)].copy()
     combined = None
     if len(df_th["code"].unique()) >= 20:
-        bt = backtest(df_th, HORIZON, topk_combined, cost=COST)
+        bt = backtest(df_th, HORIZON, topk_combined, cost=COST_ROUND_TRIP)
         if len(bt) >= 5:
             st = _stats(bt["top_net"].values, HORIZON)
             sb = _stats(bt["bench"].values, HORIZON)
@@ -143,7 +144,7 @@ def run(pred_csv, topk_combined=5, topk_theme=3, out_dir=ROOT / "data" / "hk_the
         dt = panel[panel["code"].isin(codes)].copy()
         entry = {"n_stocks_pred": len(codes), "n_eff_est": n_eff.get(t),
                  "missing": [c for c in cfg.get_theme_stocks(t) if c not in universe]}
-        bt = relaxed_backtest(dt, HORIZON, topk_theme, COST) if len(codes) >= 4 else pd.DataFrame()
+        bt = relaxed_backtest(dt, HORIZON, topk_theme, COST_ROUND_TRIP) if len(codes) >= 4 else pd.DataFrame()
         if len(bt) >= 5:
             st = _stats(bt["top_net"].values, HORIZON)
             ex = vs_baseline(bt["top_net"].values, bt["bench"].values, f"{t}-topk − {t}-等权")
@@ -173,7 +174,7 @@ def _f(x, nd=2):
 
 def _print(r):
     print("=" * 70)
-    print(f"港股题材 alpha（部署口径 20d，净成本 {COST*100:.2f}%/边）")
+    print(f"港股题材 alpha（部署口径 20d，净成本 {COST_ROUND_TRIP*100:.2f}%/边）")
     print(f"  预测: {r['pred_csv']}")
     print(f"  题材池 ∩ 有预测: {len(r['universe_theme'])} 只")
     print("=" * 70)

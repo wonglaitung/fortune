@@ -18,7 +18,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 
 
 def _maxdd(r):
@@ -41,7 +41,7 @@ def static_check(csv, horizon):
     pos = rb['pred'].astype(int).values
     entry = np.abs(np.diff(np.r_[pos[0], pos])).clip(max=1)
     ret = rb['actual_return'].values
-    sig = pos * ret - entry * COST
+    sig = pos * ret - 0.5 * entry * COST_ROUND_TRIP
     wbar = float(pos.mean())
     static = wbar * ret
     dd_sig, dd_static = _maxdd(sig), _maxdd(static)

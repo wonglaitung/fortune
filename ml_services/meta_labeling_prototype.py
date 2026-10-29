@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_services.feature_cache_utils import latest_feature_cache_files
 
-COST = 0.005            # 双边成本（与 walk_forward TOTAL_COST 一致）
+from ml_services.costs import COST_ROUND_TRIP
 PT = 1.0                # 上障碍倍数（× 波动率）
 SL = 1.0                # 下障碍倍数
 VOL_SPAN = 20           # 日波动率 EWMA 窗口
@@ -157,7 +157,7 @@ def attach_labels(pred, prices, horizon):
     pred['meta_label'] = ((pred['tb_bin'] > 0) |
                           ((pred['tb_bin'] == 0) & (pred['tb_ret'] > 0))).astype(int)
     # 净赢：扣成本后为正
-    pred['net_win'] = (pred['tb_ret'] > COST).astype(int)
+    pred['net_win'] = (pred['tb_ret'] > COST_ROUND_TRIP).astype(int)
     return pred
 
 
@@ -289,7 +289,7 @@ def evaluate(pred, meta_prob, horizon, threshold_default=0.5):
     """比较 baseline（全部信号）vs meta 过滤后"""
     d = pred.dropna(subset=['tb_ret']).copy()
     d['meta_prob'] = meta_prob.reindex(d.index)
-    d['net_ret'] = d['tb_ret'] - COST
+    d['net_ret'] = d['tb_ret'] - COST_ROUND_TRIP
     d['net_win'] = (d['net_ret'] > 0).astype(int)
     # 仅在有元模型预测的区间做公平对比
     valid = d['meta_prob'].notna()
@@ -332,7 +332,7 @@ def run(horizon, pred_csv, cache_dir, out_md):
     # 逐 Fold（仅统计有元模型预测的样本）
     d = sig.dropna(subset=['tb_ret']).copy()
     d['meta_prob'] = meta_prob.reindex(d.index)
-    d['net_ret'] = d['tb_ret'] - COST
+    d['net_ret'] = d['tb_ret'] - COST_ROUND_TRIP
     d['net_win'] = (d['net_ret'] > 0).astype(int)
     d = d[d['meta_prob'].notna()]
     fold_rows = []
@@ -353,7 +353,7 @@ def run(horizon, pred_csv, cache_dir, out_md):
     lines.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     lines.append(f"- 主模型信号数: {len(sig)}　三重障碍标签成功: {len(sig)}")
     lines.append(f"- 元模型评估样本: {n_eval}（有 purged walk-forward 预测的区间）")
-    lines.append(f"- 参数: PT={PT} SL={SL} 波动率窗口={VOL_SPAN} 成本={COST:.3f}\n")
+    lines.append(f"- 参数: PT={PT} SL={SL} 波动率窗口={VOL_SPAN} 成本={COST_ROUND_TRIP:.3f}\n")
     lines.append("## 结果对比\n")
     lines.append("| 方案 | 交易数 | Precision | Recall | F1 | 保留率 | 净均收益 | 净IR |")
     lines.append("|------|--------|-----------|--------|----|--------|---------|------|")

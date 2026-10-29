@@ -29,7 +29,8 @@ from scipy.stats import ttest_1samp
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats, COST, selection_ic
+from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats, selection_ic
+from ml_services.costs import COST_ROUND_TRIP
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
 
 def min_detectable_ir(n, horizon):
@@ -64,13 +65,13 @@ def signal_lift(df):
     df['dyn'] = df['dyn'].fillna(0.5)
     df = df.dropna(subset=['ret', 'prob'])
     trade = df['prob'] >= df['dyn']
-    win = df['ret'] > COST
+    win = df['ret'] > COST_ROUND_TRIP
     base = win.mean()
     wr = win[trade].mean() if trade.sum() else np.nan
     return wr, base, (wr - base) if wr is not None else np.nan
 
 
-def win_rate_paired_test(df, cost=COST, topk=10):
+def win_rate_paired_test(df, cost=COST_ROUND_TRIP, topk=10):
     """胜率 lift 的**逐日配对**检验，**固定 TopK 口径**。
 
     ⚠️ 2026-10-13（statistic redesign）：原先按模型 UP/DOWN 分组取「判涨组」，
@@ -390,7 +391,7 @@ def main():
     ap = argparse.ArgumentParser(description='月度护栏（净IR/PBO/DSR/lift）')
     ap.add_argument('--horizon', type=int, default=20)
     ap.add_argument('--topk', type=int, default=10)
-    ap.add_argument('--cost', type=float, default=COST)
+    ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP)
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
     ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],

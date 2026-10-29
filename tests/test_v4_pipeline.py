@@ -53,4 +53,4 @@ def test_cost_never_helps():
     # 逐期绝对净收益 ≤ 对应毛收益（成本非负）
     for _, g in pred.groupby("date"):
         g = g.sort_values("score", ascending=False)
-        assert g["fwd"].values[:k].mean() - 1.0 * vp.COST <= g["fwd"].values[:k].mean() + 1e-12
+        assert g["fwd"].values[:k].mean() - 1.0 * vp.COST_ROUND_TRIP <= g["fwd"].values[:k].mean() + 1e-12

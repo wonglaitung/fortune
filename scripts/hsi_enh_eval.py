@@ -21,7 +21,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 
 
 def _stats(x):
@@ -55,7 +55,7 @@ def evaluate(csv, horizon):
     rb = df.iloc[::horizon].reset_index(drop=True)
     pos = rb['pred'].astype(int).values
     entry = np.abs(np.diff(np.r_[pos[0], pos])).clip(max=1)
-    ret_sig = pos * rb['actual_return'].values - entry * COST
+    ret_sig = pos * rb['actual_return'].values - 0.5 * entry * COST_ROUND_TRIP
     base = rb['actual_return'].values
     excess = ret_sig - base
     ir_sig = _stats(ret_sig)[1] * np.sqrt(252.0 / horizon)

@@ -33,7 +33,7 @@ SNAP = os.path.join(ROOT, "data", "hk_market_snapshot")
 HSI_PKL = os.path.join(ROOT, "data", "hk_universe_cache", "HSI.pkl")
 H, LAG, STEP = 20, 1, 20
 TOPK = 10
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 MIN_TRAIN_DATES = 600
 FEATS = ["mom_20", "mom_60", "mom_120", "vol_20", "vol_60", "rsi_14",
          "vol_ratio", "ma_ratio_20", "ma_ratio_60", "ret_1", "ret_5"]
@@ -181,7 +181,7 @@ def main():
     # 先生成中间量(excess_*/rank)，再定义各变体标签
     variants = make_labels(panel)
     panel["y_abs"] = (panel["fwd"] > 0).astype(int)
-    panel["y_cost"] = (panel["fwd"] > COST).astype(int)
+    panel["y_cost"] = (panel["fwd"] > COST_ROUND_TRIP).astype(int)
     panel["y_hsi"] = (panel["excess_hsi"] > 0).astype(int)
     panel["y_ind"] = (panel["excess_ind"] > 0).astype(int)
     panel["y_rank"] = panel["rank"]

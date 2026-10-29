@@ -25,7 +25,7 @@ os.makedirs(OUT, exist_ok=True)
 sys.path.insert(0, REPO)
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe  # noqa: E402
 
-COST = 0.005          # H 腿双边 0.5%（预注册 §4）
+from ml_services.costs import COST_ROUND_TRIP
 HORIZON = 21          # 月频 → 年化 sqrt(252/21)=sqrt(12)
 N_TRIALS = 6          # 配置族数（预注册 §4）
 
@@ -131,7 +131,7 @@ def main():
     bench = R["ret_ew_h"]        # 等权买入持有 H
     raw = R["ret_bh"]
     turn = R["exposure"].diff().abs().fillna(R["exposure"].iloc[0] * 0.5)
-    net = raw - COST * turn      # 成本按换手
+    net = raw - 0.5 * COST_ROUND_TRIP * turn      # 成本按换手（|Δw| 是单边，D97）
 
     s = stats(raw)
     sn = stats(net.values, cost=0.0)
@@ -181,7 +181,7 @@ def main():
     Rs = run_config(pairs, SHORT, win=12, normalize=True)
     if len(Rs):
         turns = Rs["exposure"].diff().abs().fillna(Rs["exposure"].iloc[0] * 0.5)
-        nets_s = Rs["ret_bh"] - COST * turns
+        nets_s = Rs["ret_bh"] - 0.5 * COST_ROUND_TRIP * turns
         ss = stats(nets_s.values)
         print(f"\n[附录-短窗3对] n={ss['n']} netIR={ss['ir']:.3f} mean={ss['mean']:.5f} "
               f"cum={ss['cum']:.3f}")

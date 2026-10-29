@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_services.meta_labeling_prototype import (
     build_dataset, attach_labels, meta_feature_frame, purged_walk_forward,
-    COST,
+    COST_ROUND_TRIP,
 )
 
 DEFAULT_PRED = {
@@ -123,7 +123,7 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
     if year:
         sig = sig[sig['date'].dt.year == year].copy()
     sig = sig[sig['meta_prob'].notna()].copy()
-    sig['net_ret'] = sig['tb_ret'] - COST
+    sig['net_ret'] = sig['tb_ret'] - COST_ROUND_TRIP
     sig['net_win'] = (sig['net_ret'] > 0).astype(int)
     print(f"评估样本: {len(sig)}  年份={year or '全期'}")
 
@@ -167,7 +167,7 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
     L = []
     L.append(f"# 元标签消融（{horizon}d，{year or '全期'}）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
-    L.append(f"- 评估样本: {len(sig)}　成本: {COST:.3f}　Kelly=0.5×clip(2p−1,0,1)")
+    L.append(f"- 评估样本: {len(sig)}　成本: {COST_ROUND_TRIP:.3f}　Kelly=0.5×clip(2p−1,0,1)")
     L.append(f"- 目的: 主模型有 edge 子集上，检验元标签**过滤 vs 仓位**，并给 Bootstrap 置信区间")
     L.append(f"- 「ΔIR」= 相对 Baseline 的净IR增量 block bootstrap（1000 次，中括号 95%CI，括号内 P(Δ>0)）\n")
     L.append("| 方案 | 交易数 | 保留率 | Precision | 净均收益 | 净IR | ΔIR vs Baseline |")

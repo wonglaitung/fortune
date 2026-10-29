@@ -29,7 +29,7 @@ from ml_services.anomaly_dip_backtest import eval_strategy, boot_mean
 
 CACHE_DIR = 'data/feature_cache'
 HSI_PKL = 'data/hk_universe_cache/HSI.pkl'
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 ZTHR = -3.0
 HORIZON = 5
 

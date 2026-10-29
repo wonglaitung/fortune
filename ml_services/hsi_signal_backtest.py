@@ -22,7 +22,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 DEFAULT_CSV = {
     5: 'data/hsi_walk_forward/hsi_prediction_analysis_20261017_003740.csv',
     10: 'data/hsi_walk_forward/hsi_prediction_analysis_20261017_003752.csv',
@@ -47,8 +47,8 @@ def run(horizon, csv, out_md):
     # 入场成本：位置变化时计一次 0.5%
     entry_lf = rb['pos_lf'].diff().fillna(rb['pos_lf']).abs().clip(upper=1).values
     entry_ls = rb['pos_ls'].diff().fillna(rb['pos_ls']).abs().clip(upper=1).values
-    ret_lf = rb['pos_lf'] * rb['actual_return'] - entry_lf * COST
-    ret_ls = rb['pos_ls'] * rb['actual_return'] - entry_ls * COST
+    ret_lf = rb['pos_lf'] * rb['actual_return'] - 0.5 * entry_lf * COST_ROUND_TRIP
+    ret_ls = rb['pos_ls'] * rb['actual_return'] - 0.5 * entry_ls * COST_ROUND_TRIP
     base = rb['actual_return'].values  # 买入持有
 
     def stats(x):
@@ -64,7 +64,7 @@ def run(horizon, csv, out_md):
     L = []
     L.append(f"# 恒指信号交易复核（{horizon}d）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
-    L.append(f"- 数据: `{csv}`　非重叠期数: {len(rb)}　入场成本 {COST:.3f}\n")
+    L.append(f"- 数据: `{csv}`　非重叠期数: {len(rb)}　入场成本 {COST_ROUND_TRIP:.3f}\n")
     L.append("| 策略 | 净均收益/期 | 胜率 | 净IR | 净均收益 95%CI |")
     L.append("|------|------------|------|------|----------------|")
     L.append(f"| 恒指买入持有（基准） | {m_b*100:+.2f}% | {wr_b*100:.1f}% | {ir_b:.2f} | — |")

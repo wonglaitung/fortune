@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.label_ablation import FEATS, _fit_predict, load_panel  # noqa: E402
 
-COST = 0.005          # 双边成本（与 portfolio_backtest 一致）
+COST_ROUND_TRIP = 0.005  # 往返 0.5%（单边 0.25%，D97）
 LAG = 1
 MIN_TRAIN_DATES = 600
 
@@ -61,7 +61,7 @@ def _period_stats(pred, h, topk):
         sel = g["code"].values[:topk]
         turn = len(set(sel) - prev) / topk if prev else 1.0
         prev = set(sel)
-        tn = fwd[:topk].mean() - turn * COST
+        tn = fwd[:topk].mean() - turn * COST_ROUND_TRIP
         bench = fwd.mean()
         net.append(tn)
         excess.append(tn - bench)

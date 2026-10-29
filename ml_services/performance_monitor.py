@@ -22,7 +22,7 @@ from config import STOCK_SECTOR_MAPPING, PREDICTION_HORIZONS
 HORIZONS = list(PREDICTION_HORIZONS)  # D59：5/10/20（单一来源）
 
 # 双边交易成本（与 walk_forward TOTAL_COST 一致）
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 
 # 历史文件路径
 HISTORY_FILE = 'data/prediction_history.json'
@@ -330,10 +330,10 @@ def _yearly_metrics(predictions: List[Dict]) -> List[Dict]:
         acc = (g['outcome'] == 'correct').mean()
         ret = pd.to_numeric(g['actual_return'], errors='coerce').dropna()
         up = float((ret > 0).mean()) if len(ret) else 0.0
-        base = float((ret > COST).mean()) if len(ret) else 0.0
+        base = float((ret > COST_ROUND_TRIP).mean()) if len(ret) else 0.0
         buys = g[g.get('predicted_direction') == 'up']
         buy_net = pd.to_numeric(buys['actual_return'], errors='coerce').dropna() if len(buys) else pd.Series(dtype=float)
-        bwr = float((buy_net > COST).mean()) if len(buy_net) else 0.0
+        bwr = float((buy_net > COST_ROUND_TRIP).mean()) if len(buy_net) else 0.0
         rows.append({
             'year': int(y), 'n': int(len(g)), 'accuracy': round(acc, 4),
             'up_ratio': round(up, 4), 'direction_skill': round(acc - up, 4),
@@ -370,7 +370,7 @@ def _block_bootstrap_ci(predictions: List[Dict], n_boot: int = 1000, seed: int =
         if len(rets) < 20:
             return None
         up = float((rets > 0).mean())
-        base = float((rets > COST).mean())
+        base = float((rets > COST_ROUND_TRIP).mean())
         acc = sum(1 for r in rows if r.get('outcome') == 'correct') / len(rows)
         buys = [r for r in rows if r.get('predicted_direction') == 'up']
         if not buys:
@@ -379,7 +379,7 @@ def _block_bootstrap_ci(predictions: List[Dict], n_boot: int = 1000, seed: int =
                              errors='coerce').dropna()
         if len(bret) < 5:
             return None
-        bwr = float((bret > COST).mean())
+        bwr = float((bret > COST_ROUND_TRIP).mean())
         return bwr - base, acc - up
 
     rng = np.random.default_rng(seed)
@@ -728,10 +728,10 @@ def calculate_metrics(predictions: List[Dict]) -> Dict:
     # 基准与方向技能（诚实口径，见 docs/DECISIONS.md D3）
     # 无条件买入基准胜率 / 永远看涨占比 / 信号净胜率 / 超额lift / 方向技能
     up_ratio = float((returns_series > 0).mean()) if len(returns_series) > 0 else 0.0
-    base_win = float((returns_series > COST).mean()) if len(returns_series) > 0 else 0.0
+    base_win = float((returns_series > COST_ROUND_TRIP).mean()) if len(returns_series) > 0 else 0.0
     buy_net = pd.to_numeric(buy_signals['actual_return'], errors='coerce').dropna() \
         if len(buy_signals) > 0 else pd.Series(dtype=float)
-    buy_net_win_rate = float((buy_net > COST).mean()) if len(buy_net) > 0 else 0.0
+    buy_net_win_rate = float((buy_net > COST_ROUND_TRIP).mean()) if len(buy_net) > 0 else 0.0
     lift = round(buy_net_win_rate - base_win, 4)
     direction_skill = round(accuracy - up_ratio, 4)
     yearly = _yearly_metrics(predictions)

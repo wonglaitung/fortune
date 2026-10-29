@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ml_services.eval_stats import summarize, wilson_ci, effective_n
 
 # 与 walk_forward_validation.py 的 TOTAL_COST 保持一致（双边佣金+滑点+印花税 ≈ 0.5%）
-DEFAULT_TRANSACTION_COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 # 无市场情绪过滤信息时的默认买入阈值
 DEFAULT_PROB_THRESHOLD = 0.5
 # 无法映射板块时的分组名
@@ -240,7 +240,7 @@ def _resolve_trade_mask(df, default_threshold=DEFAULT_PROB_THRESHOLD):
     return prob >= thr
 
 
-def _prepare_win_df(df, cost=DEFAULT_TRANSACTION_COST,
+def _prepare_win_df(df, cost=COST_ROUND_TRIP,
                     default_threshold=DEFAULT_PROB_THRESHOLD):
     """准备买入信号/胜负列：_trade（过滤后买入）、_win（净收益>0）、_sector
 
@@ -297,7 +297,7 @@ def _group_full_metrics(group, key, horizon, reliability_threshold):
     return rows
 
 
-def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
+def evaluate_win_rate(df, horizon, cost=COST_ROUND_TRIP,
                       reliability_threshold=30, default_threshold=DEFAULT_PROB_THRESHOLD):
     """买入胜率 + 基准胜率 + 超额 lift（含板块 / 个股拆分）
 
@@ -427,7 +427,7 @@ def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
     }
 
 
-def evaluate(df, horizon, reliability_threshold=30, cost=DEFAULT_TRANSACTION_COST):
+def evaluate(df, horizon, reliability_threshold=30, cost=COST_ROUND_TRIP):
     df = _normalize_columns(df.copy())
     if 'is_correct' not in df.columns:
         raise ValueError("CSV 缺少 Is_Correct 列")
@@ -748,7 +748,7 @@ def main():
     parser.add_argument('--output', type=str, default=None, help='输出 markdown 路径')
     parser.add_argument('--reliability-threshold', type=int, default=30,
                         help='可靠性有效样本阈值（默认30）')
-    parser.add_argument('--cost', type=float, default=DEFAULT_TRANSACTION_COST,
+    parser.add_argument('--cost', type=float, default=COST_ROUND_TRIP,
                         help='双边交易成本（默认0.005，与 walk-forward 一致）')
     parser.add_argument('--compare', type=str, default=None,
                         help='另一个周期的 prediction_analysis.csv，用于跨周期一致性标注')

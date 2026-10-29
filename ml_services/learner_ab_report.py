@@ -28,7 +28,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ml_services import backtest_eval as be
 from ml_services.eval_overfit import build_matrix, cscv_pbo, deflated_sharpe
-from ml_services.monthly_guardrail import signal_lift, COST
+from ml_services.monthly_guardrail import signal_lift
+from ml_services.costs import COST_ROUND_TRIP
 from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats
 
 LEARNERS = ['catboost', 'lightgbm']
@@ -87,7 +88,7 @@ def metrics_for(csv, horizon, market='a', with_guardrail=True):
         return out
 
     panel = load_panel(csv, market=market)
-    bt = backtest(panel, horizon, TOPK, cost=COST)
+    bt = backtest(panel, horizon, TOPK, cost=COST_ROUND_TRIP)
     st = _stats(bt['top_net'].values, horizon)
     ci = bootstrap(bt['top_net'].values, horizon)
     _, base, lift = signal_lift(df)
@@ -123,7 +124,7 @@ def render(horizon, rows):
     """rows: {learner: metrics dict}"""
     L = [f"# A股学习器 A/B 对照（{horizon}d）\n",
          f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}",
-         f"- TopK={TOPK}（raw 打分），成本 {COST:.3f}，判定看 lift/净IR/PBO/DSR（D3/D10），不看绝对准确率\n"]
+         f"- TopK={TOPK}（raw 打分），成本 {COST_ROUND_TRIP:.3f}，判定看 lift/净IR/PBO/DSR（D3/D10），不看绝对准确率\n"]
 
     has_g = all('ir' in r for r in rows.values())
     cols = [l for l in LEARNERS if l in rows]

@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ml_services.strategy_eval import (  # noqa: E402
     daily_mark, static_matched, metrics_daily, has_timing_increment)
 
-COST = 0.005  # 单边换手成本（进出各计一次）
+from ml_services.costs import COST_ROUND_TRIP
 CSV_RE = re.compile(r'hsi_prediction_analysis_[0-9_]+\.csv')
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -97,7 +97,7 @@ def overlay(csv, horizon, exposure_flat=0.0):
     pos = np.where(rb['pred'].astype(int).values == 1, 1.0, exposure_flat)
     entry = np.abs(np.diff(np.r_[pos[0], pos]))
     ret = rb['actual_return'].values
-    sig = pos * ret - entry * COST
+    sig = pos * ret - 0.5 * entry * COST_ROUND_TRIP
     wbar = float(pos.mean())
     static = wbar * ret
     rows = {
@@ -140,7 +140,7 @@ def daily_overlay(csv, horizon, exposure_flat=0.0):
     stance = rb.set_index('date')['pred'].reindex(hi, method='ffill').fillna(0)
     pos = pd.Series(np.where(stance.values == 1, 1.0, exposure_flat), index=hi)
     d = dr.reindex(hi)
-    sig = daily_mark(d, pos, cost_per_turnover=COST, lag=1).dropna()   # 唯一实现
+    sig = daily_mark(d, pos, round_trip_cost=COST_ROUND_TRIP, lag=1).dropna()   # 唯一实现
     wbar = float(pos.mean())
     rows = {'信号(20d仓·逐日估值)': sig,
             f'静态等仓位({wbar:.2f})': static_matched(d, wbar).reindex(sig.index),

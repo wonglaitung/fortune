@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-COST = 0.001
+COST_PER_SIDE = 0.001  # 单边 0.1%（往返 0.2%）
 MAXH = 250
 
 
@@ -64,7 +64,7 @@ def simulate(close, sigma_scale, label):
         if exit_i is None:
             exit_i, direction = min(i + MAXH, len(c) - 1), 'timeout'
         gross = c[exit_i] / entry - 1
-        trades.append((pd.Timestamp(close.index[i]).date(), direction, gross, gross - 2 * COST,
+        trades.append((pd.Timestamp(close.index[i]).date(), direction, gross, gross - 2 * COST_PER_SIDE,
                        exit_i - i))
     df = pd.DataFrame(trades, columns=['entry_date', 'exit_dir', 'gross', 'net', 'hold_days'])
     if df.empty:

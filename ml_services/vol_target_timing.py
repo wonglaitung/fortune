@@ -33,7 +33,7 @@ import pandas as pd
 
 TRADING_DAYS = 252
 # 港股单边成本 ≈ 23bps（印花税 0.13% + 佣金 + 滑点），保守取 0.13% 印花税口径
-COST_PER_TURNOVER = 0.0023
+from ml_services.costs import COST_ROUND_TRIP
 DD_REDUCTION = 0.8
 GRID_TARGET = (0.10, 0.12, 0.15)
 GRID_WINDOW = (20, 60)
@@ -63,34 +63,34 @@ def to_monthly(w: pd.Series) -> pd.Series:
     return pd.Series(monthly.reindex(key).to_numpy(), index=w.index)
 
 
-def _turnover_cost(w_pos: pd.Series, cost_per_turnover: float):
+def _turnover_cost(w_pos: pd.Series, round_trip_cost: float):
     """换手成本：|Δw| * 单边成本（首次建仓也算换手）。"""
     turn = w_pos.diff().abs()
     if len(turn) > 0:
         turn.iloc[0] = abs(w_pos.iloc[0])
-    return turn * cost_per_turnover, turn
+    return 0.5 * turn * round_trip_cost, turn
 
 
 def strat_returns(asset_returns: pd.Series, w: pd.Series, lag: int = 1,
-                  cost_per_turnover: float = COST_PER_TURNOVER):
+                  round_trip_cost: float = COST_ROUND_TRIP):
     """给定目标仓位 w（T 决定），T+lag 生效；扣换手成本。
 
     Returns: (net, gross, turnover, w_pos)
     """
     w_pos = w.shift(lag).fillna(0.0)
     gross = w_pos * asset_returns
-    cost, turn = _turnover_cost(w_pos, cost_per_turnover)
+    cost, turn = _turnover_cost(w_pos, round_trip_cost)
     net = gross - cost
     return net, gross, turn, w_pos
 
 
 def static_matched_returns(asset_returns: pd.Series, target_exposure: float,
-                           cost_per_turnover: float = COST_PER_TURNOVER) -> pd.Series:
+                           round_trip_cost: float = COST_ROUND_TRIP) -> pd.Series:
     """静态等平均仓位对照：恒定 target_exposure，月频再平衡回该值（含成本）。"""
     w = pd.Series(float(target_exposure), index=asset_returns.index)
     w_m = to_monthly(w)
     net, _, _, _ = strat_returns(asset_returns, w_m, lag=1,
-                                 cost_per_turnover=cost_per_turnover)
+                                 round_trip_cost=round_trip_cost)
     return net
 
 
@@ -119,7 +119,7 @@ def metrics(returns: pd.Series) -> dict:
 
 def backtest(close: pd.Series, target_vol: float = HEADLINE_TARGET,
              window: int = HEADLINE_WINDOW,
-             cost_per_turnover: float = COST_PER_TURNOVER,
+             round_trip_cost: float = COST_ROUND_TRIP,
              monthly: bool = True) -> dict:
     """对恒指 ETF 做 vol-target 回测，返回 vt / bh / st 三条曲线与指标。
 
@@ -135,10 +135,10 @@ def backtest(close: pd.Series, target_vol: float = HEADLINE_TARGET,
     ret = ret.loc[start:]
     w = w.loc[start:]
 
-    vt_net, vt_gross, turn, w_pos = strat_returns(ret, w, cost_per_turnover=cost_per_turnover)
+    vt_net, vt_gross, turn, w_pos = strat_returns(ret, w, round_trip_cost=round_trip_cost)
     bh = ret
     mean_exp = float(w_pos.mean())
-    st_net = static_matched_returns(ret, mean_exp, cost_per_turnover)
+    st_net = static_matched_returns(ret, mean_exp, round_trip_cost)
     return dict(
         vt=vt_net, bh=bh, st=st_net, w_pos=w_pos, turnover=turn,
         mean_exp=mean_exp, ret=ret, start=start,
@@ -147,9 +147,9 @@ def backtest(close: pd.Series, target_vol: float = HEADLINE_TARGET,
 
 
 def evaluate_config(close: pd.Series, target_vol: float, window: int,
-                    cost_per_turnover: float = COST_PER_TURNOVER) -> dict:
+                    round_trip_cost: float = COST_ROUND_TRIP) -> dict:
     """单格判据：DD 条件 + Calmar(vt>=st,bh)。"""
-    r = backtest(close, target_vol, window, cost_per_turnover)
+    r = backtest(close, target_vol, window, round_trip_cost)
     dd_ok = (r['m_vt']['maxdd'] >= DD_REDUCTION * r['m_bh']['maxdd'])  # 负数比较
     calmar_vt, calmar_st, calmar_bh = r['m_vt']['calmar'], r['m_st']['calmar'], r['m_bh']['calmar']
     calmar_ok = (calmar_vt >= calmar_st) and (calmar_vt >= calmar_bh)
@@ -158,8 +158,8 @@ def evaluate_config(close: pd.Series, target_vol: float, window: int,
                 calmar_bh=calmar_bh, maxdd_vt=r['m_vt']['maxdd'], maxdd_bh=r['m_bh']['maxdd'])
 
 
-def run_grid(close: pd.Series, cost_per_turnover: float = COST_PER_TURNOVER) -> dict:
-    cells = [evaluate_config(close, t, w, cost_per_turnover)
+def run_grid(close: pd.Series, round_trip_cost: float = COST_ROUND_TRIP) -> dict:
+    cells = [evaluate_config(close, t, w, round_trip_cost)
              for t in GRID_TARGET for w in GRID_WINDOW]
     n = len(cells)
     dd_pass = sum(c['dd_ok'] for c in cells)
@@ -190,15 +190,15 @@ def _fmt_row(name, m):
             f"maxDD {m['maxdd']*100:>6.1f}%  Calmar {m['calmar']:>5.2f}")
 
 
-def report(close: pd.Series, cost_per_turnover: float = COST_PER_TURNOVER) -> bool:
+def report(close: pd.Series, round_trip_cost: float = COST_ROUND_TRIP) -> bool:
     """跑 headline + 网格，打印并返回是否 PASS。"""
-    head = evaluate_config(close, HEADLINE_TARGET, HEADLINE_WINDOW, cost_per_turnover)
+    head = evaluate_config(close, HEADLINE_TARGET, HEADLINE_WINDOW, round_trip_cost)
     r = head['r']
     print("=" * 96)
     print(f"波动目标风控层（standalone 恒指 ETF）  样本 {r['start'].date()} ~ {close.index[-1].date()}"
           f"  ({r['m_bh']['n']} 交易日)")
     print(f"headline: target={HEADLINE_TARGET:.0%}  window={HEADLINE_WINDOW}  "
-          f"月频再平衡  单边成本={cost_per_turnover*100:.2f}%  平均仓位={r['mean_exp']:.1%}")
+          f"月频再平衡  单边成本={round_trip_cost*100:.2f}%  平均仓位={r['mean_exp']:.1%}")
     print("-" * 96)
     print(_fmt_row('vol-target', r['m_vt']))
     print(_fmt_row('买入持有', r['m_bh']))
@@ -210,7 +210,7 @@ def report(close: pd.Series, cost_per_turnover: float = COST_PER_TURNOVER) -> bo
     print(f"② Calmar(vt)={head['calmar_vt']:.2f} vs (st)={head['calmar_st']:.2f} vs (bh)="
           f"{head['calmar_bh']:.2f}  -> {'PASS' if head['calmar_ok'] else 'FAIL'}")
     print("-" * 96)
-    grid = run_grid(close, cost_per_turnover)
+    grid = run_grid(close, round_trip_cost)
     print(f"③ 网格 {{10,12,15}}%x{{20,60}}: DD 过 {grid['dd_pass']}/{grid['n']}, "
           f"Calmar 过 {grid['calmar_pass']}/{grid['n']}  (需各 >= {GRID_MIN_PASS})  -> "
           f"{'PASS' if grid['grid_ok'] else 'FAIL'}")
@@ -233,7 +233,7 @@ def main():
     ap.add_argument('--start', type=str, default='2020-01-01', help='回测起始日（PIT）')
     ap.add_argument('--target-vol', type=float, default=HEADLINE_TARGET)
     ap.add_argument('--window', type=int, default=HEADLINE_WINDOW)
-    ap.add_argument('--cost', type=float, default=COST_PER_TURNOVER, help='单边换手成本')
+    ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP, help='往返成本（默认 0.5%，单边 0.25%）')
     ap.add_argument('--period-days', type=int, default=2600)
     args = ap.parse_args()
 
@@ -246,7 +246,7 @@ def main():
               f"实现波动(年化) {rv*100:.1f}%  目标 {args.target_vol*100:.0f}%  "
               f"-> 建议仓位 {w.iloc[-1]*100:.0f}%")
         return
-    report(close, cost_per_turnover=args.cost)
+    report(close, round_trip_cost=args.cost)
 
 
 if __name__ == '__main__':

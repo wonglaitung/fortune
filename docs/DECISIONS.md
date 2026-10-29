@@ -5851,3 +5851,41 @@ H1 = 前 100 宇宙超额 IR>0 且 CI 下界>0，且不低于 30 只；主窗与
 **存储影响**：5d ≈7.5MB、20d ≈10MB（3 模型），10d 单模型 ≈9MB；月训时间 5d/20d 约 3 倍。
 
 **适用范围**：310 池 / 5d,20d · **WF 内部比较 ✓ / 外推生产 ✗**。
+
+## D97（2026-10-29）：**成本口径统一 —— 修复「|Δw| 路径」2 倍重复计费**
+
+**问题**：仓库存在两套扣法，且同一常数 0.005 被当成两种含义：
+- 股票管线（`portfolio_backtest`/`live_topk`）：`单边换手 × 0.005` ⇒ 往返 0.5%（单边 0.25%）；
+- 择时/仓位路径（`strategy_eval.daily_mark`、`hsi_risk_overlay`、`hsi_signal_backtest`、
+  `vol_target_timing`、`run_m1`、`hsi_risk_overlay_monitor`）：`Σ|Δw| × 0.005`
+  ⇒ **每腿 0.5% = 往返 1.0%**，比股票管线严一倍。
+
+**规范（唯一来源 `ml_services/costs.py`）**
+- `COST_ROUND_TRIP = 0.005`（一次完整买入+卖出）；单边 = 0.0025。
+- 持仓替换：`成本 = 单边换手 × COST_ROUND_TRIP`
+- 仓位变化：`成本 = 0.5 × Σ|Δw| × COST_ROUND_TRIP`
+  （0→1 全买 = 半次往返；0→1→0 合计 |Δw|=2 = 一次往返）
+
+**改动**
+- 修复 `|Δw|` 路径的 0.5 因子：`strategy_eval.daily_mark`（参数改名 `round_trip_cost`）、
+  `hsi_risk_overlay`、`hsi_signal_backtest`、`vol_target_timing`、`run_m1/run_m1b`、
+  `hsi_risk_overlay_monitor`、`hsi_enh_eval`、`hsi_signal_static_check`。
+- 常量统一改名 `COST → COST_ROUND_TRIP`（`portfolio_backtest`/`monthly_guardrail`/
+  `live_topk`/`performance_monitor`/`anomaly_*`/`backtest_eval`/`meta_labeling_*` 等）；
+  `--cost` 帮助文本改为「往返成本（单边=该值/2）」。
+- `scripts/classic_timing_backtest.py` 保持单边 0.1%（往返 0.2%，指数 ETF 无印花税）；
+  `m200_sigma_rule_backtest` 明确命名为 `COST_PER_SIDE`。
+
+**影响**
+- 股票管线**数值不变**（原本就是往返口径）⇒ BASELINES 全部仍有效。
+- 择时/仓位路径成本**减半**（0.5%→0.25%/边）；这些结论原本均为 null（D32/D35/D43），
+  成本减半不会把 null 变成 alpha。
+- `classic_timing_backtest` 口径等价（0.1%/边未变），重跑仍 1/5 通过（仅 MA200 单点，
+  D43 的「相邻参数即垮」结论不变）。
+- ⚠️ `hsi_risk_overlay` / `vol_target_timing` 的**重跑被 yfinance 无超时挂起阻塞**（预存问题），
+  本次只做代码修复 + 单测；数值影响是确定性的（成本减半）。
+
+**验证**：`tests/test_costs.py`（3 条：往返/单边、|Δw| 半次、daily_mark 全往返）；
+全量 **383 passed**。
+
+**适用范围**：全项目回测口径 · 工程修正（不涉及 alpha 结论）。

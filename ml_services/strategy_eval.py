@@ -18,7 +18,7 @@ import pandas as pd
 TRADING_DAYS = 252
 
 
-def daily_mark(asset_returns: pd.Series, w, cost_per_turnover: float = 0.0, lag: int = 1) -> pd.Series:
+def daily_mark(asset_returns: pd.Series, w, round_trip_cost: float = 0.0, lag: int = 1) -> pd.Series:
     """逐日 mark-to-market：仓位 `w`（T 决定）T+lag 生效，扣换手成本。
 
     - 不重叠期收益的稀疏净值会**低估**日内回撤、虚报风控（lessons 三.78）——一律用本函数逐日记。
@@ -30,7 +30,8 @@ def daily_mark(asset_returns: pd.Series, w, cost_per_turnover: float = 0.0, lag:
     turn = (w_pos - w_pos.shift(1)).abs()
     if len(turn):
         turn.iloc[0] = abs(w_pos.iloc[0])
-    return w_pos * asset_returns - turn * cost_per_turnover
+    # D97：|Δw| 是单边变化；买+卖合计才是一次往返 ⇒ 乘 0.5
+    return w_pos * asset_returns - 0.5 * turn * round_trip_cost
 
 
 def static_matched(asset_returns: pd.Series, exposure: float) -> pd.Series:

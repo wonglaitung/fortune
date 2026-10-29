@@ -30,7 +30,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-COST = 0.005  # 双边成本（与 walk_forward / portfolio_backtest 一致）
+from ml_services.costs import COST_ROUND_TRIP
 STATE_FILE = 'data/live_portfolio/topk_state.json'
 
 
@@ -94,7 +94,7 @@ def run(pred_csv, topk, horizon, commit=False):
     buys = [c for c in tgt if c not in cur]
     sells = [c for c in cur if c not in tgt_set]
     turnover = (len(buys) / k) if k > 0 else 0.0
-    est_cost = turnover * COST
+    est_cost = turnover * COST_ROUND_TRIP
 
     data_date = 'unknown'
     try:
@@ -114,7 +114,7 @@ def run(pred_csv, topk, horizon, commit=False):
     print(f"\n买入 {len(buys)}: {buys}")
     print(f"卖出 {len(sells)}: {sells}")
     print(f"换手率(单边): {turnover*100:.0f}%　预计成本: {est_cost*100:.2f}%")
-    print(f"\n执行建议：次日开盘等权买入目标持仓；卖出手续费+滑点按 {COST*100:.1f}% 双边计")
+    print(f"\n执行建议：次日开盘等权买入目标持仓；卖出手续费+滑点按 {COST_ROUND_TRIP*100:.1f}% 双边计")
 
     if commit:
         if data_date != 'unknown' and st.get('last_rebalance_date') == data_date:

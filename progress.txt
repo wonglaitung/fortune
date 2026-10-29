@@ -5039,3 +5039,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 10d：+0.26→−0.14、DSR 0.790→0.719 ⇒ 保持单 seed。
 - 20d：+0.24→+0.57、DSR 0.800→0.883 ⇒ 采纳（D95）。
 - 默认值收敛到 LGBM_BAG_SEEDS_BY_HORIZON（生产与 WF 同源）；月训脚本校验 bag 数。
+
+## 2026-10-29：成本口径统一（D97）
+
+- 新增 ml_services/costs.py（COST_ROUND_TRIP=0.5%，单边 0.25%），两种扣法写死。
+- 修复择时/仓位路径的 2 倍重复计费（daily_mark/hsi_risk_overlay/hsi_signal/
+  vol_target/run_m1/monitor 等加 0.5 因子）；常量统一改名 COST_ROUND_TRIP。
+- 股票管线数值不变（原本即往返口径）；classic timing 口径等价，重跑 1/5 通过。
+- HSI overlay/vol-target 重跑被 yfinance 无超时挂起阻塞（预存问题），数值影响确定（成本减半）。
+- 新增 tests/test_costs.py；383 passed。

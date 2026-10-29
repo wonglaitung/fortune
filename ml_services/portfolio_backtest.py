@@ -7,7 +7,7 @@ Phase 3 最小版：把 OOS 预测分数转成组合，评估**扣成本后**的
 方法：
   - 非重叠调仓（每 horizon 天一次）
   - TopK 组合（等权），按 raw prob 排序（D73；行业中性已删除）
-  - 成本 = 单边换手率 × 双边成本(TOTAL_COST)
+  - 成本 = 单边换手率 × 往返成本(COST_ROUND_TRIP)
   - 多空 Q5-Q1
 输出：净均收益 / 净IR / 胜率 / 换手 / 累计，并与等权基准对比；
 含超额（TopK净 − 等权基准）bootstrap CI 与逐年超额分解
@@ -34,7 +34,7 @@ from ml_services.selection import (          # noqa: E402
     selection_score,
 )
 
-COST = 0.005  # 双边成本（与 walk_forward TOTAL_COST 一致）
+from ml_services.costs import COST_ROUND_TRIP
 DEFAULT_PRED = {
     5: 'output/20260922_212530_catboost_5d/prediction_analysis.csv',
     20: 'output/20260922_162806_catboost_20d/prediction_analysis.csv',
@@ -116,7 +116,7 @@ def selection_ic(df, min_per_day=20, min_sector=2):
     return out
 
 
-def backtest(df, horizon, topk, cost=COST, dropout=0, vol_target=None):
+def backtest(df, horizon, topk, cost=COST_ROUND_TRIP, dropout=0, vol_target=None):
     dates = sorted(df['date'].unique())
     rb = dates[::horizon]  # 非重叠调仓
     rows = []
@@ -199,7 +199,7 @@ def _stats(x, horizon):
     return dict(n=len(x), mean=mean, ir=ir, win=float((x > 0).mean()), cum=cum)
 
 
-def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None, market='hk'):
+def run(horizon, pred_csv, topk, out_md, cost=COST_ROUND_TRIP, dropout=0, vol_target=None, market='hk'):
     df = load_panel(pred_csv, market=market)
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
@@ -317,7 +317,7 @@ def main():
     ap = argparse.ArgumentParser(description='Phase3 最小 TopK 组合回测')
     ap.add_argument('--horizon', type=int, required=True, choices=[5, 10, 20])
     ap.add_argument('--topk', type=int, default=10)
-    ap.add_argument('--cost', type=float, default=COST, help='双边成本（默认0.005）')
+    ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP, help='往返成本（默认0.005；单边=该值/2）')
     ap.add_argument('--dropout', type=int, default=0, help='TopK-Dropout 每期剔除只数')
     ap.add_argument('--vol-target', type=float, default=None, help='年化波动率目标（如 0.15）')
     ap.add_argument('--pred', type=str, default=None)

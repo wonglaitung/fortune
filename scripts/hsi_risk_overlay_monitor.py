@@ -29,7 +29,7 @@ sys.path.insert(0, ROOT)
 
 LEDGER = os.path.join(ROOT, 'data', 'hsi_risk_overlay_ledger.csv')
 JSON_PATH = os.path.join(ROOT, 'data', 'hsi_risk_overlay_latest_20d.json')
-COST = 0.005
+from ml_services.costs import COST_ROUND_TRIP
 COLS = ['signal_date', 'stance', 'prob', 'exposure', 'horizon',
         'fill_date', 'hsi_ret', 'signal_ret', 'hold_ret', 'filled']
 
@@ -109,7 +109,7 @@ def update():
             led.at[i, 'fill_date'] = str(idx[p0 + h].date())
             led.at[i, 'hsi_ret'] = ret
             led.at[i, 'hold_ret'] = ret
-            led.at[i, 'signal_ret'] = float(r['exposure']) * ret - COST * (1.0 if r['exposure'] != 1.0 else 0.0)
+            led.at[i, 'signal_ret'] = float(r['exposure']) * ret - 0.5 * abs(float(r['exposure']) - 1.0) * COST_ROUND_TRIP
             led.at[i, 'filled'] = True
             print(f"✅ 回填 {r['signal_date']} → {idx[p0+h].date()}  HSI {ret*100:+.1f}%")
 
@@ -147,7 +147,7 @@ def _daily_mark(led):
     pos_lag = pos.shift(1).fillna(0.0)
     turn = (pos - pos_lag).abs()
     d = dr.reindex(hi)
-    sig = (pos_lag * d - turn * COST).dropna()
+    sig = (pos_lag * d - 0.5 * turn * COST_ROUND_TRIP).dropna()
     wbar = float(pos.mean())
     return wbar, {'信号(逐日刹车)': sig,
                   f'静态等仓位({wbar:.2f})': wbar * d.reindex(sig.index),

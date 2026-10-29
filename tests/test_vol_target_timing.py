@@ -11,7 +11,7 @@ import pytest
 from ml_services.vol_target_timing import (
     realized_vol, vol_exposure, to_monthly, strat_returns,
     static_matched_returns, metrics, backtest, evaluate_config, run_grid,
-    TRADING_DAYS, COST_PER_TURNOVER,
+    TRADING_DAYS, COST_ROUND_TRIP,
 )
 
 

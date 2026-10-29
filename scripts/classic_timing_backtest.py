@@ -21,7 +21,7 @@ sys.path.insert(0, ROOT)
 from ml_services.strategy_eval import (  # noqa: E402
     daily_mark, static_matched, metrics_daily, has_timing_increment)
 
-COST = 0.001
+COST_ROUND_TRIP = 0.002  # 往返 0.2%（指数 ETF，无印花税；单边 0.1%，D97）
 RULES = ['faber10m', 'ma150', 'ma200', 'ma250', 'mom12']
 
 
@@ -68,7 +68,7 @@ def main():
     for rule in RULES:
         pos = position(close, rule).reindex(dr.index).fillna(0.0)
         wbar = float(pos.mean())
-        net = daily_mark(dr, pos, cost_per_turnover=COST)     # 逐日 mark（含 T+1 + 换手成本）
+        net = daily_mark(dr, pos, round_trip_cost=COST_ROUND_TRIP)     # 逐日 mark（含 T+1 + 换手成本）
         st = static_matched(dr, wbar)                          # 静态等仓位对照
         m, ms = metrics_daily(net), metrics_daily(st)
         ok = (m['maxdd'] > bh['maxdd']) and (m['maxdd'] > ms['maxdd']) and (m['sharpe'] >= bh['sharpe'] - 0.05)

@@ -104,7 +104,7 @@ def evaluate(period="10y"):
     st = res["Market_Regime"].reindex(h.index)
 
     def _strat(w, name):
-        net = daily_mark(r, w, cost_per_turnover=0.005, lag=1)
+        net = daily_mark(r, w, round_trip_cost=0.005, lag=1)
         m = metrics_daily(net, horizon=1)
         return {"name": name, "sharpe": round(float(m["sharpe"]), 2),
                 "cagr_pct": round(float(m["cagr"]) * 100, 1),

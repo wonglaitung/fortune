@@ -21,7 +21,7 @@ os.makedirs(OUT, exist_ok=True)
 sys.path.insert(0, REPO)
 sys.path.insert(0, BASE)
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe  # noqa: E402
-from run_m1 import COST, HORIZON, N_TRIALS, load_pairs, build_signal, fwd_return  # noqa: E402
+from run_m1 import COST_ROUND_TRIP, HORIZON, N_TRIALS, load_pairs, build_signal, fwd_return  # noqa: E402
 
 # 独立窗：短窗 3 对（A 股 2021/22 才 IPO）
 SHORT = ["600938", "600941", "601728"]  # 油 / 移 / 电
@@ -78,7 +78,7 @@ def main():
     bench = R["ret_ew_h"]
     raw = R["ret_bh"]
     turn = R["exposure"].diff().abs().fillna(R["exposure"].iloc[0] * 0.5)
-    net = raw - COST * turn
+    net = raw - 0.5 * COST_ROUND_TRIP * turn
 
     sn = stats(net.values)
     sb = stats(bench)
