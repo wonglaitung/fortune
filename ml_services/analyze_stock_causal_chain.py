@@ -18,7 +18,7 @@ import json
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -29,24 +29,24 @@ RANDOM_SEED = 42
 OUTPUT_DIR = "output"
 
 
-# CatBoost 参数（完整版，按周期调整）
-def get_full_catboost_params(horizon):
+# LightGBM 参数（完整版，按周期调整；D75 唯一学习器）
+def get_full_lgbm_params(horizon):
     if horizon == 1:
-        return {'iterations': 100, 'learning_rate': 0.15, 'depth': 5,
-                'l2_leaf_reg': 3, 'random_seed': RANDOM_SEED,
-                'loss_function': 'Logloss', 'auto_class_weights': 'Balanced', 'verbose': 0}
+        return {'n_estimators': 100, 'learning_rate': 0.15, 'max_depth': 5,
+                'reg_lambda': 3, 'random_state': RANDOM_SEED,
+                'class_weight': 'balanced', 'verbose': -1}
     elif horizon == 5:
-        return {'iterations': 100, 'learning_rate': 0.15, 'depth': 4,
-                'l2_leaf_reg': 3, 'subsample': 0.7, 'random_seed': RANDOM_SEED,
-                'loss_function': 'Logloss', 'auto_class_weights': 'Balanced', 'verbose': 0}
+        return {'n_estimators': 100, 'learning_rate': 0.15, 'max_depth': 4,
+                'reg_lambda': 3, 'subsample': 0.7, 'random_state': RANDOM_SEED,
+                'class_weight': 'balanced', 'verbose': -1}
     elif horizon == 10:
-        return {'iterations': 100, 'learning_rate': 0.15, 'depth': 4,
-                'l2_leaf_reg': 3, 'subsample': 0.75, 'random_seed': RANDOM_SEED,
-                'loss_function': 'Logloss', 'auto_class_weights': 'Balanced', 'verbose': 0}
+        return {'n_estimators': 100, 'learning_rate': 0.15, 'max_depth': 4,
+                'reg_lambda': 3, 'subsample': 0.75, 'random_state': RANDOM_SEED,
+                'class_weight': 'balanced', 'verbose': -1}
     else:
-        return {'iterations': 100, 'learning_rate': 0.15, 'depth': 4,
-                'l2_leaf_reg': 3, 'subsample': 0.8, 'random_seed': RANDOM_SEED,
-                'loss_function': 'Logloss', 'auto_class_weights': 'Balanced', 'verbose': 0}
+        return {'n_estimators': 100, 'learning_rate': 0.15, 'max_depth': 4,
+                'reg_lambda': 3, 'subsample': 0.8, 'random_state': RANDOM_SEED,
+                'class_weight': 'balanced', 'verbose': -1}
 
 
 class FullFeatureEngineer:
@@ -209,7 +209,7 @@ def run_single_stock_walkforward(stock_code, stock_name, feature_engineer):
                 y_train = train_clean[target_col]
 
                 try:
-                    model = CatBoostClassifier(**get_full_catboost_params(horizon))
+                    model = LGBMClassifier(**get_full_lgbm_params(horizon))
                     model.fit(X_train, y_train)
 
                     X_test = test_clean[available_features]

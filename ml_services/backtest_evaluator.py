@@ -131,62 +131,15 @@ class BacktestEvaluator:
 
         # 生成预测
         if hasattr(model, 'predict_proba'):
-            # 检查是否是 CatBoost 模型对象（包含 catboost_model 属性）
-            if hasattr(model, 'catboost_model') and hasattr(model, 'model_type') and model.model_type == 'catboost':
-                # CatBoost 模型需要使用 Pool 对象
-                from catboost import Pool
-
-                categorical_encoders = getattr(model, 'categorical_encoders', {})
-                feature_columns = getattr(model, 'feature_columns', [])
-                catboost_model = model.catboost_model
-
-# 确保 test_data 是 DataFrame
-                if isinstance(test_data, pd.DataFrame):
-                    # 使用 test_data 的实际列名，过滤出模型需要的特征
-                    available_features = [col for col in feature_columns if col in test_data.columns]
-                    if len(available_features) < len(feature_columns):
-                        missing_cols = [col for col in feature_columns if col not in test_data.columns]
-                        print(f"   ⚠️  缺失 {len(missing_cols)} 个特征，将补齐为 0")
-                    
-                    # 补齐缺失的特征
-                    test_df = test_data[available_features].copy()
-                    for col in feature_columns:
-                        if col not in test_df.columns:
-                            test_df[col] = 0.0
-                    
-                    # 确保列的顺序与训练时一致
-                    test_df = test_df[feature_columns]
-                else:
-                    # 如果是 numpy 数组，转换为 DataFrame
-                    test_df = pd.DataFrame(test_data, columns=feature_columns)
-
-                # 处理分类特征（使用训练时的编码器转换字符串为数字）
-                for col_name, encoder in categorical_encoders.items():
-                    if col_name in test_df.columns:
-                        try:
-                            test_df[col_name] = test_df[col_name].fillna('unknown').astype(str)
-                            test_df[col_name] = encoder.transform(test_df[col_name])
-                            test_df[col_name] = test_df[col_name].astype(np.int32)
-                        except ValueError:
-                            # 处理未见过的类别
-                            test_df[col_name] = 0
-
-                # 使用 Pool 对象进行预测
-                test_pool = Pool(data=test_df)
-                predictions = catboost_model.predict_proba(test_pool)[:, 1]
+            # 唯一学习器 = LightGBM（D75）；分类列转数值后直接 predict_proba
+            if isinstance(test_data, pd.DataFrame):
+                test_df = test_data.copy()
+                for col in test_df.columns:
+                    if test_df[col].dtype == 'object':
+                        test_df[col] = pd.Categorical(test_df[col]).codes
+                predictions = model.predict_proba(test_df)[:, 1]
             else:
-                # 其他模型直接使用 predict_proba
-                # 需要检查是否有 object 类型的列
-                if isinstance(test_data, pd.DataFrame):
-                    test_df = test_data.copy()
-                    # 将 object 类型的列转换为数值类型
-                    for col in test_df.columns:
-                        if test_df[col].dtype == 'object':
-                            # 尝试转换为字符串，再转换为类别编码
-                            test_df[col] = pd.Categorical(test_df[col]).codes
-                    predictions = model.predict_proba(test_df)[:, 1]
-                else:
-                    predictions = model.predict_proba(test_data)[:, 1]
+                predictions = model.predict_proba(test_data)[:, 1]
         elif hasattr(model, 'gbdt_model') and hasattr(model.gbdt_model, 'predict_proba'):
             # GBDTModel 需要使用 model.gbdt_model.predict_proba
             # 需要检查是否有 object 类型的列

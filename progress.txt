@@ -5062,3 +5062,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 20d：310 池超额 0.57→0.23（零售）/0.16（低佣）/0.04（银行），CI 均跨 0；
   自选 30 −0.11→−0.16。
 - 结论：生产 30 的 0.5% 基本合理；310 池研究此前偏乐观。默认仍 flat，模型模式显式开启。
+
+## 2026-10-29：P3 清理（CatBoost 残留 / 仓库体积）
+
+- 删除 3 个 CatBoost 研究脚本（stock_three_horizon / analyze_causal_chain / analyze_sector_rotation）；
+  `analyze_three_horizon_relationships` 与 `analyze_stock_causal_chain` 移植为 LightGBM；
+  `backtest_evaluator` 删除 CatBoost Pool 分支；requirements 移除 catboost。
+- `git gc --aggressive`：.git 4.0G → 485M。
+- output 7.2G → 3.2G：删除 59 个未在文档引用的 run 目录 + 175 个 walk_forward_*.json（3.9G）。
+- 385 passed。

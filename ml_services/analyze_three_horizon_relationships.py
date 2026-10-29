@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -194,9 +194,9 @@ def run_walkforward_predictions(df):
             y_train = train_clean[f'Target_{horizon}d']
 
             try:
-                model = CatBoostClassifier(
-                    iterations=200, learning_rate=0.05, depth=3,
-                    random_seed=RANDOM_SEED, auto_class_weights='Balanced', verbose=0
+                model = LGBMClassifier(
+                    n_estimators=200, learning_rate=0.05, max_depth=3,
+                    random_state=RANDOM_SEED, class_weight='balanced', verbose=-1
                 )
                 model.fit(X_train, y_train)
 
