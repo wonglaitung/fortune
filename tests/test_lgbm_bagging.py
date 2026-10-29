@@ -65,3 +65,26 @@ def test_per_horizon_defaults(tmp_path, monkeypatch):
     m10.label_mode = 'rank'; m10.community_ids = []
     m10._train_lightgbm(None, False, None, 10, X, y)
     assert len(m10.models) == 1
+
+
+def test_model_manifest_written_and_checked(tmp_path, monkeypatch):
+    import json
+    m, _ = _fit(tmp_path, monkeypatch, '1,2')
+    p = str(tmp_path / 'm.pkl')
+    m.save_model(p)
+    mp = str(tmp_path / 'm.manifest.json')
+    man = json.load(open(mp))
+    assert man['horizon'] == 20
+    assert man['n_models'] == 2
+    assert len(man['sha256']) == 64
+
+    m2 = TradingModel()
+    m2.load_model(p)  # 哈希一致：不应抛错
+    assert m2.models
+
+    # 文件被篡改 → 仍可加载，但应走告警分支（不抛异常）
+    with open(p, 'ab') as f:
+        f.write(b'x')
+    m3 = TradingModel()
+    m3.load_model(p)
+    assert m3.model is not None

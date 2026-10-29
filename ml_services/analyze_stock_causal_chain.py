@@ -131,7 +131,7 @@ def fetch_stock_data(stock_code, period_days=1460):
     try:
         import yfinance as yf
         ticker = yf.Ticker(stock_code)
-        df = ticker.history(period=f"{period_days}d", interval="1d")
+        df = ticker.history(period=f"{period_days}d", interval="1d", timeout=15)
         if df.empty or len(df) < 300:
             return None
         return df

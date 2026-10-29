@@ -1862,7 +1862,7 @@ def get_hsi_analysis():
     """
     try:
         hsi_ticker = yf.Ticker("^HSI")
-        hist = hsi_ticker.history(period="6mo")
+        hist = hsi_ticker.history(period="6mo", timeout=15)
 
         if hist.empty:
             return None
@@ -2068,7 +2068,7 @@ def get_current_market_state():
             # 回退到 yfinance
             print("⚠️ 腾讯财经获取恒指数据失败，回退到 yfinance")
             hsi_ticker = yf.Ticker("^HSI")
-            hsi_df = hsi_ticker.history(period="5mo")
+            hsi_df = hsi_ticker.history(period="5mo", timeout=15)
 
             if len(hsi_df) < 10:
                 return None
@@ -2665,7 +2665,7 @@ def get_stock_technical_indicators(stock_code):
 
         # 获取股票数据 - 使用完整的股票代码（带.HK）
         ticker = yf.Ticker(stock_code)
-        hist = ticker.history(period="6mo")
+        hist = ticker.history(period="6mo", timeout=15)
 
         if hist.empty:
             print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")

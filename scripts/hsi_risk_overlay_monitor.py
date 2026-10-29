@@ -38,7 +38,7 @@ def get_hsi_close():
     """HSI 收盘序列（yf，失败回退缓存 HSI.pkl）。"""
     try:
         import yfinance as yf
-        h = yf.Ticker('^HSI').history(period='5y', interval='1d')
+        h = yf.Ticker('^HSI').history(period='5y', interval='1d', timeout=15)
         if not h.empty:
             s = h['Close'].copy()
             s.index = pd.to_datetime(s.index)

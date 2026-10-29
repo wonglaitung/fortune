@@ -5049,6 +5049,54 @@ class TradingModel(BaseTradingModel):
             traceback.print_exc()
             return None
 
+    def _manifest_path(self, filepath):
+        return filepath[:-4] + '.manifest.json' if filepath.endswith('.pkl') else filepath + '.manifest.json'
+
+    def _write_model_manifest(self, filepath):
+        """D100：写模型清单（sha256/参数/bag/特征数/训练时间），供日常校验。"""
+        try:
+            import datetime
+            import hashlib
+            p = self._manifest_path(filepath)
+            man = {
+                'file': os.path.basename(filepath),
+                'sha256': hashlib.sha256(open(filepath, 'rb').read()).hexdigest(),
+                'horizon': int(getattr(self, 'horizon', 0)),
+                'label_mode': getattr(self, 'label_mode', 'absolute'),
+                'n_features': len(getattr(self, 'feature_columns', None) or []),
+                'n_estimators': getattr(self, 'actual_n_estimators', None),
+                'n_models': len(getattr(self, 'models', None) or [self.model]),
+                'bag_spec': (os.environ.get('LGBM_BAG_SEEDS')
+                             or LGBM_BAG_SEEDS_BY_HORIZON.get(int(getattr(self, 'horizon', 0)), '42')),
+                'params': load_lgbm_params(int(getattr(self, 'horizon', 0))),
+                'trained_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            }
+            tmp = p + '.tmp'
+            with open(tmp, 'w') as f:
+                json.dump(man, f, indent=2, sort_keys=True)
+            os.replace(tmp, p)
+        except Exception as e:
+            logger.warning(f"写模型 manifest 失败: {e}")
+
+    def _check_model_manifest(self, filepath):
+        """D100：加载时校验 manifest 哈希；缺失/不匹配只告警（不阻断推理）。"""
+        try:
+            import hashlib
+            p = self._manifest_path(filepath)
+            if not os.path.exists(p):
+                logger.warning(f"模型 manifest 缺失: {p}")
+                return
+            with open(p) as f:
+                man = json.load(f)
+            h = hashlib.sha256(open(filepath, 'rb').read()).hexdigest()
+            if h != man.get('sha256'):
+                logger.warning(f"模型 manifest 哈希不匹配: {filepath}（文件被替换或重训未更新 manifest）")
+            else:
+                logger.info(f"模型 manifest 校验通过: {os.path.basename(filepath)} "
+                            f"(horizon={man.get('horizon')}, n_models={man.get('n_models')})")
+        except Exception as e:
+            logger.warning(f"校验模型 manifest 失败: {e}")
+
     def save_model(self, filepath):
         """保存模型（唯一学习器 = LightGBM）"""
         model_data = {
@@ -5070,6 +5118,7 @@ class TradingModel(BaseTradingModel):
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, filepath)
+        self._write_model_manifest(filepath)
         print(f"LightGBM 模型已保存到 {filepath}")
 
     def load_model(self, filepath):
@@ -5087,6 +5136,7 @@ class TradingModel(BaseTradingModel):
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         self.community_ids = model_data.get('community_ids', None)  # 恢复社区 ID 列表
         self.label_mode = model_data.get('label_mode', 'absolute')  # D59
+        self._check_model_manifest(filepath)
         print(f"{learner} 模型已从 {filepath} 加载"
               + (f"（社区 ID: {self.community_ids}）" if self.community_ids else "")
               + (f"（标签: {self.label_mode}）" if self.label_mode != 'absolute' else ""))
@@ -5159,6 +5209,7 @@ class TradingModel(BaseTradingModel):
     def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
         """LightGBM 拟合（复用 LightGBM 管线的 prepare_data/特征选择/编码，仅换学习器）"""
         import lightgbm as lgb
+        self.horizon = int(horizon)
         # n_jobs 过大（如 -1=32）在高负载下会因线程争用导致 40 倍反向劣化，
         # 可用 LGBM_N_JOBS 限制线程数（默认 -1 不变）
         lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))

@@ -31,7 +31,7 @@ LBL = {0: "低波震荡", 1: "上涨", 2: "高波偏弱"}
 
 def _load_hsi(period):
     import yfinance as yf
-    h = yf.Ticker("^HSI").history(period=period, auto_adjust=True)
+    h = yf.Ticker("^HSI").history(period=period, auto_adjust=True, timeout=15)
     h.index = pd.to_datetime(h.index)
     if getattr(h.index, "tz", None) is not None:
         h.index = h.index.tz_localize(None)

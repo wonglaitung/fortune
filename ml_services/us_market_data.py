@@ -300,9 +300,9 @@ class USMarketData:
             ticker = yf.Ticker('^GSPC')
             if start_date is not None:
                 df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
-                                    end=datetime.now(), auto_adjust=True)
+                                    end=datetime.now(), auto_adjust=True, timeout=15)
             else:
-                df = ticker.history(period=f'{period_days}d')
+                df = ticker.history(period=f'{period_days}d', timeout=15)
 
             if df.empty:
                 print("⚠️ yfinance 也无法获取标普500指数数据")
@@ -391,9 +391,9 @@ class USMarketData:
             ticker = yf.Ticker('^IXIC')
             if start_date is not None:
                 df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
-                                    end=datetime.now(), auto_adjust=True)
+                                    end=datetime.now(), auto_adjust=True, timeout=15)
             else:
-                df = ticker.history(period=f'{period_days}d')
+                df = ticker.history(period=f'{period_days}d', timeout=15)
 
             if df.empty:
                 print("⚠️ yfinance 也无法获取纳斯达克指数数据")
@@ -442,9 +442,9 @@ class USMarketData:
             ticker = yf.Ticker('^VIX')
             if start_date is not None:
                 df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
-                                    end=datetime.now(), auto_adjust=True)
+                                    end=datetime.now(), auto_adjust=True, timeout=15)
             else:
-                df = ticker.history(period=f'{period_days}d')
+                df = ticker.history(period=f'{period_days}d', timeout=15)
 
             if df.empty:
                 print("⚠️ 无法获取VIX恐慌指数数据")

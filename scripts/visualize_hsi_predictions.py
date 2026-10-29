@@ -80,7 +80,7 @@ def get_hsi_price_data(start_date, end_date):
 
     try:
         hsi = yf.Ticker("^HSI")
-        df = hsi.history(start=start_date, end=end_date)
+        df = hsi.history(start=start_date, end=end_date, timeout=15)
         if df.empty:
             print("⚠️ 无法获取恒指价格数据")
             return None

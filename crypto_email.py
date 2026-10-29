@@ -379,7 +379,7 @@ def _detect_single_crypto_anomaly(crypto_name, crypto_symbol, prices, use_deep_a
         
         # Get historical data (小时级数据，1个月)
         ticker = yf.Ticker(crypto_symbol)
-        hist = ticker.history(period="1mo", interval='1h')
+        hist = ticker.history(period="1mo", interval='1h', timeout=15)
         
         if hist.empty:
             print(f"⚠️ {crypto_symbol} 历史数据不可用")

@@ -165,31 +165,31 @@ class HSIWalkForwardValidator:
 
         # 获取恒指数据
         hsi = yf.Ticker(HSI_SYMBOL)
-        hsi_df = hsi.history(period="5y", interval="1d")
+        hsi_df = hsi.history(period="5y", interval="1d", timeout=15)
 
         if hsi_df.empty:
             raise ValueError("恒指数据获取失败")
 
         # 获取美债收益率
         us_yield = yf.Ticker("^TNX")
-        us_df = us_yield.history(period="5y", interval="1d")
+        us_df = us_yield.history(period="5y", interval="1d", timeout=15)
 
         # 获取VIX
         vix = yf.Ticker("^VIX")
-        vix_df = vix.history(period="5y", interval="1d")
+        vix_df = vix.history(period="5y", interval="1d", timeout=15)
 
         # D35 增强：USD/CNH、纳指（仅启用时取，避免无谓失败）
         extra = {}
         if 'usdcnh' in HSI_ENH:
             try:
                 # 离岸 CNH(yf CNH=X) 返回空 ⇒ 用在岸 USDCNY=X 代理（2026-10-15 实测 1300 行）
-                extra['cnh'] = yf.Ticker("USDCNY=X").history(period="5y", interval="1d")
+                extra['cnh'] = yf.Ticker("USDCNY=X").history(period="5y", interval="1d", timeout=15)
             except Exception as e:
                 print(f"  ⚠️ USD/CNH 获取失败: {e}")
                 extra['cnh'] = pd.DataFrame()
         if 'nasdaq' in HSI_ENH:
             try:
-                extra['nasdaq'] = yf.Ticker("^IXIC").history(period="5y", interval="1d")
+                extra['nasdaq'] = yf.Ticker("^IXIC").history(period="5y", interval="1d", timeout=15)
             except Exception as e:
                 print(f"  ⚠️ Nasdaq 获取失败: {e}")
                 extra['nasdaq'] = pd.DataFrame()

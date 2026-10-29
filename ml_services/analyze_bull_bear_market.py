@@ -32,7 +32,7 @@ def analyze_market_environment(start_date='2024-01-01', end_date='2025-12-31'):
     """
     print(f"获取恒生指数数据: {start_date} 至 {end_date}")
     hsi_ticker = yf.Ticker("^HSI")
-    hsi_df = hsi_ticker.history(start=start_date, end=end_date)
+    hsi_df = hsi_ticker.history(start=start_date, end=end_date, timeout=15)
     
     if len(hsi_df) == 0:
         print("❌ 错误：无法获取恒生指数数据")

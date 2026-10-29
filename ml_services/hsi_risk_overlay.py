@@ -110,7 +110,7 @@ def overlay(csv, horizon, exposure_flat=0.0):
 
 def _hsi_daily_close():
     import yfinance as yf
-    h = yf.Ticker('^HSI').history(period='5y', interval='1d')
+    h = yf.Ticker('^HSI').history(period='5y', interval='1d', timeout=15)
     if h.empty:
         return None
     s = h['Close'].copy()

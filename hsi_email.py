@@ -201,7 +201,7 @@ class HSIEmailSystem:
         """获取恒生指数数据"""
         try:
             hsi_ticker = yf.Ticker("^HSI")
-            hist = hsi_ticker.history(period="6mo")
+            hist = hsi_ticker.history(period="6mo", timeout=15)
             if hist.empty:
                 print("❌ 无法获取恒生指数历史数据")
                 return None
@@ -242,7 +242,7 @@ class HSIEmailSystem:
         """获取指定股票的数据"""
         try:
             ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="6mo")
+            hist = ticker.history(period="6mo", timeout=15)
             if hist.empty:
                 print(f"❌ 无法获取 {symbol} 的历史数据")
                 return None
@@ -313,7 +313,7 @@ class HSIEmailSystem:
             period = self.DATA_PERIOD_CONFIG.get(investment_style, '6mo')
             
             ticker = yf.Ticker(symbol)
-            hist = ticker.history(period=period)
+            hist = ticker.history(period=period, timeout=15)
             
             if hist.empty:
                 print(f"⚠️ 无法获取 {symbol} 的历史数据 (period={period})")

@@ -25,7 +25,7 @@ MAXH = 250
 def load_hsi():
     try:
         import yfinance as yf
-        s = yf.Ticker('^HSI').history(period='max', interval='1d')['Close'].copy()
+        s = yf.Ticker('^HSI').history(period='max', interval='1d', timeout=15)['Close'].copy()
     except Exception:
         s = pd.Series(dtype=float)
     if s is None or s.empty:

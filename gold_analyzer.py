@@ -58,7 +58,7 @@ class GoldDataCollector:
         for symbol, name in self.gold_assets.items():
             try:
                 ticker = yf.Ticker(symbol)
-                hist = ticker.history(period=period)
+                hist = ticker.history(period=period, timeout=15)
                 if not hist.empty:
                     # 计算价格变化率
                     hist['Price_change_1d'] = hist['Close'].pct_change(1)
@@ -83,7 +83,7 @@ class GoldDataCollector:
         for symbol, name in self.macro_indicators.items():
             try:
                 ticker = yf.Ticker(symbol)
-                hist = ticker.history(period=period)
+                hist = ticker.history(period=period, timeout=15)
                 if not hist.empty:
                     # 计算价格变化率
                     hist['Price_change_1d'] = hist['Close'].pct_change(1)

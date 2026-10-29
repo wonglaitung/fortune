@@ -925,7 +925,7 @@ class MarketAnalyzer:
         for symbol in self.symbols:
             try:
                 ticker = yf.Ticker(symbol)
-                hist = ticker.history(period=period)
+                hist = ticker.history(period=period, timeout=15)
                 if not hist.empty:
                     data[symbol] = {
                         'name': ticker.info.get('longName', ticker.info.get('shortName', symbol)),

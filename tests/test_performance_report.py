@@ -370,6 +370,6 @@ def test_fetch_price_falls_back_to_yfinance(monkeypatch):
          'Volume': [1000]},
         index=pd.DatetimeIndex([pd.Timestamp('2026-09-03', tz='Asia/Hong_Kong')]))
     monkeypatch.setattr(pm.yf, 'Ticker', lambda code: type(
-        'T', (), {'history': lambda self, start=None, end=None: fake_yf})())
+        'T', (), {'history': lambda self, start=None, end=None, **kw: fake_yf})())
     v = pm.fetch_price('0700.HK', '2026-09-03')
     assert v == 101.0

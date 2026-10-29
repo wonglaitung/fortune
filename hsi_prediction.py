@@ -206,18 +206,18 @@ class HSI_Predictor:
             # 回退到 yfinance
             print("    ⚠️ 腾讯财经数据获取失败，回退到 yfinance...")
             hsi = yf.Ticker("^HSI")
-            self.hsi_data = hsi.history(period="2y", interval="1d")
+            self.hsi_data = hsi.history(period="2y", interval="1d", timeout=15)
             self.tencent_hsi_data = None
 
         # 获取美国10年期国债收益率
         print("  - 美国国债收益率...")
         us_yield = yf.Ticker("^TNX")
-        self.us_data = us_yield.history(period="2y", interval="1d")
+        self.us_data = us_yield.history(period="2y", interval="1d", timeout=15)
 
         # 获取VIX指数
         print("  - VIX恐慌指数...")
         vix = yf.Ticker("^VIX")
-        self.vix_data = vix.history(period="2y", interval="1d")
+        self.vix_data = vix.history(period="2y", interval="1d", timeout=15)
 
         # 获取港股通南向资金数据
         print("  - 港股通资金流向...")
@@ -2353,7 +2353,7 @@ class HSI_Predictor:
             # 使用恒指历史数据获取香港实际交易日
             import yfinance as yf
             hsi = yf.Ticker("^HSI")
-            hsi_data = hsi.history(period="2mo", interval="1d")
+            hsi_data = hsi.history(period="2mo", interval="1d", timeout=15)
             trading_dates = [d.strftime('%Y-%m-%d') for d in hsi_data.index]
 
             if current_date_str in trading_dates:
@@ -3056,7 +3056,7 @@ def verify_predictions():
     # 获取恒指历史数据用于验证
     print("\n📊 获取恒指历史数据用于验证...")
     hsi = yf.Ticker("^HSI")
-    hsi_data = hsi.history(period="3mo", interval="1d")  # 获取最近3个月数据
+    hsi_data = hsi.history(period="3mo", interval="1d", timeout=15)  # 获取最近3个月数据
 
     if hsi_data.empty:
         print("❌ 无法获取恒指数据")

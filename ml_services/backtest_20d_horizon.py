@@ -386,7 +386,7 @@ class Backtest20DHoldPeriod:
             
             # 获取恒生指数数据
             hsi_ticker = yf.Ticker("^HSI")
-            hsi_df = hsi_ticker.history(start=start_str, end=end_str)
+            hsi_df = hsi_ticker.history(start=start_str, end=end_str, timeout=15)
             
             if len(hsi_df) > 0:
                 hsi_df = hsi_df.reset_index()
@@ -401,7 +401,7 @@ class Backtest20DHoldPeriod:
 
             # 获取VIX数据
             vix_ticker = yf.Ticker("^VIX")
-            vix_df = vix_ticker.history(start=start_str, end=end_str)
+            vix_df = vix_ticker.history(start=start_str, end=end_str, timeout=15)
             
             if len(vix_df) > 0:
                 vix_df = vix_df.reset_index()

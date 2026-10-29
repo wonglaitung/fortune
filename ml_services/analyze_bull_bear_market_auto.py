@@ -76,7 +76,7 @@ def analyze_market_environment(start_date, end_date):
     """
     print(f"📊 获取恒生指数数据: {start_date} 至 {end_date}")
     hsi_ticker = yf.Ticker("^HSI")
-    hsi_df = hsi_ticker.history(start=start_date, end=end_date)
+    hsi_df = hsi_ticker.history(start=start_date, end=end_date, timeout=15)
     
     if len(hsi_df) == 0:
         print("❌ 错误：无法获取恒生指数数据")
@@ -417,8 +417,8 @@ def get_current_market_state():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
         
-        hsi_df = hsi_ticker.history(start=start_date.strftime('%Y-%m-%d'), 
-                                    end=end_date.strftime('%Y-%m-%d'))
+        hsi_df = hsi_ticker.history(start=start_date.strftime('%Y-%m-%d'),
+                                    end=end_date.strftime('%Y-%m-%d'), timeout=15)
         
         if len(hsi_df) < 10:
             return None

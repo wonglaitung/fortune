@@ -95,7 +95,7 @@ class SignalAnomalyCorrelationValidator:
         """加载历史数据"""
         # 获取历史数据（加6个月用于计算滚动指标）
         ticker = yf.Ticker(self.symbol)
-        hist = ticker.history(period="max")
+        hist = ticker.history(period="max", timeout=15)
         
         # 筛选日期范围
         hist = hist[(hist.index >= self.start_date) & (hist.index <= self.end_date)]

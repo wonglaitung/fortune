@@ -65,7 +65,7 @@ def count_trading_days(start_date: str, end_date: str, stock_code: str) -> int:
     try:
         # 使用 yfinance 获取股票数据
         ticker = yf.Ticker(stock_code)
-        df = ticker.history(start=start_date, end=end_date)
+        df = ticker.history(start=start_date, end=end_date, timeout=15)
         return len(df)
     except Exception as e:
         print(f"⚠️ 获取交易日历失败: {e}")
@@ -124,7 +124,7 @@ def fetch_price(stock_code: str, date: str) -> Optional[float]:
         start = (date_obj - timedelta(days=5)).strftime('%Y-%m-%d')
         end = (date_obj + timedelta(days=5)).strftime('%Y-%m-%d')
 
-        df = ticker.history(start=start, end=end)
+        df = ticker.history(start=start, end=end, timeout=15)
 
         if df.empty:
             return None

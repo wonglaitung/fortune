@@ -329,7 +329,7 @@ class AStockMarketFeatures:
             try:
                 import yfinance as yf
                 ticker = yf.Ticker("USDCNY=X")
-                data = ticker.history(period="1d")
+                data = ticker.history(period="1d", timeout=15)
                 if not data.empty:
                     result = pd.DataFrame({
                         'date': [datetime.now()],

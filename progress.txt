@@ -5071,3 +5071,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - `git gc --aggressive`：.git 4.0G → 485M。
 - output 7.2G → 3.2G：删除 59 个未在文档引用的 run 目录 + 175 个 walk_forward_*.json（3.9G）。
 - 385 passed。
+
+## 2026-10-29：P0 运维加固（D100）
+
+- 全仓 yfinance `.history` 加 timeout=15（44+ 处），修复外围取数无超时挂死。
+- save_model 写 manifest（sha256/参数/bag/特征数/训练时间），load_model 校验并告警；
+  已生成 5/10/20 三个 manifest（5/20 bag=3，10 bag=1）。
+- 386 passed。

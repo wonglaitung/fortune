@@ -204,7 +204,7 @@ class HSIModel:
         # 获取恒指数据（使用 period 参数确保获取数据）
         print("  - 恒生指数数据...")
         hsi = yf.Ticker(HSI_SYMBOL)
-        hsi_df = hsi.history(period="5y", interval="1d")
+        hsi_df = hsi.history(period="5y", interval="1d", timeout=15)
 
         if hsi_df.empty:
             raise ValueError("恒指数据获取失败")
@@ -218,12 +218,12 @@ class HSIModel:
         # 获取美债收益率
         print("  - 美国国债收益率...")
         us_yield = yf.Ticker("^TNX")
-        us_df = us_yield.history(period="5y", interval="1d")
+        us_df = us_yield.history(period="5y", interval="1d", timeout=15)
 
         # 获取VIX
         print("  - VIX恐慌指数...")
         vix = yf.Ticker("^VIX")
-        vix_df = vix.history(period="5y", interval="1d")
+        vix_df = vix.history(period="5y", interval="1d", timeout=15)
 
         print(f"  ✅ 数据获取完成（恒指：{len(hsi_df)} 条）")
 

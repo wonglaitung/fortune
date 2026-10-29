@@ -53,7 +53,7 @@ def fetch_stock_data(stock_code, period="2y"):
     """获取单只股票数据"""
     try:
         ticker = yf.Ticker(stock_code)
-        df = ticker.history(period=period, interval="1d")
+        df = ticker.history(period=period, interval="1d", timeout=15)
         if len(df) < 100:
             return None
         df['Return'] = df['Close'].pct_change()

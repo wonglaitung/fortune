@@ -44,7 +44,7 @@ def fetch_and_prepare_data():
     """获取数据并准备三周期预测（集成新特征）"""
     print("📊 正在获取数据...")
     hsi = yf.Ticker("^HSI")
-    df = hsi.history(period="5y", interval="1d")
+    df = hsi.history(period="5y", interval="1d", timeout=15)
 
     print(f"  原始数据: {len(df)} 条")
 
@@ -84,8 +84,8 @@ def fetch_and_prepare_data():
 
     # ========== 宏观数据 ==========
     print("  获取宏观数据...")
-    us_df = yf.Ticker("^TNX").history(period="5y", interval="1d")
-    vix_df = yf.Ticker("^VIX").history(period="5y", interval="1d")
+    us_df = yf.Ticker("^TNX").history(period="5y", interval="1d", timeout=15)
+    vix_df = yf.Ticker("^VIX").history(period="5y", interval="1d", timeout=15)
 
     if not us_df.empty:
         us_aligned = us_df.reindex(df.index, method='ffill')

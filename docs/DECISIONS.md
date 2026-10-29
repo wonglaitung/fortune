@@ -5942,3 +5942,23 @@ H1 = 前 100 宇宙超额 IR>0 且 CI 下界>0，且不低于 30 只；主窗与
 与净超额列不一致，报告时须注明。
 
 **适用范围**：港股 / 20d / 本快照 · 工程与读数校准（非 alpha）。
+
+## D100（2026-10-29）：**运维加固 —— yfinance 超时 + 模型 manifest 校验**
+
+**背景**：D87 后日常只加载模型，但外围取数仍可能无超时挂死（实测 `hsi_risk_overlay`
+因 `yf.Ticker('^HSI').history(period='5y')` 挂 15 分钟未返回）。
+
+**改动**
+1. **yfinance 统一超时**：全仓 `.history(...)` 调用批量加入 `timeout=15`（44+ 处，
+   覆盖 `hsi_ml_model` / `hsi_walk_forward` / `hsi_risk_overlay` / `stock_network_analysis` /
+   `us_market_data` / `performance_monitor` / `comprehensive_analysis` 等）。
+   已验证 yfinance 0.2.66 支持该参数。
+2. **模型 manifest**：`save_model` 写 `<pkl>.manifest.json`（sha256、horizon、label_mode、
+   特征数、n_estimators、bag 数量与 seeds、参数、训练时间）；`load_model` 重算 sha256
+   并比对，**不一致只告警不阻断**（避免月度重训窗口造成生产停机）。
+   已为现有 5/10/20 三个 pkl 生成 manifest（5d/20d bag=3，10d bag=1）。
+
+**验证**：新增 manifest 单测（写入/校验/篡改告警）；修正一处 fake `.history` 签名；
+全量 **386 passed**；`hsi_prediction` 等生产路径冒烟正常。
+
+**适用范围**：运维/可靠性（不涉及 alpha）。

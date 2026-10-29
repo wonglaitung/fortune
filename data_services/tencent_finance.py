@@ -29,7 +29,7 @@ def _hk_yf_fallback(code, period_days):
     try:
         import yfinance as yf
         tk = f"{int(code):04d}.HK"
-        hist = yf.Ticker(tk).history(period='max')
+        hist = yf.Ticker(tk).history(period='max', timeout=15)
         if hist is None or len(hist) < 5:
             return None
         df = hist[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
