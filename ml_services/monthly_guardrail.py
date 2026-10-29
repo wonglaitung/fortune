@@ -196,9 +196,11 @@ def config_spread(M):
     return float(sr.max() - sr.min()), sr
 
 
-def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropout=0):
+def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropout=0,
+        cost_mode='flat', cost_model=None, trade_value=50000.0):
     df = load_panel(pred_csv, market=market)
-    bt = backtest(df, horizon, topk, cost=cost, dropout=dropout)
+    bt = backtest(df, horizon, topk, cost=cost, dropout=dropout,
+                  cost_mode=cost_mode, cost_model=cost_model, trade_value=trade_value)
     # ⓪ 同一性闸第⑤问：能力指标必须用**部署打分口径**（raw prob，D73）
     cap = selection_ic(df)
     st = _stats(bt['top_net'].values, horizon)
@@ -392,6 +394,11 @@ def main():
     ap.add_argument('--horizon', type=int, default=20)
     ap.add_argument('--topk', type=int, default=10)
     ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP)
+    ap.add_argument('--cost-mode', choices=['flat', 'model'], default='flat')
+    ap.add_argument('--broker-rate', type=float, default=0.001)
+    ap.add_argument('--min-fee', type=float, default=50.0)
+    ap.add_argument('--impact-k', type=float, default=1.0)
+    ap.add_argument('--trade-value', type=float, default=50000.0)
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
     ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
@@ -458,8 +465,14 @@ def main():
 
     out = (args.output
            or f"output/monthly_guardrail_{args.horizon}d_{datetime.now():%Y%m%d}{suffix}.md")
+    _cm = None
+    if args.cost_mode == 'model':
+        from ml_services.costs import SideCostModel
+        _cm = SideCostModel(broker_rate=args.broker_rate, min_fee=args.min_fee,
+                            impact_k=args.impact_k)
     run(args.horizon, pred, args.topk, args.cost, out, market=args.market,
-        null_perm=args.null_perm, dropout=args.dropout)
+        null_perm=args.null_perm, dropout=args.dropout,
+        cost_mode=args.cost_mode, cost_model=_cm, trade_value=args.trade_value)
 
 
 if __name__ == '__main__':

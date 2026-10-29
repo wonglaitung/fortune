@@ -34,7 +34,7 @@ from ml_services.selection import (          # noqa: E402
     selection_score,
 )
 
-from ml_services.costs import COST_ROUND_TRIP
+from ml_services.costs import COST_ROUND_TRIP, SideCostModel
 DEFAULT_PRED = {
     5: 'output/20260922_212530_catboost_5d/prediction_analysis.csv',
     20: 'output/20260922_162806_catboost_20d/prediction_analysis.csv',
@@ -116,8 +116,12 @@ def selection_ic(df, min_per_day=20, min_sector=2):
     return out
 
 
-def backtest(df, horizon, topk, cost=COST_ROUND_TRIP, dropout=0, vol_target=None):
+def backtest(df, horizon, topk, cost=COST_ROUND_TRIP, dropout=0, vol_target=None,
+             cost_mode='flat', cost_model=None, trade_value=50000.0):
     dates = sorted(df['date'].unique())
+    if cost_mode == 'model' and cost_model is not None:
+        from ml_services.exposures import load_exposures
+        _adv, _sig, _spr = load_exposures(sorted(df['code'].unique()))
     rb = dates[::horizon]  # 非重叠调仓
     rows = []
     prev_long, prev_short = set(), set()
@@ -147,15 +151,34 @@ def backtest(df, horizon, topk, cost=COST_ROUND_TRIP, dropout=0, vol_target=None
         cur_long = set(long['code']); cur_short = set(short['code'])
         t_long = len(cur_long - prev_long) / k if prev_long else 1.0
         t_short = len(cur_short - prev_short) / k if prev_short else 1.0
-        prev_long, prev_short = cur_long, cur_short
         held = sel
 
         top_gross = long['ret'].mean()
-        top_net = top_gross - t_long * cost
         ls_gross = top_gross - short['ret'].mean()
-        ls_net = ls_gross - (t_long + t_short) * cost
+        if cost_mode == 'model' and cost_model is not None:
+            from ml_services.exposures import lookup
+            def _cost_of(old, new_set):
+                c = 0.0
+                for code in (new_set - old) | (old - new_set):
+                    av = lookup(_adv, d, code)
+                    sg = lookup(_sig, d, code)
+                    sp = lookup(_spr, d, code)
+                    if np.isfinite(av) and np.isfinite(sg):
+                        c += (1.0 / k) * cost_model.per_side(trade_value, av, sg, sp)['total']
+                    else:
+                        c += (1.0 / k) * (cost / 2.0)
+                return c
+            c_long = _cost_of(prev_long, cur_long)
+            c_short = _cost_of(prev_short, cur_short)
+        else:
+            c_long = t_long * cost
+            c_short = t_short * cost
+        top_net = top_gross - c_long
+        ls_net = ls_gross - c_long - c_short
+        prev_long, prev_short = cur_long, cur_short
         rows.append(dict(date=d, bench=bench, top_gross=top_gross, top_net=top_net,
-                         ls_gross=ls_gross, ls_net=ls_net, turnover=t_long))
+                         ls_gross=ls_gross, ls_net=ls_net, turnover=t_long,
+                         cost=c_long, cost_short=c_short))
     bt = pd.DataFrame(rows)
     # 波动率目标：按上一期为止的基准已实现波动缩放敞口
     if vol_target and len(bt) > 3:
@@ -199,12 +222,14 @@ def _stats(x, horizon):
     return dict(n=len(x), mean=mean, ir=ir, win=float((x > 0).mean()), cum=cum)
 
 
-def run(horizon, pred_csv, topk, out_md, cost=COST_ROUND_TRIP, dropout=0, vol_target=None, market='hk'):
+def run(horizon, pred_csv, topk, out_md, cost=COST_ROUND_TRIP, dropout=0, vol_target=None, market='hk',
+        cost_mode='flat', cost_model=None, trade_value=50000.0):
     df = load_panel(pred_csv, market=market)
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
 
-    res = {"TopK": backtest(df, horizon, topk, cost=cost, dropout=dropout, vol_target=vol_target)}
+    res = {"TopK": backtest(df, horizon, topk, cost=cost, dropout=dropout, vol_target=vol_target,
+                              cost_mode=cost_mode, cost_model=cost_model, trade_value=trade_value)}
 
     # 汇总
     rows = []
@@ -317,7 +342,12 @@ def main():
     ap = argparse.ArgumentParser(description='Phase3 最小 TopK 组合回测')
     ap.add_argument('--horizon', type=int, required=True, choices=[5, 10, 20])
     ap.add_argument('--topk', type=int, default=10)
-    ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP, help='往返成本（默认0.005；单边=该值/2）')
+    ap.add_argument('--cost', type=float, default=COST_ROUND_TRIP, help='往返成本（flat 模式）')
+    ap.add_argument('--cost-mode', choices=['flat', 'model'], default='flat')
+    ap.add_argument('--broker-rate', type=float, default=0.001)
+    ap.add_argument('--min-fee', type=float, default=50.0)
+    ap.add_argument('--impact-k', type=float, default=1.0)
+    ap.add_argument('--trade-value', type=float, default=50000.0)
     ap.add_argument('--dropout', type=int, default=0, help='TopK-Dropout 每期剔除只数')
     ap.add_argument('--vol-target', type=float, default=None, help='年化波动率目标（如 0.15）')
     ap.add_argument('--pred', type=str, default=None)
@@ -330,7 +360,9 @@ def main():
         raise SystemExit(f"未提供 --pred，且 horizon={args.horizon} 无默认 CSV（D60：10d 需显式 --pred）")
     suffix = '_a' if args.market == 'a' else ''
     out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}{suffix}.md"
+    cm = SideCostModel(broker_rate=args.broker_rate, min_fee=args.min_fee, impact_k=args.impact_k) if args.cost_mode == 'model' else None
     run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout,
+        cost_mode=args.cost_mode, cost_model=cm, trade_value=args.trade_value,
         vol_target=args.vol_target, market=args.market)
 
 

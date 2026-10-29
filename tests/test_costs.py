@@ -30,3 +30,28 @@ def test_daily_mark_full_round_trip_cost():
 def pytest_approx(x):
     import pytest
     return pytest.approx(x, abs=1e-12)
+
+
+def test_side_cost_model_components():
+    from ml_services.costs import SideCostModel
+    m = SideCostModel(broker_rate=0.001, min_fee=50.0, impact_k=1.0)
+    c = m.per_side(50000, adv=1e8, sigma=0.02, spread=0.002)
+    assert c['stamp'] == pytest_approx(0.001)
+    assert c['commission'] == pytest_approx(0.001)
+    assert c['half_spread'] == pytest_approx(0.001)
+    assert 0 < c['impact'] < 0.05
+    # 最低佣金：单笔 5000 → 佣金 1%
+    small = m.per_side(5000, adv=1e8, sigma=0.02, spread=0.002)
+    assert small['commission'] == pytest_approx(0.01)
+    # ETF 免印花税
+    etf = m.per_side(50000, adv=1e8, sigma=0.02, spread=0.002, is_etf=True)
+    assert etf['stamp'] == 0.0
+
+
+def test_hk_tick_size_bands():
+    from ml_services.costs import hk_tick_size, tick_spread
+    assert hk_tick_size(4.0) == 0.01
+    assert hk_tick_size(50) == 0.05
+    assert hk_tick_size(387) == 0.2
+    assert tick_spread(387, floor=0.0) == pytest_approx(0.2 / 387)
+    assert tick_spread(1.0) == pytest_approx(0.01)  # 1% 但上限 2% 内
