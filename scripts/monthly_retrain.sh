@@ -46,6 +46,9 @@ assert type(m).__name__ == 'LGBMRegressor', type(m).__name__
 assert d.get('horizon') == h, (d.get('horizon'), h)
 assert d.get('label_mode') == 'rank', d.get('label_mode')
 assert len(d.get('feature_columns') or []) > 100, len(d.get('feature_columns') or [])
+from ml_services.ml_trading_model import LGBM_BAG_SEEDS_BY_HORIZON
+exp = len([x for x in LGBM_BAG_SEEDS_BY_HORIZON.get(h, '42').split(',') if x.strip()])
+assert len(d.get('models') or [m]) == exp, (len(d.get('models') or [m]), exp)
 print(f"✅ 校验通过: {path}（{type(m).__name__}, n={m.n_estimators}, "
       f"features={len(d['feature_columns'])}）")
 PY

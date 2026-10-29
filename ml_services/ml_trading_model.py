@@ -3934,6 +3934,9 @@ class BaseTradingModel:
         return X, y, feature_columns
 
 
+# D96：按周期的 bagging 默认（5/20 采纳 3-seed；10d 单 seed）。环境变量 LGBM_BAG_SEEDS 可覆盖。
+LGBM_BAG_SEEDS_BY_HORIZON = {5: '42,7,2024', 10: '42', 20: '42,7,2024'}
+
 LGBM_DEFAULT_PARAMS = {
     'n_estimators': 400,
     'num_leaves': 64,
@@ -5171,7 +5174,9 @@ class TradingModel(BaseTradingModel):
         if lgb_n_jobs > 0:
             print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS，避免高负载线程争用）")
         # D95：多 seed bagging（默认单 seed，行为不变；LGBM_BAG_SEEDS=42,7,2024 开启）
-        seeds = [int(x) for x in str(os.environ.get('LGBM_BAG_SEEDS', '42')).split(',') if x.strip()]
+        bag_env = os.environ.get('LGBM_BAG_SEEDS')
+        bag_spec = bag_env if bag_env else LGBM_BAG_SEEDS_BY_HORIZON.get(int(horizon), '42')
+        seeds = [int(x) for x in str(bag_spec).split(',') if x.strip()]
         self.models = []
         for seed in seeds:
             p = dict(lgb_params)

@@ -265,6 +265,7 @@ python hsi_email.py --no-email
 | min_child_samples | 30 | 30 | 30 | 50 |
 
 生产训练与 Walk-forward 都经 `load_lgbm_params(horizon)` 取参（D76/D78/D79）。
+**Bagging（D96）**：`LGBM_BAG_SEEDS_BY_HORIZON` —— 5d/20d 默认 3 seed（42,7,2024），10d 单 seed；生产与 WF 同源，`LGBM_BAG_SEEDS` 仅作实验覆盖。
 
 **恒指模型**（`hsi_ml_model.py`）：LGBMClassifier，n_estimators 300 / lr 0.03 / depth 4 / class_weight balanced。
 
