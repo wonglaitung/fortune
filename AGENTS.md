@@ -40,6 +40,7 @@
 - **外围辅助**（非核心预测）：crypto / 黄金监控、性能监控、新闻抓取、SFC/南向取数。
 - ⚠️ **一句话**：**①② 的价值在工程 / 展示 / 流程 / 风控，不在"能赚钱"；③ 才是"科学"那部分。**
 - 用尺量任何策略前，先走技能 `.opencode/skills/hypothesis-validation/SKILL.md`（G1–G9）。
+- 分析个股（含银行）/ 长期投资价值 / 定投前，先走技能 `.opencode/skills/equity-analysis/SKILL.md`（业界口径 + 数据缺口）。
 
 ---
 
@@ -501,6 +502,7 @@ HTML / SVG / 视频不入库。完整检查表见 [docs/AI_WORKFLOW.md](docs/AI_
 - **特征工程**：[docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 完整指南（含案例分析）
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **验证方法**：[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)
+- **个股分析技能**：[.opencode/skills/equity-analysis/SKILL.md](.opencode/skills/equity-analysis/SKILL.md) ＋ `scripts/stock_fundamentals.py`
 - **模型改进计划**：[docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) - 三层提升假设与预注册判据 ⭐
 - **决策备忘**：[docs/DECISIONS.md](docs/DECISIONS.md) - 个股 alpha 停止投入等关键决策 ⭐
 - **建设方法论**：[docs/QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md) - 五层结构 / 七原则 / 七阶段 / 三道闸 ⭐

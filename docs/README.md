@@ -18,6 +18,7 @@
 | **搞懂量化交易常见误区（方法论）** | [量化交易误解-正式文档.md](量化交易误解-正式文档.md)（四道陷阱理论版，与 lessons/DECISIONS 对应） |
 | **验证新模型 / 新特征 / 新周期** | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) ＋ 技能 `.opencode/command/model_validation.md` |
 | **加一个新特征** | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md)（8 步验证清单） |
+| **分析个股 / 长期投资价值 / 定投** | 技能 `.opencode/skills/equity-analysis/SKILL.md` ＋ `scripts/stock_fundamentals.py` |
 | **搞懂 1/5/20 天三周期的结论** | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) |
 | **知道最近做过哪些实验、结论是什么** | [DECISIONS.md](DECISIONS.md) D1–D14 |
 | **排查我踩过的坑** | [../lessons.md](../lessons.md) |
