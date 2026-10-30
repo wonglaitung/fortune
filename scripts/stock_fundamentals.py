@@ -90,9 +90,30 @@ def load_stock(code, ccy='CNY', bank=False):
     payout = div / net if div == div else np.nan
     dy = (div / shares * fx) / px if div == div else np.nan
 
-    row = {'code': code, 'ccy': ccy, 'PB': pb, 'PE': pe, 'ROE': roe, 'ROA': roa,
+    bb_year = None
+    if cf is not None and '回购股份' in cf:
+        bbs = cf['回购股份'].dropna()
+        if not bbs.empty:
+            bb_year = bbs.index.max().year
+            bb = float(bbs.loc[bbs.index.max()])
+            iss_s = cf['发行股份'].dropna() if '发行股份' in cf else pd.Series(dtype=float)
+            iss = float(iss_s.loc[bbs.index.max()]) if bbs.index.max() in iss_s.index else 0.0
+        else:
+            bb, iss = 0.0, 0.0
+    else:
+        bb, iss = 0.0, 0.0
+    net_bb = bb - iss
+    mcap = px * shares
+    net_bb_yield = net_bb / mcap if (bb_year == d.year and mcap) else np.nan
+    dy0 = dy if dy == dy else 0.0
+    tsr = dy0 + (net_bb_yield if net_bb_yield == net_bb_yield else 0.0)
+
+    row = {'code': code, 'ccy': ccy, '财年': d.year, 'PB': pb, 'PE': pe, 'ROE': roe, 'ROA': roa,
            '毛利率': gm, '净利率': nm, '营收增速': rg, '净利增速': npg,
-           '资产负债率': dar, 'OCF÷净利': cash_conv, '股息率': dy, '派息率': payout}
+           '资产负债率': dar, 'OCF÷净利': cash_conv, '股息率': dy, '派息率': payout,
+           '净回购年': bb_year if bb_year else '—',
+           '净回购(亿)': net_bb / 1e8, '净回购收益率': net_bb_yield,
+           '总股东回报': tsr}
 
     if bank:
         nii = pick(is_, d, '净利息收入')
@@ -115,13 +136,15 @@ def load_stock(code, ccy='CNY', bank=False):
 
 def to_md(rows, bank=False):
     t = pd.DataFrame(rows)
-    cols = ['code', 'ccy', 'PB', 'PE', 'ROE', 'ROA', '毛利率', '净利率',
-            '营收增速', '净利增速', '资产负债率', 'OCF÷净利', '股息率', '派息率']
+    cols = ['code', 'ccy', '财年', 'PB', 'PE', 'ROE', 'ROA', '毛利率', '净利率',
+            '营收增速', '净利增速', '资产负债率', 'OCF÷净利', '股息率', '派息率',
+            '净回购年', '净回购(亿)', '净回购收益率', '总股东回报']
     if bank:
         cols += ['NIM', '成本收入', '信用成本', '贷存比', '合理PB', '空间']
-    fmts = {'PB': '{:.2f}', 'PE': '{:.1f}', 'ROE': '{:.1%}', 'ROA': '{:.2%}',
+    fmts = {'财年': '{:.0f}', 'PB': '{:.2f}', 'PE': '{:.1f}', 'ROE': '{:.1%}', 'ROA': '{:.2%}',
             '毛利率': '{:.1%}', '净利率': '{:.1%}', '营收增速': '{:.1%}', '净利增速': '{:.1%}',
             '资产负债率': '{:.0%}', 'OCF÷净利': '{:.2f}', '股息率': '{:.1%}', '派息率': '{:.0%}',
+            '净回购年': '{}', '净回购(亿)': '{:+.0f}', '净回购收益率': '{:+.1%}', '总股东回报': '{:+.1%}',
             'NIM': '{:.2%}', '成本收入': '{:.0%}', '信用成本': '{:.2%}', '贷存比': '{:.0%}',
             '合理PB': '{:.2f}', '空间': '{:+.0%}'}
     out = t[cols].copy()
@@ -147,7 +170,8 @@ def main():
         raise SystemExit('无可分析股票（检查 fund_cache / 快照 / 币种）')
     text = ('# 股票基本面（业界口径）\n\n'
             f'- 股票：{len(rows)}；报表币种假设：**{args.ccy}**（价格 HKD；错误币种会让 PE/PB/股息率失真）\n'
-            '- 数据：akshare 三表 + 快照价格；缺分部、一致预期；金融股缺 NPL/拨备/CET1\n\n'
+            '- 数据：akshare 三表 + 快照价格；缺分部、一致预期；金融股缺 NPL/拨备/CET1\n'
+            '- 净回购 = 回购股份 − 发行股份；总股东回报 = 股息率 + 净回购收益率（近似，数据源口径）\n\n'
             + to_md(rows, bank=args.bank) + '\n\n'
             '> 读法：先看增速/毛利率/ROE 趋势，再看现金流质量与负债，最后看估值；\n'
             '> 单一倍数不构成结论，情景不是预测。\n')

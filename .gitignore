@@ -176,3 +176,8 @@ data/ccass/
 
 # HKEX 公告缓存（本地研究；不批量入库）
 data/hkex_announcements/
+
+# 银行年报 PDF（体积大，可重抓）
+data/bank_reports/
+data/buyback_pdfs/
+data/bank_reports/*.part

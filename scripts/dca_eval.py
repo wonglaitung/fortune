@@ -8,10 +8,12 @@
 用法：
   python3 scripts/dca_eval.py --code 0700.HK --start 2016-10-17 --end 2026-10-16
   python3 scripts/dca_eval.py --index hsi --start 2016-10-17 --end 2026-10-16
+  python3 scripts/dca_eval.py --code 0005.HK --start 2016-10-17 --end 2026-10-16 --total-return
 """
 import argparse
 import os
 import sys
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -26,7 +28,22 @@ def _norm(idx):
     return idx.tz_convert(None) if idx.tz is not None else idx
 
 
-def load_prices(code=None, index=None, start=None, end=None):
+def load_prices(code=None, index=None, start=None, end=None, total_return=False):
+    if total_return:
+        sym = '2800.HK' if index == 'hsi' else code
+        try:
+            import yfinance as yf
+            end_ex = (pd.Timestamp(end) + timedelta(days=1)).strftime('%Y-%m-%d') if end else None
+            tr = yf.download(sym, start=start, end=end_ex, auto_adjust=True, progress=False)
+            if tr is not None and not tr.empty:
+                if isinstance(tr.columns, pd.MultiIndex):
+                    tr.columns = tr.columns.get_level_values(0)
+                px = tr['Close'].dropna()
+                px.index = _norm(px.index).normalize()
+                return px.sort_index()
+            print(f'[warn] {sym} 总回报数据为空，回退价格', file=sys.stderr)
+        except Exception as e:
+            print(f'[warn] 总回报下载失败（{e}），回退价格', file=sys.stderr)
     if index == 'hsi':
         df = get_hsi_data_tencent(period_days=5000)
         if df is None or df.empty:
@@ -81,9 +98,11 @@ def main():
     ap.add_argument('--end', required=True)
     ap.add_argument('--amount', type=float, default=1.0, help='每期投入（默认 1 单位）')
     ap.add_argument('--out', default=None)
+    ap.add_argument('--total-return', action='store_true',
+                    help='用总回报（股息再投资，yfinance auto_adjust）；HSI 用 2800.HK 代理')
     args = ap.parse_args()
 
-    px = load_prices(args.code, args.index, args.start, args.end)
+    px = load_prices(args.code, args.index, args.start, args.end, args.total_return)
     monthly = px.resample('ME').last().dropna()
     if len(monthly) < 6:
         raise SystemExit('样本不足（<6 个月）')
@@ -104,6 +123,7 @@ def main():
 
     lines = ['# 定投 vs 一次性', '',
              f'- 标的：{args.index or args.code}；{monthly.index[0].date()} → {monthly.index[-1].date()}（{n} 个月）',
+             f'- 口径：{"总回报（股息再投资）" if args.total_return else "价格"}',
              f'- 总投入：{total:.2f}；标的区间最大回撤：{max_drawdown(px):.1%}', '',
              '| 方式 | 终值 | 盈亏 | IRR（年化） |', '|---|---|---|---|',
              f'| 月定投 | {dca_terminal:.2f} | {dca_terminal-total:+.2f} | {dca_irr:+.2%} |',

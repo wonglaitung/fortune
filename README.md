@@ -372,6 +372,7 @@ python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10
 python3 scripts/stock_fundamentals.py --codes 0700.HK,0939.HK --ccy CNY
 python3 scripts/stock_fundamentals.py --codes 0939.HK,1398.HK --bank --ccy CNY
 python3 scripts/dca_eval.py --code 0700.HK --start 2016-10-17 --end 2026-10-16   # 定投 vs 一次性（IRR）
+python3 scripts/dca_eval.py --code 0005.HK --start 2016-10-17 --end 2026-10-16 --total-return   # 总回报（股息再投资）
 
 # 共用
 python3 ml_services/performance_monitor.py --mode all --no-email
