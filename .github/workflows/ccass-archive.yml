@@ -99,17 +99,18 @@ jobs:
           esac
 
           set +e
-          out=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --exit-code --heads \
+          out=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --heads \
             "https://x-access-token:${CCASS_DATA_TOKEN}@github.com/${CCASS_DATA_REPO}.git" 2>&1)
           rc=$?
           set -e
           echo "$out" | mask
           echo "git_ls_remote_rc=$rc"
-          case "$rc" in
-            0) echo "git read ok（已有分支）";;
-            2) echo "git read ok（空仓，无分支；首次运行会初始化 main）";;
-            *) fail "git ls-remote 失败 rc=$rc（stderr 见上）";;
-          esac
+          [ "$rc" -eq 0 ] || fail "git ls-remote 失败 rc=$rc（stderr 见上）"
+          if [ -z "$out" ]; then
+            echo "git read ok（空仓，无分支；首次运行会初始化 main）"
+          else
+            echo "git read ok（已有分支）"
+          fi
 
           # 写权限探针：--dry-run 不改变远端，只验证 Contents: Write
           probe=$(mktemp -d)
@@ -152,25 +153,25 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           set +e
-          err=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --exit-code --heads "$remote" 2>&1 >/dev/null)
+          heads=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --heads "$remote" 2>&1)
           rc=$?
           set -e
-          if [ "$rc" -eq 0 ]; then
-            if ! GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 "$remote" ccass-repo 2>/tmp/ccass_clone.err; then
-              echo "$err" | mask
-              mask < /tmp/ccass_clone.err
-              echo "::error::clone 失败（数据仓可读但克隆失败）"
-              exit 1
-            fi
-          elif [ "$rc" -eq 2 ]; then
+          if [ "$rc" -ne 0 ]; then
+            echo "$heads" | mask
+            echo "::error::无法访问私有数据仓 $CCASS_DATA_REPO（git ls-remote exit=$rc）；stderr 见上"
+            exit 1
+          fi
+          if [ -z "$heads" ]; then
             echo "数据仓无任何分支（空仓），初始化 main"
             mkdir -p ccass-repo
             git -C ccass-repo init -b main
             git -C ccass-repo remote add origin "$remote"
           else
-            echo "$err" | mask
-            echo "::error::无法访问私有数据仓 $CCASS_DATA_REPO（git ls-remote exit=$rc）；stderr 见上"
-            exit 1
+            if ! GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 "$remote" ccass-repo 2>/tmp/ccass_clone.err; then
+              mask < /tmp/ccass_clone.err
+              echo "::error::clone 失败（数据仓可读但克隆失败）"
+              exit 1
+            fi
           fi
 
       - name: Pack and commit
