@@ -96,20 +96,45 @@ def fetch_one(session, date_str, code):
     return parse_rows(r.text)
 
 
-def trading_days(n=1):
-    cal = pd.read_pickle('data/hk_broad/snapshot/00700.pkl').index
-    cal = pd.to_datetime(cal).tz_convert(None).normalize()
-    cal = cal[cal < pd.Timestamp.today().normalize()]
-    return list(cal[-n:])
+def _business_days(n, start=None):
+    """最近 n 个工作日（默认不含今天），由近到远。"""
+    d = (pd.Timestamp(start) if start is not None else pd.Timestamp.today().normalize()) - pd.Timedelta(days=1)
+    out = []
+    while len(out) < n:
+        if d.weekday() < 5:
+            out.append(d)
+        d -= pd.Timedelta(days=1)
+    return out
+
+
+def _has_data(session, ts, probe_code='00700'):
+    """向 HKEX 探测某日是否有 CCASS 记录；网络异常按无数据处理。"""
+    try:
+        return not fetch_one(session, ts.strftime('%Y/%m/%d'), probe_code).empty
+    except Exception:
+        return False
+
+
+def probe_latest_trading_day(max_back=15):
+    """探测最近一个有 CCASS 数据的工作日（避开周末与公众假期）。"""
+    session = _session()
+    for ts in _business_days(max_back):
+        if _has_data(session, ts):
+            return ts
+    raise RuntimeError(f'最近 {max_back} 个工作日均无 CCASS 数据（数据源异常或假期过长）')
 
 
 def fridays(n):
-    cal = pd.read_pickle('data/hk_broad/snapshot/00700.pkl').index
-    cal = pd.to_datetime(cal).tz_convert(None).normalize()
-    fri = [d for d in cal if d.weekday() == 4 and d < pd.Timestamp.today().normalize()]
-    # HKEX 只保留约 12 个月
-    fri = [d for d in fri if d >= pd.Timestamp.today().normalize() - pd.Timedelta(days=330)]
-    return fri[-n:]
+    """最近 n 个有数据的周五（HKEX 只保留约 12 个月）。"""
+    session = _session()
+    out = []
+    d = pd.Timestamp.today().normalize() - pd.Timedelta(days=1)
+    limit = pd.Timestamp.today().normalize() - pd.Timedelta(days=330)
+    while d >= limit and len(out) < n:
+        if d.weekday() == 4 and _has_data(session, d):
+            out.append(d)
+        d -= pd.Timedelta(days=1)
+    return out[::-1]
 
 
 def save_derived(date_dir, code, df):
@@ -199,7 +224,7 @@ def main():
     elif args.date:
         dates = [args.date]
     else:
-        dates = [d.strftime('%Y/%m/%d') for d in trading_days(1)]
+        dates = [probe_latest_trading_day().strftime('%Y/%m/%d')]
 
     os.makedirs(args.out, exist_ok=True)
     if args.rebuild_issued:

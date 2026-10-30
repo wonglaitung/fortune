@@ -5095,3 +5095,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 
 - D102 修订：结论降级为「未发现可靠净超额，不能证明没有小 edge」；补 MDE/CI
   （动量 MDE≈1.64%/月、反转 CI [−1.81,+0.89]、蜡烛图毛 CI ±0.1%）。
+
+## 2026-10-30：CCASS 归档 CI 失败修复
+
+- 根因：`scripts/fetch_ccass.py` 默认日期读本地未入库的 `data/hk_broad/snapshot/00700.pkl`
+  （该目录已 gitignore），CI 新检出即 `FileNotFoundError`，1 秒退出。
+- 改为向 HKEX 探测最近有 CCASS 数据的工作日（`probe_latest_trading_day`）；
+  `--backfill-weeks` 的周五同日过滤掉无数据日，避免写 310 个 `.failed` 哨兵。
+- 本地验证：探测 → 2026-10-29；`--date 2026/10/29 --stocks 00700` ok=1；`doc_gate` 通过。
