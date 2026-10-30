@@ -43,5 +43,5 @@ jobs:
           fi
           git commit -m "月度重训：港股 5/10/20 模型 $(date '+%Y-%m') [skip ci]"
           git fetch origin main
-          git pull --rebase origin main
+          git pull --rebase --autostash origin main
           git push

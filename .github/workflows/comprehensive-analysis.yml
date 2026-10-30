@@ -97,7 +97,7 @@ jobs:
             # 推送时处理可能的冲突
             if ! git push; then
               # 推送失败，拉取最新更改
-              git pull --rebase origin main
+              git pull --rebase --autostash origin main
               # 再次尝试推送
               git push
             fi

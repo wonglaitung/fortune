@@ -74,7 +74,7 @@ jobs:
           # 拉取并变基（最多重试3次）
           PULL_SUCCESS=false
           for i in 1 2 3; do
-            if git pull --rebase origin main; then
+            if git pull --rebase --autostash origin main; then
               PULL_SUCCESS=true
               break
             fi
