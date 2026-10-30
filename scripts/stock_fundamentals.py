@@ -56,7 +56,7 @@ def load_stock(code, ccy='CNY', bank=False):
     rev0 = pick(is_, d0, ['营业额', '营业收入', '收入'])
     gross = pick(is_, d, ['毛利'])
     op = pick(is_, d, ['经营溢利'])
-    equity = pick(bs, d, ['归属于母公司股东权益', '总权益'])
+    equity = pick(bs, d, ['归属于母公司股东权益', '股东权益', '总权益'])
     assets = pick(bs, d, ['总资产', '总权益及总负债'])
     assets0 = pick(bs, d0, ['总资产', '总权益及总负债'])
     liab = pick(bs, d, ['总负债'])
