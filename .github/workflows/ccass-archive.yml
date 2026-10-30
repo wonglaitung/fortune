@@ -21,6 +21,10 @@ on:
         description: '重试已有 .failed 哨兵'
         type: boolean
         default: false
+      verify_only:
+        description: '只验证 secrets（API + git 读写），不抓取/归档'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,22 +54,82 @@ jobs:
       - name: Install deps (minimal)
         run: pip install pandas requests beautifulsoup4 lxml
 
-      - name: Verify secrets and private data repo
+      - name: Verify secrets (API + git read probe)
+        timeout-minutes: 5
         run: |
-          set -euo pipefail
-          if [ -z "${CCASS_DATA_REPO:-}" ] || [ -z "${CCASS_DATA_TOKEN:-}" ]; then
-            echo "::error::缺少 CCASS_DATA_REPO / CCASS_DATA_TOKEN secrets"
-            exit 1
+          set -uo pipefail
+          mask() { sed "s|${CCASS_DATA_TOKEN}|***|g"; }
+          fail() { echo "::error::$*"; exit 1; }
+
+          [ -n "${CCASS_DATA_REPO:-}" ] || fail "缺少 CCASS_DATA_REPO"
+          [ -n "${CCASS_DATA_TOKEN:-}" ] || fail "缺少 CCASS_DATA_TOKEN"
+          case "$CCASS_DATA_REPO" in
+            *://*|*.git|*' '*|*'\t'*) fail "CCASS_DATA_REPO 格式应为 owner/repo（当前含 URL/.git/空白）";;
+            */*/*) fail "CCASS_DATA_REPO 格式应为 owner/repo（层级过多）";;
+            */*) ;;
+            *) fail "CCASS_DATA_REPO 格式应为 owner/repo";;
+          esac
+          echo "repo=[$CCASS_DATA_REPO] token_len=${#CCASS_DATA_TOKEN} token_prefix=${CCASS_DATA_TOKEN:0:11}"
+
+          api_code=$(curl -sS -m 20 -o /tmp/ccass_repo.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CCASS_DATA_TOKEN" \
+            "https://api.github.com/repos/$CCASS_DATA_REPO") || fail "API 请求失败（网络/DNS）"
+          echo "api_http=$api_code"
+          if [ "$api_code" != "200" ]; then
+            echo "::group::API response"
+            cat /tmp/ccass_repo.json 2>/dev/null || true
+            echo
+            echo "::endgroup::"
+            fail "API 返回 $api_code（token 无效或对该仓库无访问权）"
           fi
-          vis=$(curl -fsS -H "Authorization: Bearer $CCASS_DATA_TOKEN" \
-                "https://api.github.com/repos/$CCASS_DATA_REPO" \
-                | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('private'))")
-          if [ "$vis" != "True" ]; then
-            echo "::error::$CCASS_DATA_REPO 不是私有仓库（private=$vis）——HKEX 数据禁止公开再分发"
-            exit 1
-          fi
+          priv=$(python3 -c "import json;print(json.load(open('/tmp/ccass_repo.json')).get('private'))")
+          echo "private=$priv"
+          [ "$priv" = "True" ] || fail "$CCASS_DATA_REPO 不是私有仓库（private=$priv）"
+
+          # git smart HTTP 必须用 Basic（Bearer 会 401，不能用来判断 git 权限）
+          git_code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' \
+            -u "x-access-token:${CCASS_DATA_TOKEN}" \
+            "https://github.com/${CCASS_DATA_REPO}.git/info/refs?service=git-upload-pack") || true
+          echo "git_http_basic=$git_code"
+          case "$git_code" in
+            200) ;;
+            401|403) fail "git smart HTTP=$git_code：token 对 git 无权限（检查 Contents: Read/Write）";;
+            404) fail "git smart HTTP=404：仓库名或权限不对";;
+            *) fail "git smart HTTP=$git_code（非预期）";;
+          esac
+
+          set +e
+          out=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --exit-code --heads \
+            "https://x-access-token:${CCASS_DATA_TOKEN}@github.com/${CCASS_DATA_REPO}.git" 2>&1)
+          rc=$?
+          set -e
+          echo "$out" | mask
+          echo "git_ls_remote_rc=$rc"
+          case "$rc" in
+            0) echo "git read ok（已有分支）";;
+            2) echo "git read ok（空仓，无分支；首次运行会初始化 main）";;
+            *) fail "git ls-remote 失败 rc=$rc（stderr 见上）";;
+          esac
+
+          # 写权限探针：--dry-run 不改变远端，只验证 Contents: Write
+          probe=$(mktemp -d)
+          git -C "$probe" init -q -b main
+          echo probe > "$probe/.probe"
+          git -C "$probe" add .probe
+          git -C "$probe" -c user.email=ci@example.invalid -c user.name=ci commit -qm probe
+          set +e
+          perr=$(GIT_TERMINAL_PROMPT=0 timeout 30 git -C "$probe" push --dry-run \
+            "https://x-access-token:${CCASS_DATA_TOKEN}@github.com/${CCASS_DATA_REPO}.git" \
+            HEAD:refs/heads/__ccass_probe__ 2>&1)
+          prc=$?
+          set -e
+          rm -rf "$probe"
+          echo "$perr" | mask
+          echo "git_push_dry_run_rc=$prc"
+          [ "$prc" -eq 0 ] || fail "写权限探针失败 rc=$prc（检查 Contents: Write）"
 
       - name: Fetch CCASS
+        if: ${{ inputs.verify_only != true }}
         run: |
           set -euo pipefail
           ARGS="--workers 4"
@@ -78,29 +142,39 @@ jobs:
           python3 scripts/fetch_ccass.py $ARGS
 
       - name: Prepare private data repo
+        if: ${{ inputs.verify_only != true }}
+        timeout-minutes: 10
         run: |
           set -euo pipefail
+          mask() { sed "s|${CCASS_DATA_TOKEN}|***|g"; }
           remote="https://x-access-token:${CCASS_DATA_TOKEN}@github.com/${CCASS_DATA_REPO}.git"
           rm -rf ccass-repo
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           set +e
-          git ls-remote --exit-code --heads "$remote" >/dev/null 2>&1
+          err=$(GIT_TERMINAL_PROMPT=0 timeout 30 git ls-remote --exit-code --heads "$remote" 2>&1 >/dev/null)
           rc=$?
           set -e
           if [ "$rc" -eq 0 ]; then
-            git clone --depth 1 "$remote" ccass-repo
+            if ! GIT_TERMINAL_PROMPT=0 timeout 120 git clone --depth 1 "$remote" ccass-repo 2>/tmp/ccass_clone.err; then
+              echo "$err" | mask
+              mask < /tmp/ccass_clone.err
+              echo "::error::clone 失败（数据仓可读但克隆失败）"
+              exit 1
+            fi
           elif [ "$rc" -eq 2 ]; then
             echo "数据仓无任何分支（空仓），初始化 main"
             mkdir -p ccass-repo
             git -C ccass-repo init -b main
             git -C ccass-repo remote add origin "$remote"
           else
-            echo "::error::无法访问私有数据仓 $CCASS_DATA_REPO（git ls-remote exit=$rc），请检查 CCASS_DATA_TOKEN 的 Contents 权限"
+            echo "$err" | mask
+            echo "::error::无法访问私有数据仓 $CCASS_DATA_REPO（git ls-remote exit=$rc）；stderr 见上"
             exit 1
           fi
 
       - name: Pack and commit
+        if: ${{ inputs.verify_only != true }}
         run: |
           set -euo pipefail
           mkdir -p ccass-repo/data/ccass
@@ -125,7 +199,11 @@ jobs:
             exit 0
           fi
           git commit -m "ccass: 归档 $(date '+%Y-%m-%d')"
-          git push -u origin HEAD
+          if ! timeout 120 git push -u origin HEAD 2>/tmp/ccass_push.err; then
+            sed "s|${CCASS_DATA_TOKEN}|***|g" /tmp/ccass_push.err
+            echo "::error::推送失败（检查 token 的 Contents: Write）"
+            exit 1
+          fi
 
       - name: Summary
         if: always()
