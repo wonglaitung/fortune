@@ -31,6 +31,8 @@ def justified_pb(roe, payout, coe=0.11, g_cap=0.05):
 
 
 def pick(df, date, names):
+    if isinstance(names, str):
+        names = [names]
     for n in names:
         if date in df.index and n in df.columns and pd.notna(df.loc[date, n]):
             return float(df.loc[date, n])
