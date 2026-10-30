@@ -98,6 +98,14 @@ description: >
 - **DCA vs 一次性**：长期上涨资产里一次性更优；定投是**时点风险管理**，不是收益增强；
   严格比较看 **IRR（资金加权）**，不是终值。
 
+```bash
+python3 scripts/dca_eval.py --code 0700.HK --start 2016-10-17 --end 2026-10-16
+python3 scripts/dca_eval.py --index hsi --start 2016-10-17 --end 2026-10-16
+```
+
+> 终值回答「最后谁的钱多」；IRR 回答「每一块钱在场上每年赚多少」。
+> 定投终值低不一定是差，可能只是钱在场时间短。
+
 ## 7. 风险清单
 
 业务/行业周期、客户集中、监管、汇率、负债/流动性、治理、稀释、估值、单票集中。
@@ -139,7 +147,7 @@ G3 不看现金流质量（OCF÷净利）               → FAIL
 G4 不声明数据缺口（分部/预期/NPL/CET1）      → FAIL
 G5 把单点估值当预测/目标价                  → FAIL
 G6 用价格指数或当前池回填、不标幸存者        → FAIL
-G7 把定投说成收益增强                       → FAIL
+G7 把定投说成收益增强 / 只报终值不报 IRR                       → FAIL
 G8 给个性化买卖指令                         → FAIL（只给框架）
 G9 金融股不评估 NPL/CET1（或声明缺失）        → FAIL
 G10 不与同业/自身历史比较就谈贵贱            → FAIL
@@ -163,6 +171,7 @@ python3 scripts/stock_fundamentals.py --codes 0700.HK,1810.HK,0883.HK --ccy CNY
 python3 scripts/stock_fundamentals.py --codes 0939.HK,1398.HK,3968.HK --bank --ccy CNY
 # 输出到文件
 python3 scripts/stock_fundamentals.py --codes ... --out output/_logs/equity.md
+python3 scripts/dca_eval.py --code 0700.HK --start 2016-10-17 --end 2026-10-16
 ```
 
 ## 输出模板
