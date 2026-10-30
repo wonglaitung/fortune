@@ -77,12 +77,28 @@ jobs:
           fi
           python3 scripts/fetch_ccass.py $ARGS
 
-      - name: Checkout private data repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.CCASS_DATA_REPO }}
-          token: ${{ env.CCASS_DATA_TOKEN }}
-          path: ccass-repo
+      - name: Prepare private data repo
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${CCASS_DATA_TOKEN}@github.com/${CCASS_DATA_REPO}.git"
+          rm -rf ccass-repo
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          set +e
+          git ls-remote --exit-code --heads "$remote" >/dev/null 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            git clone --depth 1 "$remote" ccass-repo
+          elif [ "$rc" -eq 2 ]; then
+            echo "数据仓无任何分支（空仓），初始化 main"
+            mkdir -p ccass-repo
+            git -C ccass-repo init -b main
+            git -C ccass-repo remote add origin "$remote"
+          else
+            echo "::error::无法访问私有数据仓 $CCASS_DATA_REPO（git ls-remote exit=$rc），请检查 CCASS_DATA_TOKEN 的 Contents 权限"
+            exit 1
+          fi
 
       - name: Pack and commit
         run: |
@@ -90,21 +106,26 @@ jobs:
           mkdir -p ccass-repo/data/ccass
           rm -rf ccass-compact
           python3 scripts/compact_ccass.py --src data/ccass --dst ccass-compact
-          for d in ccass-compact/20*/; do
+          shopt -s nullglob
+          days=(ccass-compact/20*/)
+          shopt -u nullglob
+          if [ ${#days[@]} -eq 0 ]; then
+            echo "::error::没有可归档的日期目录（抓取可能全部失败）"
+            exit 1
+          fi
+          for d in "${days[@]}"; do
             day=$(basename "$d")
             tar -czf "ccass-repo/data/ccass/${day}.tar.gz" -C ccass-compact "$day"
           done
           cp data/ccass/manifest.json ccass-repo/data/ccass/manifest.json
           cd ccass-repo
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
           git add data/ccass
           if git diff --staged --quiet; then
             echo "无新增归档"
             exit 0
           fi
           git commit -m "ccass: 归档 $(date '+%Y-%m-%d')"
-          git push
+          git push -u origin HEAD
 
       - name: Summary
         if: always()

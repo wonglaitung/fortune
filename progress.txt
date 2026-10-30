@@ -5103,3 +5103,13 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 改为向 HKEX 探测最近有 CCASS 数据的工作日（`probe_latest_trading_day`）；
   `--backfill-weeks` 的周五同日过滤掉无数据日，避免写 310 个 `.failed` 哨兵。
 - 本地验证：探测 → 2026-10-29；`--date 2026/10/29 --stocks 00700` ok=1；`doc_gate` 通过。
+
+## 2026-10-30：CCASS 归档 CI 二次修复（私有仓空仓）
+
+- 根因：前次修复后 Fetch 成功，但 `actions/checkout` 对「空仓」私有数据仓失败
+  （`couldn't find remote ref refs/heads/main`，exit 128）——空仓无任何 ref，
+  checkout 默认按数据仓默认分支 `main` 拉取必失败。
+- 改为 `git ls-remote --exit-code --heads` 探测：rc=0 克隆；rc=2（空仓）本地
+  `git init -b main` + 配 remote；其他 rc 明确报错（区分空仓与 token 权限问题）。
+- 打包步加 nullglob：无日期目录即报错退出，避免 glob 字面量导致 tar 失败；
+  推送改 `git push -u origin HEAD`。
