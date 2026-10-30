@@ -44,6 +44,10 @@ jobs:
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          # 关键：checkout 默认写入 http.https://github.com/.extraheader（main 仓 GITHUB_TOKEN），
+          # 会覆盖 URL 里 x-access-token:CCASS 的凭据，导致私有数据仓 "Repository not found"
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -59,6 +63,8 @@ jobs:
         run: |
           set -uo pipefail
           mask() { sed "s|${CCASS_DATA_TOKEN}|***|g"; }
+          # 双保险：清掉 checkout 可能残留的 extraheader
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
           fail() { echo "::error::$*"; exit 1; }
 
           [ -n "${CCASS_DATA_REPO:-}" ] || fail "缺少 CCASS_DATA_REPO"
