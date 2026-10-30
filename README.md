@@ -112,6 +112,8 @@ python3 a_stock_walk_forward.py --horizon 20
 **示例（2016-10 → 2026-10）**：恒指价格 +5.0%，含息 +43.8%；310 当前池中位 +2.1%。
 
 **入口**
+- 技能：[.opencode/skills/market-diagnostics/SKILL.md](.opencode/skills/market-diagnostics/SKILL.md)
+
 ```bash
 python3 scripts/ic_attribution.py --input output/<run>/prediction_analysis.csv --horizon 20
 python3 scripts/cost_calibration.py --pred output/<run>/prediction_analysis.csv
