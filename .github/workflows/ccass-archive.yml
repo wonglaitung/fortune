@@ -25,6 +25,10 @@ on:
         description: '只验证 secrets（API + git 读写），不抓取/归档'
         type: boolean
         default: false
+      backfill_all:
+        description: '回填 HKEX 保留期内所有交易日（约 250 天，1–2 小时）'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -36,7 +40,7 @@ concurrency:
 jobs:
   archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     env:
       TZ: Asia/Hong_Kong
       CCASS_DATA_REPO: ${{ secrets.CCASS_DATA_REPO }}
@@ -140,7 +144,9 @@ jobs:
         run: |
           set -euo pipefail
           ARGS="--workers 4"
-          if [ -n "${{ inputs.backfill_weeks }}" ] && [ "${{ inputs.backfill_weeks }}" != "0" ]; then
+          if [ "${{ inputs.backfill_all }}" = "true" ]; then
+            ARGS="$ARGS --backfill-all"
+          elif [ -n "${{ inputs.backfill_weeks }}" ] && [ "${{ inputs.backfill_weeks }}" != "0" ]; then
             ARGS="$ARGS --backfill-weeks ${{ inputs.backfill_weeks }}"
           fi
           if [ "${{ inputs.retry_failed }}" = "true" ]; then

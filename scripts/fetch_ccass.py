@@ -137,6 +137,23 @@ def fridays(n):
     return out[::-1]
 
 
+def all_available_dates(max_back=330, max_gap=10):
+    """HKEX 保留期内所有有数据的工作日（约 12 个月），由远到近返回。"""
+    session = _session()
+    out, gap = [], 0
+    d = pd.Timestamp.today().normalize() - pd.Timedelta(days=1)
+    limit = pd.Timestamp.today().normalize() - pd.Timedelta(days=max_back)
+    while d >= limit and gap < max_gap:
+        if d.weekday() < 5:
+            if _has_data(session, d):
+                out.append(d)
+                gap = 0
+            else:
+                gap += 1
+        d -= pd.Timedelta(days=1)
+    return out[::-1]
+
+
 def save_derived(date_dir, code, df):
     """派生：估算总发行股数（用 pct≥0.5 的参与者中位数）。仅本地。"""
     if df.empty or 'pct' not in df.columns or 'shares' not in df.columns:
@@ -202,6 +219,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--date', default=None, help='YYYY/MM/DD；默认最近交易日')
     ap.add_argument('--backfill-weeks', type=int, default=0)
+    ap.add_argument('--backfill-all', action='store_true',
+                    help='回填 HKEX 保留期内所有有数据的工作日（约 250 天，1–2 小时）')
     ap.add_argument('--stocks', default=None, help='逗号分隔 5 位代码；默认 310 池')
     ap.add_argument('--out', default=ROOT)
     ap.add_argument('--sleep', type=float, default=0.15)
@@ -219,7 +238,9 @@ def main():
         uni = json.load(open('data/hk_broad/universe_310.json'))
         codes = sorted({c.split('.')[0].zfill(5) for c in uni})
 
-    if args.backfill_weeks:
+    if args.backfill_all:
+        dates = [d.strftime('%Y/%m/%d') for d in all_available_dates()]
+    elif args.backfill_weeks:
         dates = [d.strftime('%Y/%m/%d') for d in fridays(args.backfill_weeks)]
     elif args.date:
         dates = [args.date]
