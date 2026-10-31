@@ -157,3 +157,25 @@
 
 **结论**：事件特征没有稳健的独立信号；`盈警` 是唯一方向稳定但未过多重比较的。
 P2c 只做「最小事件 block + WF 消融」，不承诺提升；不过则降级为风险标记。
+
+## 12. P2c：接入模型（默认关，A/B 消融）
+
+- `EVENT_FEATURES=0`（默认）→ 生产特征完全不变。
+- `EVENT_FEATURES=1` → 在 `prepare_data()` / `predict()` 后叠加事件 block；
+  Top500 特征选择后**强制保留**事件列（类似 F1/HIBOR FORCE）。
+- 缓存键含 `EVENT_FEATURES`，避免与基线互写。
+- 冒烟：`0700.HK` 2025-01→2025-09 可生成 17 个事件列（`ev_*`/`place_*`）。
+
+A/B 命令：
+```bash
+# 基线（现有口径）
+EVENT_FEATURES=0 scripts/run_walk_forward.sh --model-type lgbm --horizon 20 \
+  --use-feature-selection --start-date 2020-06-01 --end-date 2026-07-31 --no-commit
+
+# 事件臂
+EVENT_FEATURES=1 scripts/run_walk_forward.sh --model-type lgbm --horizon 20 \
+  --use-feature-selection --start-date 2020-06-01 --end-date 2026-07-31 --no-commit
+```
+
+判据：同三冻结 + 双跑 md5；增量净 IR CI 下界 >0、PBO<0.5、DSR≥0.95、子窗同号。
+不通过 → 保留为风险标记，不改生产默认。

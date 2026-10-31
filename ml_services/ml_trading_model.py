@@ -46,6 +46,7 @@ LABEL_ENTRY_LAG_DAYS = 1
 
 # 导入项目模块
 from ml_services.run_manifest import manifest_fingerprint, resolve_flags, write_manifest
+from ml_services.feature_engineering.event_features import FEATURES as EVENT_FEATURE_COLS, build_event_features
 from ml_services.network_ids import resolve_community_ids
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 
@@ -124,6 +125,35 @@ ABSOLUTE_PRICE_FEATURES = [
     # 其他绝对值（中间变量）
     'High_Max', 'Low_Min'
 ]
+
+
+_EVENT_TABLE = None
+_EVENT_MAG = None
+
+
+def _load_event_tables():
+    global _EVENT_TABLE, _EVENT_MAG
+    if _EVENT_TABLE is None:
+        try:
+            _EVENT_TABLE = pd.read_csv('data/events/events_310.csv')
+        except Exception:
+            _EVENT_TABLE = pd.DataFrame()
+        try:
+            _EVENT_MAG = pd.read_csv('data/events/event_magnitudes.csv')
+        except Exception:
+            _EVENT_MAG = pd.DataFrame()
+
+
+def _add_event_features(stock_df, code):
+    """P2c：按 EVENT_FEATURES=1 叠加事件特征（默认关）。"""
+    if resolve_flags().get('EVENT_FEATURES', '0') != '1':
+        return stock_df
+    _load_event_tables()
+    if _EVENT_TABLE is None or _EVENT_TABLE.empty:
+        return stock_df
+    f = build_event_features(code, stock_df.index, _EVENT_TABLE, _EVENT_MAG)
+    f.index = stock_df.index
+    return stock_df.join(f)
 
 
 def _build_market_level_features():
@@ -4237,6 +4267,8 @@ class TradingModel(BaseTradingModel):
                         cached_df = cached_data['stock_df']
                         # 检查新特征列是否存在（GARCH + HSI Regime）
                         required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime']
+                        if resolve_flags().get('EVENT_FEATURES', '0') == '1':
+                            required_new_cols.append('ev_warn_decay')
                         missing_cols = [c for c in required_new_cols if c not in cached_df.columns]
                         if missing_cols:
                             print(f"  ⚠️ 缓存缺少新特征: {missing_cols}，重新计算...")
@@ -4285,6 +4317,9 @@ class TradingModel(BaseTradingModel):
                         if overlap:
                             stock_df = stock_df.drop(columns=overlap)
                         stock_df = stock_df.join(f1_feats)
+
+                    # P2c：事件特征（默认关）
+                    stock_df = _add_event_features(stock_df, code)
 
                     # 添加股票类型特征
                     stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
@@ -4585,6 +4620,11 @@ class TradingModel(BaseTradingModel):
                 if _hib:
                     self.feature_columns.extend(_hib)
                     print(f"🔧 HIBOR_FORCE 强制纳入 {len(_hib)} 个 HIBOR 特征: {sorted(_hib)}")
+            if resolve_flags().get('EVENT_FEATURES', '0') == '1':
+                _ev = [c for c in EVENT_FEATURE_COLS if c in df.columns and c not in self.feature_columns]
+                if _ev:
+                    self.feature_columns.extend(_ev)
+                    print(f"🔧 EVENT_FEATURES 强制纳入 {len(_ev)} 个事件特征")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
@@ -4701,6 +4741,8 @@ class TradingModel(BaseTradingModel):
                     cached_df = cached_data['stock_df']
                     # 检查新特征列是否存在（GARCH + HSI Regime）
                     required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime', 'net_composite_centrality']
+                    if resolve_flags().get('EVENT_FEATURES', '0') == '1':
+                        required_new_cols.append('ev_warn_decay')
                     missing_cols = [c for c in required_new_cols if c not in cached_df.columns]
                     if missing_cols:
                         logger.debug(f"预测缓存缺少新特征: {missing_cols}，重新计算...")
@@ -4821,6 +4863,9 @@ class TradingModel(BaseTradingModel):
                     if overlap:
                         stock_df = stock_df.drop(columns=overlap)
                     stock_df = stock_df.join(f1_feats)
+
+                # P2c：事件特征（默认关）
+                stock_df = _add_event_features(stock_df, code)
 
                 # 添加股票类型特征
                 stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)

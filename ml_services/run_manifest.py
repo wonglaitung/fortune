@@ -31,10 +31,11 @@ FLAG_DEFAULTS = {
     'F1_FORCE': '1',          # 必须与 F1_FEATURES 同向，否则「算了不用」
     'HIBOR_FEATURES': '1',    # D22 例外观察采用
     'HIBOR_FORCE': '1',       # D24；未开启时不算进列
+    'EVENT_FEATURES': '0',    # P2c 消融；默认关，验证后再决定是否上线
 }
 
 # 参与缓存隔离的开关（任一变化 ⇒ 特征列集合可能变化 ⇒ 缓存键必须变）
-CACHE_AFFECTING_FLAGS = ('F1_FEATURES', 'F1_FORCE', 'HIBOR_FEATURES', 'HIBOR_FORCE')
+CACHE_AFFECTING_FLAGS = ('F1_FEATURES', 'F1_FORCE', 'HIBOR_FEATURES', 'HIBOR_FORCE', 'EVENT_FEATURES')
 
 #: 这些开关**只允许**出现在 run_manifest 的默认表里；其它文件出现即违反 O5。
 GATING_FILES = ('ml_services/ml_trading_model.py',
