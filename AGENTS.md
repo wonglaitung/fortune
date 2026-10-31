@@ -435,6 +435,8 @@ test_df[col] = test_df[col].apply(
   - **例外**：A-H 溢价数据集 `data/ah_premium/ah_*.csv` + `fx_hkdcny.csv` + `manifest.json`
     （D21 M1/M1b 复现资产；`ml_services/fetch_ah_premium.py` 可全量回拉，但 A 股长窗历史
     仅免费源可得，不入库=换机不可复现，同 lessons 三.51）
+  - **例外**：公司行动事件表 `data/events/events_310.csv` + `manifest_310.json`
+    （每周 `data-refresh.yml` 生成；小体积 PIT 派生数据，供分析/技能读取）
   - **例外**：PIT 恒指成分表 `data/hsi_constituents_pit.csv` + `hsi_constituents_pit_manifest.json`
     （D34 立项产物；上游 `yfiua/index-constituents` 逐月快照会滚掉旧月 ⇒ 不入库 = 历史成分永久
     丢失，同 lessons 三.51。`scripts/fetch_hsi_constituents_pit.py` 重建）

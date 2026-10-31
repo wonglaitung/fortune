@@ -27,6 +27,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Refresh HSI PIT constituents
+        run: python3 scripts/fetch_hsi_constituents_pit.py || echo "⚠️ HSI PIT 刷新失败，沿用旧表"
+
+      - name: Data freshness
+        run: python3 scripts/data_freshness.py --skip-local --out output/_logs/data_freshness.md || true
+
       - name: Retrain 5/10/20
         run: bash scripts/monthly_retrain.sh
 
@@ -36,7 +42,10 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add data/ml_trading_model_lgbm_5d.pkl \
                   data/ml_trading_model_lgbm_10d.pkl \
-                  data/ml_trading_model_lgbm_20d.pkl
+                  data/ml_trading_model_lgbm_20d.pkl 2>/dev/null || true
+          git add data/hsi_constituents_pit.csv \
+                  data/hsi_constituents_pit_manifest.json 2>/dev/null || true
+          git add output/_logs/data_freshness.md 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "模型未变化，无需提交"
             exit 0

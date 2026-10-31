@@ -1,0 +1,55 @@
+name: 每周数据刷新（公告/事件表）
+
+on:
+  schedule:
+    # 周六 00:00 UTC = 08:00 HKT；SFC 周五发布后
+    - cron: '0 0 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install minimal deps
+        run: pip install pandas requests beautifulsoup4 lxml
+
+      - name: Fetch HKEX announcements (2016-2026)
+        run: python3 scripts/fetch_hkex_announcements.py --start 2016 --end 2026 --workers 2
+
+      - name: Build event table (310)
+        run: python3 scripts/build_event_table.py --universe 310
+
+      - name: Data freshness
+        run: python3 scripts/data_freshness.py --skip-local --out output/_logs/data_freshness.md || true
+
+      - name: Commit event table
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/events/events_310.csv data/events/manifest_310.json output/_logs/data_freshness.md
+          if git diff --staged --quiet; then
+            echo "事件表无变化"
+            exit 0
+          fi
+          git commit -m "每周数据刷新：公告/事件表 $(date '+%Y-%m-%d') [skip ci]"
+          git fetch origin main
+          git pull --rebase --autostash origin main || true
+          git push || { git pull --rebase --autostash origin main; git push; }

@@ -1,0 +1,34 @@
+{
+ "generated_at": "2026-10-31T13:06:54",
+ "n_events": 2246,
+ "by_type": {
+  "POSITIVE_PROFIT_ALERT": 670,
+  "RIGHTS_ISSUE": 108,
+  "CB_ISSUANCE": 190,
+  "PROFIT_WARNING": 724,
+  "PLACEMENT_COMPANY": 215,
+  "CB_CONVERSION": 135,
+  "PRIVATISATION": 126,
+  "PLACEMENT_SHAREHOLDER": 28,
+  "LOCKUP": 10,
+  "SCHEME": 40
+ },
+ "by_year": {
+  "2016": 117,
+  "2017": 174,
+  "2018": 153,
+  "2019": 169,
+  "2020": 289,
+  "2021": 244,
+  "2022": 232,
+  "2023": 222,
+  "2024": 198,
+  "2025": 252,
+  "2026": 196
+ },
+ "by_confidence": {
+  "high": 1965,
+  "review": 281
+ },
+ "universe": "310"
+}

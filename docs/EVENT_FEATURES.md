@@ -107,3 +107,15 @@
 2. 控制规模、折价、市场状态；
 3. 用 310 之外的独立窗口；
 4. 先补退市股，消除幸存者。
+
+## 9. 自动更新（2026-10-31 起）
+
+| 频率 | Workflow | 更新 |
+|---|---|---|
+| 每天 16:30 | `comprehensive-analysis.yml` | 追加 `data_freshness.md`（只读检查） |
+| 每周六 08:00 | `data-refresh.yml` | 公告 2016–2026 → 事件表 → 提交 |
+| 每月 1 日 18:00 | `monthly-retrain.yml` | 恒指 PIT + 新鲜度 + 重训 → 模型 |
+
+- 入库：`data/events/events_310.csv` + `manifest_310.json`（约 600 KB）。
+- 不入库：公告 JSON/PDF、`fund_cache`、快照、CCASS 原始数据。
+- 本地同步：`bash scripts/sync_data.sh`；需要 CCASS 私有仓加 `--ccass`。

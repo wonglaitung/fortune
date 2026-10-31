@@ -180,5 +180,7 @@ data/hkex_announcements/
 # 银行年报 PDF（体积大，可重抓）
 data/bank_reports/
 data/buyback_pdfs/
-data/events/
+data/events/*
+!data/events/events_310.csv
+!data/events/manifest_310.json
 data/bank_reports/*.part
