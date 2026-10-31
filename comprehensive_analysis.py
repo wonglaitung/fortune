@@ -2484,6 +2484,46 @@ def analyze_anomalies_with_llm(anomaly_data):
         return f"⚠️ 大模型分析失败: {e}"
 
 
+EVENT_CN = {
+    'PROFIT_WARNING': '盈警', 'POSITIVE_PROFIT_ALERT': '盈喜',
+    'PLACEMENT_COMPANY': '公司配售', 'PLACEMENT_SHAREHOLDER': '大股东配售',
+    'CB_ISSUANCE': '可转债发行', 'CB_CONVERSION': '可转债转股',
+    'RIGHTS_ISSUE': '供股', 'OPEN_OFFER': '公开招股',
+    'PRIVATISATION': '私有化', 'SCHEME': '协议安排', 'LOCKUP': '锁定',
+}
+
+
+def generate_event_report_content(days=30, max_rows=20):
+    """近 N 天自选池公司行动提示（信息展示，不构成买卖建议）。"""
+    p = 'data/events/events_310.csv'
+    if not os.path.exists(p):
+        return '> 事件表未生成（运行 `python3 scripts/build_event_table.py --universe 310`）。'
+    try:
+        ev = pd.read_csv(p)
+        ev['announce_ts'] = pd.to_datetime(ev.announce_ts, errors='coerce')
+        ev['code'] = ev.code.astype(str).str.zfill(5)
+        codes = {c.split('.')[0].zfill(5) for c in WATCHLIST}
+        name_map = {c.split('.')[0].zfill(5): n for c, n in WATCHLIST.items()}
+        cutoff = pd.Timestamp.today().normalize() - pd.Timedelta(days=days)
+        sub = ev[(ev.code.isin(codes)) & (ev.confidence == 'high') &
+                 (ev.announce_ts >= cutoff)].sort_values('announce_ts', ascending=False)
+        if sub.empty:
+            return f'> 近 {days} 天自选池无高置信公司行动（事件表截至 {ev.announce_ts.max().date() if ev.announce_ts.notna().any() else "未知"}）。'
+        lines = [f'近 {days} 天自选池共 {len(sub)} 条高置信事件（最多列 {max_rows} 条）：', '',
+                 '| 日期 | 代码 | 名称 | 事件 | 方向 | 标题 |', '|---|---|---|---|---|---|']
+        for _, r in sub.head(max_rows).iterrows():
+            title = str(r.get('title', ''))[:70].replace('|', '/')
+            url = r.get('url', '')
+            link = f'[{title}]({url})' if isinstance(url, str) and url.startswith('http') else title
+            lines.append(f"| {r.announce_ts.date()} | {r.code} | {name_map.get(r.code, r.get('name',''))} | "
+                         f"{EVENT_CN.get(r.event_type, r.event_type)} | {r.direction} | {link} |")
+        lines += ['', '> 事件为公告标题口径，`review` 置信未列入；仅作信息提示，不构成买卖建议。',
+                  '> 事件研究无稳定 alpha（D107），不要仅凭事件追涨杀跌。']
+        return '\n'.join(lines)
+    except Exception as e:
+        return f'> 事件报告生成失败：{e}'
+
+
 def generate_anomaly_report_content(anomaly_data):
     """
     生成异常检测报告内容
@@ -5352,6 +5392,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     _grd_block = _guardrail_block()
                 except Exception:
                     _grd_block = ""
+                event_text = generate_event_report_content(days=30)
                 full_content = banner_line + f"""**本文导航**：今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
 
 <!--RISK_PANEL-->
@@ -5381,7 +5422,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
 {_grd_block}
-## 三、股票异常检测提醒
+## 三、公司行动与事件提示（近 30 天）
+
+{event_text}
+
+## 四、股票异常检测提醒
 
 """
 
@@ -5390,19 +5435,19 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                 full_content += f"""
 
-## 四、板块分析（5日涨跌幅排名）
+## 五、板块分析（5日涨跌幅排名）
 
 {sector_text}
 
-## 五、股息信息（即将除净）
+## 六、股息信息（即将除净）
 
 {dividend_text}
 
-## 六、股票技术指标详情
+## 七、股票技术指标详情
 
 {technical_indicators_table}
 
-## 七、最近48小时模拟交易记录
+## 八、最近48小时模拟交易记录
 
 {recent_transactions_text}
 
