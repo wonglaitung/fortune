@@ -119,3 +119,21 @@
 - 入库：`data/events/events_310.csv` + `manifest_310.json`（约 600 KB）。
 - 不入库：公告 JSON/PDF、`fund_cache`、快照、CCASS 原始数据。
 - 本地同步：`bash scripts/sync_data.sh`；需要 CCASS 私有仓加 `--ccass`。
+
+## 10. P2a：事件规模抽取（30 只）
+
+工具：`scripts/extract_event_magnitude.py`（PDF → 规模字段）。
+输出：`data/events/event_magnitudes.csv`（24 条：高置信 8、低置信 16、followup 7）。
+
+| 事件 | 关键规模 |
+|---|---|
+| 中芯国际 2017 配售 | 稀释 3.07%，折价 4.91%，募资/市值 3.0% |
+| 黑芝麻 2025 配售 | 稀释 8.29%，折价 11.79%，募资/市值 8.0% |
+| 中国平安 2024 CB | 转股稀释 3.56%，本金 HK$273 亿 |
+| 汇丰 2025 私有化 | 要约价 HK$155，溢价 30.3%（后续更新 33.1%） |
+| 小米 2019 锁定 | 365 天 |
+
+**低置信/缺口**：药明生物配售只抽到折价（6.7–8.1%）与规模（3–4% 市值），稀释比例缺失；
+阿里配售、部分 CB/锁定公告未披露关键字段；同一事件有多份公告（`is_followup=1`）。
+
+**规则**：P2b 只用 `magnitude_conf=high` 的规模；低置信只保留事件 dummy/decay，缺失显式标记。

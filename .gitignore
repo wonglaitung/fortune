@@ -183,4 +183,5 @@ data/buyback_pdfs/
 data/events/*
 !data/events/events_310.csv
 !data/events/manifest_310.json
+!data/events/event_magnitudes.csv
 data/bank_reports/*.part
