@@ -5,6 +5,7 @@
 输出：data/events/events.csv + manifest.json（数据目录 gitignore，可重生成）
 事件：盈警/盈喜、配售、供股、公开招股、可转债、私有化、协议安排、锁定
 """
+import argparse
 import csv
 import glob
 import json
@@ -18,6 +19,13 @@ from config import WATCHLIST
 
 OUT = 'data/events'
 YEARS = range(2016, 2027)
+
+
+def load_universe(kind):
+    if kind == 'watchlist':
+        return dict(WATCHLIST)
+    d = json.load(open('data/hk_broad/universe_310.json'))
+    return {c: (v.get('name') or c) for c, v in d.items()}
 
 PATTERNS = [
     ('PROFIT_WARNING', re.compile(r'\bPROFIT WARNING\b|盈警', re.I), 'high', '-'),
@@ -60,11 +68,20 @@ def parse_dt(s):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--universe', choices=['watchlist', '310'], default='310')
+    ap.add_argument('--start-year', type=int, default=2016)
+    ap.add_argument('--end-year', type=int, default=2026)
+    args = ap.parse_args()
+    universe = load_universe(args.universe)
+    years = range(args.start_year, args.end_year + 1)
+    suffix = '' if args.universe == 'watchlist' else '_310'
+
     os.makedirs(OUT, exist_ok=True)
     rows, seen = [], set()
-    for code in WATCHLIST:
+    for code, name in universe.items():
         c5 = code.split('.')[0].zfill(5)
-        for y in YEARS:
+        for y in years:
             for fn in glob.glob(f'data/hkex_announcements/{c5}_{y}.json'):
                 for x in json.load(open(fn)):
                     hit = classify(x.get('TITLE', ''))
@@ -77,14 +94,14 @@ def main():
                         continue
                     seen.add(key)
                     rows.append({
-                        'code': c5, 'name': WATCHLIST[code], 'event_type': typ,
+                        'code': c5, 'name': name, 'event_type': typ,
                         'announce_ts': dt.isoformat(sep=' '), 'confidence': conf, 'direction': direction,
                         'stage': stage(x.get('TITLE', '')),
                         'title': x.get('TITLE', ''), 'url': 'https://www1.hkexnews.hk' + x.get('FILE_LINK', ''),
                         'source': 'HKEXnews',
                     })
     rows.sort(key=lambda r: (r['announce_ts'], r['code']))
-    with open(f'{OUT}/events.csv', 'w', newline='') as f:
+    with open(f'{OUT}/events{suffix}.csv', 'w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()) if rows else
                            ['code', 'name', 'event_type', 'announce_ts', 'confidence', 'title', 'url', 'source'])
         w.writeheader(); w.writerows(rows)
@@ -96,7 +113,8 @@ def main():
         y = r['announce_ts'][:4]
         manifest['by_year'][y] = manifest['by_year'].get(y, 0) + 1
         manifest['by_confidence'][r['confidence']] = manifest['by_confidence'].get(r['confidence'], 0) + 1
-    json.dump(manifest, open(f'{OUT}/manifest.json', 'w'), ensure_ascii=False, indent=1)
+    manifest['universe'] = args.universe
+    json.dump(manifest, open(f'{OUT}/manifest{suffix}.json', 'w'), ensure_ascii=False, indent=1)
     print(json.dumps(manifest, ensure_ascii=False, indent=1))
 
 
