@@ -190,3 +190,8 @@ data/bank_reports/*.part
 data/di/*
 !data/di/di_notices.csv
 !data/di/manifest.json
+
+# FF301 月度股本（CSV 入库，PDF 不入库）
+data/hkex_monthly_pdfs/
+data/hkex_monthly_shares.csv
+!data/hkex_monthly_shares.csv
