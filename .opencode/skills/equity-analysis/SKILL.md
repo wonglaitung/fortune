@@ -30,9 +30,13 @@ description: >
 |---|---|---|
 | 三表（年度/中期） | `data/fund_cache/{code}_*.pkl` | akshare 港股财报；2002→ |
 | 价格 | `data/hk_broad/snapshot/{5位}.pkl` | 前复权；或实时行情 |
-| 股本 | `shares = 归母净利 / 每股基本盈利` | 比 CCASS 更接近总股本 |
+| 股本（官方） | `data/hkex_monthly_shares.csv`（FF301） | 优先 `issued`；缺失回退 `shares_history` / 净利EPS |
 | 股息/回购 | 现金流量表 `已付股息(融资)`、`回购股份`、`发行股份` | 净回购=回购−发行；总回报=股息率+净回购收益率 |
 | 公司行动 | `data/events/events_310.csv`（`build_event_table.py` 生成）+ HKEXnews | 配售/供股/CB/私有化/锁定；PIT 公告日 |
+| 历史股本 | `data/hkex_monthly_shares_history.csv` + `data/shares_history.csv` | 30 只 FF301 月度；yfinance 代理逐日 |
+| 权益披露 | `data/di/di_notices.csv` | 大股东/董事增减持（1101/1201） |
+| CCASS | `data/ccass/` + `scripts/ccass_concentration.py` | 集中度/覆盖率；分母用 FF301 |
+| 除牌/港股通 | `data/hkex_delisted.csv` / `data/stock_connect_northbound.csv` | 幸存者 / 合资格变化 |
 | 币种 | 内地企业多为 **CNY**，香港/英国多为 HKD/USD | **错误币种会让 PE/PB/股息率失真** |
 
 **拿不到、必须看年报/公告的**：
@@ -78,6 +82,8 @@ python3 scripts/event_study.py --events data/events/events_310.csv
 4. 股息是否由自由现金流覆盖？有没有借钱分红？
 5. 有没有控制权变更/私有化/指数调整/停牌？
 6. 除权日是否已复权？供股是否按 TERP 调整？
+7. 股本用的是什么口径？FF301 / yfinance / 净利EPS 差异是否 >1%？
+8. 是否已除牌/停牌？港股通合资格是否变化？
 
 > 数据缺口：事件表基于**公告标题**，`confidence=review` 需回看原文；30 只/310 只均为当前池，缺退市股。
 
@@ -206,6 +212,7 @@ G10 不与同业/自身历史比较就谈贵贱            → FAIL
 G11 只看回购、不扣发行/不看回购价            → FAIL
 G12 不检查最近 12 个月公司行动/稀释            → FAIL
 G13 不复权/不看供股 TERP                     → FAIL
+G14 股本只用净利/EPS、不查 FF301/稀释        → FAIL
 ```
 
 ## 失败模式库
@@ -216,7 +223,7 @@ G13 不复权/不看供股 TERP                     → FAIL
 - **币种错误**：内地企业报表 CNY，未折算会把 PE/PB 低估约 8%；
 - **稀释**：股本持续增加，EPS 增长被摊薄；只买回购不看增发/库存股再出售；
 - **除权**：把供股/拆股/除息造成的价格下跌当亏损，未用复权/总回报；
-- **事件当 alpha**：事件研究无稳定信号（D107），不能把“有配售/盈警”直接当买卖理由；
+- **事件当 alpha**：事件研究无稳定信号（D107/D110），不能把“有配售/盈警/大股东买卖”直接当买卖理由；
 - **幸存者/单窗口**：当前池回填、只用一段牛市外推。
 
 ## 命令

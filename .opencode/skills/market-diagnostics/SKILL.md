@@ -36,7 +36,11 @@ description: >
 | 成本 | 往返多少？flat 还是分层模型？ |
 | 显著性 | 行级还是折/月聚类？ |
 
-**数据缺口（本项目现状）**：无历史股数/权重、无退市股、无 2010–2023 PIT 成分、南向只有总量。
+**数据缺口（本项目现状）**：
+- 股数：FF301 月度只覆盖 30 只（2015–2026）；310 只无完整官方历史；
+- 退市：有除牌代码名单（810 条），**无逐日行情/退市日**；
+- 指数：HSI PIT 成分 2023-07 起；无历史权重；
+- 南向：逐股持仓可用（2024-10 起），更早只有总量。
 ⇒ 缺这些时，只能做**描述性诊断**，不能声称「无偏回测」。
 
 ---
@@ -52,6 +56,19 @@ description: >
 
 > 示例结论模板：「恒指价格 +5.0%，含息 +43.8%；310 当前池中位 +2.1%；
 > 自选 30 +204% 但属事后挑选的赢家子集」——每句都要能复算。
+
+## 2.5 筹码/股本（CCASS + FF301）
+
+```bash
+python3 scripts/ccass_concentration.py --date latest --top 20
+python3 scripts/stock_fundamentals.py --codes 0700.HK,0005.HK --ccy HKD
+```
+
+- **分母**：优先 FF301 `issued`，缺失回退 `shares_history` / 净利EPS；
+- **集中度**：Top1/Top5/Top10、HHI、CCASS 覆盖率；
+- **读法**：高集中度 = 自由流通量低/挤仓风险；但 CCASS 是参与者（券商/托管行）层面，**不是最终受益人**；
+- **变动**：持仓变化可能是转仓/托管迁移/公司行动，不等于买卖；
+- **DI**：大股东/董事增减持（`scripts/di_signal.py`），事件研究无稳定信号（D110），只做解释/风险。
 
 ## 2. 信息层归因（IC）
 
@@ -79,6 +96,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --cost-mode mod
 ```bash
 python3 scripts/hkex_event_study.py --horizon 20
 python3 scripts/sfc_signal.py --fwd 20 --lag 10
+python3 scripts/di_signal.py
 ```
 
 - 入场时点（公告次日）、持有期、基准（等权/行业/流动性匹配）；
@@ -114,6 +132,8 @@ G5 行级 z/t 当显著                      → FAIL（改折/月聚类）
 G6 说“没有 edge”却不报 MDE              → FAIL
 G7 取网格最好一格当结论                 → FAIL
 G8 把诊断结论当交易信号                 → FAIL
+G9 用净利/EPS 当股本、不查 FF301        → FAIL
+G10 不查除牌名单/幸存者                 → FAIL
 ```
 
 ## 失败模式库
@@ -131,6 +151,7 @@ G8 把诊断结论当交易信号                 → FAIL
 ```
 ## 口径（基准/宇宙/端点/成本/聚类）
 ## 指数 vs 个股（股息/端点/权重/幸存者）
+## 筹码/股本（CCASS/FF301/DI）
 ## 信息层（IC 分层）
 ## 组合层（净超额/成本/盈亏平衡）
 ## 事件（CAR/聚类）
@@ -146,6 +167,7 @@ python3 scripts/ic_attribution.py --input <csv> --horizon 20
 python3 scripts/cost_calibration.py --pred <csv>
 python3 scripts/hkex_event_study.py --horizon 20
 python3 scripts/sfc_signal.py --fwd 20 --lag 10
+python3 scripts/di_signal.py
 python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10
 python3 ml_services/monthly_guardrail.py --horizon 20 --pred <csv>
 python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred <csv>

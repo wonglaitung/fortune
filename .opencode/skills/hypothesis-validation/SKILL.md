@@ -39,7 +39,10 @@ description: >
 
 ### 2. 数据卫生 + 三冻结
 - **无前视**：滚动特征 `.shift(1)`；标签 `Close.shift(-(h+lag))/Close.shift(-lag)-1`；外部行情（HSI/美股）走**对齐函数**，别裸 `merge`。
-- **无幸存者**：池成员要 PIT（时点还原），别用"今天还在的成分"回填历史。
+- **无幸存者**：池成员要 PIT（时点还原），别用"今天还在的成分"回填历史；
+  除牌检查用 `data/hkex_delisted.csv`。
+- **股本/筹码口径**：优先 FF301 `data/hkex_monthly_shares.csv`（历史 30 只）；
+  缺失回退 `shares_history` / 净利EPS，并在结论标注；CCASS/DI 用公告日 T+1。
 - **三冻结**：`HK_MARKET_SNAPSHOT_DIR` + `US_MARKET_SNAPSHOT_DIR` + `GATE_SOURCE_CSV` + **双跑 md5 一致**。
 - ⚠️ **跨日/跨机不可逐行复现**（数据源日内更新）⇒ 只比**决策指标**，禁逐行 diff。
 
