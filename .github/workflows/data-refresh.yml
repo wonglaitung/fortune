@@ -37,6 +37,12 @@ jobs:
       - name: Build event table (310)
         run: python3 scripts/build_event_table.py --universe 310
 
+      - name: Build watchlist event table (for magnitudes)
+        run: python3 scripts/build_event_table.py --universe watchlist
+
+      - name: Refresh event magnitudes (watchlist)
+        run: python3 scripts/extract_event_magnitude.py --events data/events/events.csv
+
       - name: Fetch DI notices (last 2 years)
         run: python3 scripts/fetch_di.py --universe watchlist --start 2025 --end 2026
 
@@ -53,7 +59,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data/events/events_310.csv data/events/manifest_310.json data/di/di_notices.csv data/di/manifest.json data/hkex_delisted.csv data/stock_connect_northbound.csv output/_logs/data_freshness.md
+          git add data/events/events_310.csv data/events/manifest_310.json data/events/event_magnitudes.csv data/di/di_notices.csv data/di/manifest.json data/hkex_delisted.csv data/stock_connect_northbound.csv output/_logs/data_freshness.md
           if git diff --staged --quiet; then
             echo "事件表无变化"
             exit 0

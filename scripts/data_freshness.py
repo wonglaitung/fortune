@@ -83,6 +83,20 @@ def hsi_pit_date():
     return None
 
 
+def _csv_max(path, col):
+    if not os.path.exists(path):
+        return None
+    try:
+        d = pd.read_csv(path, usecols=[col])
+        return pd.to_datetime(d[col], errors='coerce').max()
+    except Exception:
+        return None
+
+
+def _mtime(path):
+    return datetime.fromtimestamp(os.path.getmtime(path)) if os.path.exists(path) else None
+
+
 def fund_cache_date():
     fs = glob.glob(os.path.join(ROOT, 'data/fund_cache/*.pkl'))
     return datetime.fromtimestamp(max(os.path.getmtime(f) for f in fs)) if fs else None
@@ -104,6 +118,12 @@ def main():
         ('港股模型 pkl', model_date(), 35, 45),
         ('恒指 PIT 成分', hsi_pit_date(), 45, 90),
         ('财报表 fund_cache', fund_cache_date(), 200, 365),
+        ('权益披露 DI', _csv_max(os.path.join(ROOT, 'data/di/di_notices.csv'), 'filing_date'), 14, 30),
+        ('FF301 月度股本', _csv_max(os.path.join(ROOT, 'data/hkex_monthly_shares.csv'), 'filing_date'), 45, 70),
+        ('历史股本', _csv_max(os.path.join(ROOT, 'data/shares_history.csv'), 'date'), 45, 70),
+        ('除牌名单', _mtime(os.path.join(ROOT, 'data/hkex_delisted.csv')), 14, 30),
+        ('Stock Connect 北向', _mtime(os.path.join(ROOT, 'data/stock_connect_northbound.csv')), 14, 30),
+        ('事件规模', _csv_max(os.path.join(ROOT, 'data/events/event_magnitudes.csv'), 'announce_ts'), 60, 120),
     ]
     lines = ['# 数据新鲜度', '', '| 数据 | 最后日期 | 年龄（天） | 状态 |', '|---|---:|---:|---|']
     bad = False
