@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 FUND = 'data/fund_cache'
+FF301 = 'data/hkex_monthly_shares.csv'
 SNAP = 'data/hk_broad/snapshot'
 FX = {'CNY': 1.08, 'HKD': 1.0, 'USD': 7.8}
 
@@ -28,6 +29,21 @@ def justified_pb(roe, payout, coe=0.11, g_cap=0.05):
     if roe <= g or coe <= g:
         return np.nan
     return (roe - g) / (coe - g)
+
+
+_FF301 = None
+
+
+def load_ff301():
+    global _FF301
+    if _FF301 is None:
+        try:
+            d = pd.read_csv(FF301, dtype={'code': str})
+            d['code'] = d.code.str.zfill(5)
+            _FF301 = d.set_index('code')[['issued', 'treasury', 'total']].to_dict('index')
+        except Exception:
+            _FF301 = {}
+    return _FF301
 
 
 def pick(df, date, names):
@@ -71,6 +87,15 @@ def load_stock(code, ccy='CNY', bank=False):
 
     fx = FX.get(ccy, 1.08)
     shares = net / eps
+    shares_source = 'net_eps'
+    _ff = load_ff301().get(code.split('.')[0].zfill(5))
+    if _ff:
+        for k in ('issued', 'total'):
+            v = _ff.get(k)
+            if v is not None and np.isfinite(v) and v > 0:
+                shares = float(v)
+                shares_source = 'FF301'
+                break
     bvps = equity / shares * fx
     pe = px / (eps * fx)
     pb = px / bvps
@@ -111,6 +136,7 @@ def load_stock(code, ccy='CNY', bank=False):
     row = {'code': code, 'ccy': ccy, '财年': d.year, 'PB': pb, 'PE': pe, 'ROE': roe, 'ROA': roa,
            '毛利率': gm, '净利率': nm, '营收增速': rg, '净利增速': npg,
            '资产负债率': dar, 'OCF÷净利': cash_conv, '股息率': dy, '派息率': payout,
+           '股本来源': shares_source,
            '净回购年': bb_year if bb_year else '—',
            '净回购(亿)': net_bb / 1e8, '净回购收益率': net_bb_yield,
            '总股东回报': tsr}
