@@ -113,12 +113,14 @@ EVENTS_CSV = re.compile(r"^data/events/(events(_310)?\.csv|manifest(_310)?\.json
 DI_CSV = re.compile(r"^data/di/(di_notices\.csv|manifest\.json)$")
 # 例外：FF301 月度股本
 HKEX_MONTHLY_CSV = re.compile(r"^data/hkex_monthly_shares\.csv$")
+# 例外：除牌名单
+HKEX_DELISTED_CSV = re.compile(r"^data/hkex_delisted\.csv$")
 
 # 新增数据文件的放行清单（集中一处，避免条件链继续变长）
 DATA_EXCEPTIONS = [
     HK20D_CSV, SFC_CSV, SOUTHBOUND_CSV, CNH_HIBOR_CSV, AH_PREMIUM_CSV,
     HSI_PIT_CSV, RISK_LEDGER_CSV, RISK_PANEL_LEDGER_CSV, A_STOCK_MODEL_PKL, HSI_MODEL_PKL,
-    HK_MODEL_PKL, EVENTS_CSV, DI_CSV, HKEX_MONTHLY_CSV,
+    HK_MODEL_PKL, EVENTS_CSV, DI_CSV, HKEX_MONTHLY_CSV, HKEX_DELISTED_CSV,
 ]
 
 

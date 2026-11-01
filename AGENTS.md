@@ -435,6 +435,7 @@ test_df[col] = test_df[col].apply(
   - **例外**：A-H 溢价数据集 `data/ah_premium/ah_*.csv` + `fx_hkdcny.csv` + `manifest.json`
     （D21 M1/M1b 复现资产；`ml_services/fetch_ah_premium.py` 可全量回拉，但 A 股长窗历史
     仅免费源可得，不入库=换机不可复现，同 lessons 三.51）
+  - **例外**：除牌名单 `data/hkex_delisted.csv`（周更，小体积，幸存者检查）
   - **例外**：FF301 月度股本 `data/hkex_monthly_shares.csv`
     （月度重训前刷新；小体积 PIT 派生数据）
   - **例外**：权益披露 DI `data/di/di_notices.csv` + `manifest.json`

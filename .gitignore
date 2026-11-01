@@ -197,3 +197,6 @@ data/hkex_monthly_shares.csv
 !data/hkex_monthly_shares.csv
 
 data/ccass_concentration.csv
+
+data/hkex_delisted.csv
+!data/hkex_delisted.csv
