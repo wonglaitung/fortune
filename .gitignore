@@ -185,3 +185,8 @@ data/events/*
 !data/events/manifest_310.json
 !data/events/event_magnitudes.csv
 data/bank_reports/*.part
+
+# 权益披露 DI（CSV 入库，cache 不入库）
+data/di/*
+!data/di/di_notices.csv
+!data/di/manifest.json

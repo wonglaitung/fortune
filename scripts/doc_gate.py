@@ -109,12 +109,14 @@ HSI_MODEL_PKL = re.compile(r"^data/hsi_models/hsi_lightgbm_\d+d_\d{8}_\d{6}\.pkl
 HK_MODEL_PKL = re.compile(r"^data/ml_trading_model_lgbm_\d+d\.pkl$")
 # 例外：公司行动事件表（每周 data-refresh 工作流生成；小体积、PIT 派生数据）
 EVENTS_CSV = re.compile(r"^data/events/(events(_310)?\.csv|manifest(_310)?\.json|event_magnitudes\.csv)$")
+# 例外：权益披露 DI（周更，小体积，PIT 派生）
+DI_CSV = re.compile(r"^data/di/(di_notices\.csv|manifest\.json)$")
 
 # 新增数据文件的放行清单（集中一处，避免条件链继续变长）
 DATA_EXCEPTIONS = [
     HK20D_CSV, SFC_CSV, SOUTHBOUND_CSV, CNH_HIBOR_CSV, AH_PREMIUM_CSV,
     HSI_PIT_CSV, RISK_LEDGER_CSV, RISK_PANEL_LEDGER_CSV, A_STOCK_MODEL_PKL, HSI_MODEL_PKL,
-    HK_MODEL_PKL, EVENTS_CSV,
+    HK_MODEL_PKL, EVENTS_CSV, DI_CSV,
 ]
 
 
