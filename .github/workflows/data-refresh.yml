@@ -43,6 +43,9 @@ jobs:
       - name: Fetch delisted securities
         run: python3 scripts/fetch_hkex_delisted.py
 
+      - name: Fetch Stock Connect northbound list
+        run: python3 scripts/fetch_stock_connect_northbound.py
+
       - name: Data freshness
         run: python3 scripts/data_freshness.py --skip-local --out output/_logs/data_freshness.md || true
 
@@ -50,7 +53,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data/events/events_310.csv data/events/manifest_310.json data/di/di_notices.csv data/di/manifest.json data/hkex_delisted.csv output/_logs/data_freshness.md
+          git add data/events/events_310.csv data/events/manifest_310.json data/di/di_notices.csv data/di/manifest.json data/hkex_delisted.csv data/stock_connect_northbound.csv output/_logs/data_freshness.md
           if git diff --staged --quiet; then
             echo "事件表无变化"
             exit 0

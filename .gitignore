@@ -200,3 +200,6 @@ data/ccass_concentration.csv
 
 data/hkex_delisted.csv
 !data/hkex_delisted.csv
+
+data/stock_connect_northbound.csv
+!data/stock_connect_northbound.csv
