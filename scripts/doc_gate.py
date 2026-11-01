@@ -119,12 +119,14 @@ HKEX_DELISTED_CSV = re.compile(r"^data/hkex_delisted\.csv$")
 STOCK_CONNECT_CSV = re.compile(r"^data/stock_connect_northbound\.csv$")
 # 例外：历史股本
 SHARES_HISTORY_CSV = re.compile(r"^data/shares_history\.csv$")
+# 例外：FF301 历史月度股本
+HKEX_MONTHLY_HISTORY_CSV = re.compile(r"^data/hkex_monthly_shares_history\.csv$")
 
 # 新增数据文件的放行清单（集中一处，避免条件链继续变长）
 DATA_EXCEPTIONS = [
     HK20D_CSV, SFC_CSV, SOUTHBOUND_CSV, CNH_HIBOR_CSV, AH_PREMIUM_CSV,
     HSI_PIT_CSV, RISK_LEDGER_CSV, RISK_PANEL_LEDGER_CSV, A_STOCK_MODEL_PKL, HSI_MODEL_PKL,
-    HK_MODEL_PKL, EVENTS_CSV, DI_CSV, HKEX_MONTHLY_CSV, HKEX_DELISTED_CSV, STOCK_CONNECT_CSV, SHARES_HISTORY_CSV,
+    HK_MODEL_PKL, EVENTS_CSV, DI_CSV, HKEX_MONTHLY_CSV, HKEX_DELISTED_CSV, STOCK_CONNECT_CSV, SHARES_HISTORY_CSV, HKEX_MONTHLY_HISTORY_CSV,
 ]
 
 

@@ -120,6 +120,7 @@ def main():
         ('财报表 fund_cache', fund_cache_date(), 200, 365),
         ('权益披露 DI', _csv_max(os.path.join(ROOT, 'data/di/di_notices.csv'), 'filing_date'), 14, 30),
         ('FF301 月度股本', _csv_max(os.path.join(ROOT, 'data/hkex_monthly_shares.csv'), 'filing_date'), 45, 70),
+        ('FF301 历史', _csv_max(os.path.join(ROOT, 'data/hkex_monthly_shares_history.csv'), 'month_end'), 45, 70),
         ('历史股本', _csv_max(os.path.join(ROOT, 'data/shares_history.csv'), 'date'), 45, 70),
         ('除牌名单', _mtime(os.path.join(ROOT, 'data/hkex_delisted.csv')), 14, 30),
         ('Stock Connect 北向', _mtime(os.path.join(ROOT, 'data/stock_connect_northbound.csv')), 14, 30),

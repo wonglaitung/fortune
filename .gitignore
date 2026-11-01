@@ -206,3 +206,6 @@ data/stock_connect_northbound.csv
 
 data/shares_history.csv
 !data/shares_history.csv
+
+data/hkex_monthly_shares_history.csv
+!data/hkex_monthly_shares_history.csv
