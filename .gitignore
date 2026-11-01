@@ -203,3 +203,6 @@ data/hkex_delisted.csv
 
 data/stock_connect_northbound.csv
 !data/stock_connect_northbound.csv
+
+data/shares_history.csv
+!data/shares_history.csv
