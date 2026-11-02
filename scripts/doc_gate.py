@@ -11,6 +11,7 @@
   L4  已撤销/已外迁内容残留        必须 0
   L5  A 闸可运行（--help 不得崩溃）
   L6  结论必须条件化               DECISIONS 段含结论词须带「适用范围」
+  L7  README 数据清单计数          标题/导语/表格行数/目录锚点必须一致
 
 检查项（--tests 追加）：
   T1  全量 pytest
@@ -243,6 +244,34 @@ def check_gate_runnable() -> list[str]:
 
 
 # ------------------------------------------------------- L6 结论条件化
+# ------------------------------------------------------- L7 README 数据清单计数
+def check_readme_data_count() -> list[str]:
+    p = ROOT / 'README.md'
+    if not p.exists():
+        return ['README.md 不存在']
+    text = p.read_text(encoding='utf-8')
+    m = re.search(r'^##\s+3\.\s*数据清单（(\d+)\s*类）', text, re.M)
+    if not m:
+        return ['README 缺少「## 3. 数据清单（N 类）」']
+    n = int(m.group(1))
+    fails = []
+    intro = re.search(r'共维护\s*\*\*(\d+)\s*类数据\*\*', text)
+    if not intro or int(intro.group(1)) != n:
+        fails.append(f'导语类数 {intro.group(1) if intro else "缺失"} ≠ 标题 {n}')
+    start = m.end()
+    nxt = re.search(r'^##\s+', text[start:], re.M)
+    section = text[start:start + nxt.start()] if nxt else text[start:]
+    nums = [int(x) for x in re.findall(r'^\|\s*(\d+)\s*\|', section, re.M)]
+    if len(nums) != n:
+        fails.append(f'表格行数 {len(nums)} ≠ 标题 {n}')
+    if nums and nums != list(range(1, n + 1)):
+        fails.append(f'表格编号不连续: {nums}')
+    toc = re.search(r'#3-数据清单(\d+)-类', text)
+    if not toc or int(toc.group(1)) != n:
+        fails.append(f'目录锚点 {toc.group(1) if toc else "缺失"} ≠ 标题 {n}')
+    return fails
+
+
 def check_conclusion_scope() -> list[str]:
     """"结论必须条件化"（QUANT_SYSTEM_METHODOLOGY 七原则之一，可判定版）。
 
@@ -351,6 +380,7 @@ def main() -> int:
     rc |= _run("L4 过期残留", check_banned)
     rc |= _run("L5 A 闸可运行", check_gate_runnable)
     rc |= _run("L6 结论条件化", check_conclusion_scope)
+    rc |= _run("L7 README 数据清单计数", check_readme_data_count)
     if args.staged:
         rc |= _run("S1 提交规范", check_staged)
         rc |= _run("S2 py_compile", check_py_compile)
