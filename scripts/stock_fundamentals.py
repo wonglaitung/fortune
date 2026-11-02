@@ -93,8 +93,12 @@ def load_stock(code, ccy='CNY', bank=False):
         for k in ('issued', 'total'):
             v = _ff.get(k)
             if v is not None and np.isfinite(v) and v > 0:
-                shares = float(v)
-                shares_source = 'FF301'
+                # A+H 公司 FF301 常只报 H 股；与净利/EPS 总股本差异过大时不覆盖
+                if 0.8 <= float(v) / shares <= 1.2:
+                    shares = float(v)
+                    shares_source = 'FF301'
+                else:
+                    shares_source = 'net_eps (FF301 H-share only)'
                 break
     bvps = equity / shares * fx
     pe = px / (eps * fx)

@@ -16,6 +16,6 @@
     "reg_lambda": 5.0,
     "subsample": 0.85
   },
-  "sha256": "6eb30f4ef78bcfab721b61af452131218538744cd116d3be88124885a45a0361",
-  "trained_at": "2026-10-29T23:32:34"
+  "sha256": "441bb2da745eabb17c5bd117fcf6fb8f8003bc685b4823d0fa7caffce48fc023",
+  "trained_at": "2026-11-01T21:15:01"
 }

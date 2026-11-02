@@ -209,3 +209,5 @@ data/shares_history.csv
 
 data/hkex_monthly_shares_history.csv
 !data/hkex_monthly_shares_history.csv
+
+data/event_pdfs/
