@@ -66,9 +66,41 @@ def parse(path):
             'month_end': pd.to_datetime(me.group(1)).date().isoformat() if me else ''}
 
 
+def fallback_shares(code5):
+    p = 'data/shares_history.csv'
+    if not os.path.exists(p):
+        return None
+    d = pd.read_csv(p, dtype={'code': str})
+    d['code'] = d.code.str.zfill(5)
+    x = d[d.code == code5].sort_values('date')
+    if not x.empty:
+        r = x.iloc[-1]
+        v = int(r.shares)
+        return {'issued': v, 'treasury': 0, 'total': v,
+                'month_end': str(r.date), 'filing_date': str(r.date),
+                'url': '', 'source': 'yfinance_fallback'}
+    try:
+        import yfinance as yf
+        sym = code5.lstrip('0').zfill(4) + '.HK'
+        sh = yf.Ticker(sym).get_shares_full(start='2024-01-01')
+        if sh is not None and len(sh):
+            d = pd.to_datetime(sh.index).tz_localize(None).normalize()
+            v = int(sh.iloc[-1])
+            return {'issued': v, 'treasury': 0, 'total': v,
+                    'month_end': str(d[-1].date()), 'filing_date': str(d[-1].date()),
+                    'url': '', 'source': 'yfinance_fallback'}
+    except Exception:
+        pass
+    return None
+
+
 def job(code5):
     hit = latest_notice(code5)
     if not hit:
+        fb = fallback_shares(code5)
+        if fb:
+            fb['code'] = code5
+            return fb
         return {'code': code5, 'error': 'no monthly return'}
     dt, x = hit
     try:
@@ -77,7 +109,8 @@ def job(code5):
         if not r:
             return {'code': code5, 'error': 'parse failed', 'url': 'https://www1.hkexnews.hk' + x['FILE_LINK']}
         r.update({'code': code5, 'filing_date': dt.date().isoformat(),
-                  'url': 'https://www1.hkexnews.hk' + x['FILE_LINK']})
+                  'url': 'https://www1.hkexnews.hk' + x['FILE_LINK'],
+                  'source': 'HKEX_FF301'})
         return r
     except Exception as e:
         return {'code': code5, 'error': str(e)[:80]}
