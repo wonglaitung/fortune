@@ -44,7 +44,7 @@ jobs:
         run: python3 scripts/extract_event_magnitude.py --events data/events/events.csv
 
       - name: Fetch DI notices (last 2 years)
-        run: python3 scripts/fetch_di.py --universe watchlist --start 2025 --end 2026
+        run: python3 scripts/fetch_di.py --universe 310 --start 2025 --end 2026
 
       - name: Fetch delisted securities
         run: python3 scripts/fetch_hkex_delisted.py

@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 import pandas as pd
@@ -162,6 +163,31 @@ def code_list(args):
     return list(json.load(open('data/hk_broad/universe_310.json')))
 
 
+def process_code(cfg, args):
+    code5 = cfg.split('.')[0].zfill(5)
+    sess = requests.Session(); sess.headers.update(UA)
+    out = []
+    for y in range(args.start, args.end + 1):
+        rows = _load_cache(code5, y, refresh=args.refresh)
+        if rows is None:
+            try:
+                soup = search(sess, code5, datetime(y, 1, 1), min(datetime(y, 12, 31), datetime.now()))
+                links = _result_links(soup)
+                target = 'all' if args.include_directors else 'ss'
+                rows = parse_pages(sess, links[target]) if target in links else []
+            except Exception as e:
+                print(f'{code5} {y}: ERR {e}', flush=True)
+                rows = []
+            _save_cache(code5, y, rows)
+        for r in rows:
+            r['code'] = code5
+            r['name_cfg'] = WATCHLIST.get(cfg, '')
+        out.extend(rows)
+        print(f'{code5} {y}: {len(rows)}', flush=True)
+        time.sleep(args.sleep)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--codes', default=None)
@@ -170,6 +196,7 @@ def main():
     ap.add_argument('--end', type=int, default=2026)
     ap.add_argument('--sleep', type=float, default=0.3)
     ap.add_argument('--include-directors', action='store_true', help='同时抓董事通知（量大）')
+    ap.add_argument('--workers', type=int, default=4)
     ap.add_argument('--refresh', action='store_true', help='忽略缓存重新抓取')
     ap.add_argument('--no-merge', action='store_true', help='不合并已有 CSV')
     ap.add_argument('--out', default=OUT)
@@ -177,28 +204,11 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     sess = requests.Session(); sess.headers.update(UA)
     all_rows = []
-    for cfg in code_list(args):
-        code5 = cfg.split('.')[0].zfill(5)
-        for y in range(args.start, args.end + 1):
-            try:
-                rows = _load_cache(code5, y, refresh=args.refresh)
-                if rows is None:
-                    soup = search(sess, code5, datetime(y, 1, 1), min(datetime(y, 12, 31), datetime.now()))
-                    links = _result_links(soup)
-                    target = 'all' if args.include_directors else 'ss'
-                    if target not in links:
-                        rows = []
-                    else:
-                        rows = parse_pages(sess, links[target])
-                    _save_cache(code5, y, rows)
-                for r in rows:
-                    r['code'] = code5
-                    r['name_cfg'] = WATCHLIST.get(cfg, '')
-                all_rows.extend(rows)
-                print(f'{code5} {y}: {len(rows)}', flush=True)
-            except Exception as e:
-                print(f'{code5} {y}: ERR {e}', flush=True)
-            time.sleep(args.sleep)
+    codes = code_list(args)
+    with ThreadPoolExecutor(max_workers=args.workers) as ex:
+        futs = [ex.submit(process_code, c, args) for c in codes]
+        for f in as_completed(futs):
+            all_rows.extend(f.result())
     df = pd.DataFrame(all_rows)
     p = os.path.join(args.out, 'di_notices.csv')
     if not args.no_merge and os.path.exists(p) and len(df):
@@ -210,7 +220,7 @@ def main():
     if not df.empty:
         df = df.drop_duplicates(subset=['form_serial'], keep='last')
         df['filing_date'] = pd.to_datetime(df.form_serial.str.extract(r'^[A-Z]+(\d{8})')[0], format='%Y%m%d', errors='coerce')
-        df['event_date'] = pd.to_datetime(df.event_date, dayfirst=True, errors='coerce')
+        df['event_date'] = pd.to_datetime(df.event_date, format='mixed', dayfirst=True, errors='coerce')
         df = df.sort_values(['filing_date', 'code'], na_position='last')
     df.to_csv(p, index=False)
     manifest = {'generated_at': datetime.now().isoformat(timespec='seconds'),
