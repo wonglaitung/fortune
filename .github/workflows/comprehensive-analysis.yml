@@ -61,6 +61,16 @@ jobs:
         if: always()
         run: python3 scripts/data_freshness.py --skip-local --out output/_logs/data_freshness.md || true
 
+      - name: Prune reports older than 15 days
+        if: always()
+        run: |
+          cutoff=$(date -d '15 days ago' +%F)
+          for f in output/comprehensive_reports/*.md; do
+            [ -e "$f" ] || continue
+            d=$(basename "$f" .md)
+            if [[ "$d" < "$cutoff" ]]; then rm -f "$f"; fi
+          done
+
       - name: Commit prediction history
         if: always()
         run: |
@@ -93,6 +103,7 @@ jobs:
           # ml_trading_model.py --mode train 重建，无需跨 run 携带）
           git add data/prediction_history.json
           git add output/comprehensive_reports/*.md
+          git add -u output/comprehensive_reports
           git add output/_logs/data_freshness.md 2>/dev/null || true
           # SFC 卖空周报增量刷新结果写回仓库，使刷新每周递推（D20 生产纳入配套）
           git add data/sfc_short/ 2>/dev/null || true
