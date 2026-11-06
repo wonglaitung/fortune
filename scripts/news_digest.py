@@ -18,6 +18,7 @@ import json
 import re
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
+from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
@@ -120,6 +121,17 @@ def dedupe(items):
 
 
 def render(rows):
+    def cell(value):
+        return escape(str(value or ""), quote=False).replace("|", "&#124;")
+
+    def linked_title(x):
+        title = cell(x["title"])
+        link = str(x.get("link") or "").strip()
+        if not link:
+            return title
+        href = escape(link, quote=True)
+        return f'<a href="{href}" target="_blank" rel="noopener noreferrer">{title}</a>'
+
     lines = [
         "# 每日重要新闻",
         "",
@@ -132,7 +144,7 @@ def render(rows):
     ]
     for i, x in enumerate(rows, 1):
         tm = x["time"].strftime("%m-%d %H:%M") if x["time"] else "—"
-        lines.append(f"| {i} | {tm} | {x['topic']} | [{x['title']}]({x['link']}) | {x['source'] or '—'} |")
+        lines.append(f"| {i} | {tm} | {cell(x['topic'])} | {linked_title(x)} | {cell(x['source'])} |")
     lines += ["", "> 新闻标题只是线索；同一事件可能有多篇报道，需点开原文核对。"]
     return "\n".join(lines) + "\n"
 

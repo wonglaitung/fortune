@@ -1401,7 +1401,13 @@ def generate_html_email(content, date_str):
 
     # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
     html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
-    
+
+    # 新闻等外部链接统一新窗口打开，避免邮件客户端在站内打开
+    def _new_tab(m):
+        tag = m.group(0)
+        return tag if 'target=' in tag else tag[:-1] + ' target="_blank" rel="noopener noreferrer">'
+    html_content = re.sub(r'<a\b[^>]*>', _new_tab, html_content)
+
     # 组装完整的HTML
     html = f"""
 <!DOCTYPE html>
@@ -1468,6 +1474,13 @@ def generate_html_email(content, date_str):
         strong {{
             color: #2c3e50;
             font-weight: 600;
+        }}
+        a {{
+            color: #1a73e8;
+            text-decoration: underline;
+        }}
+        a:hover {{
+            color: #0b57d0;
         }}
         .reference-section {{
             background: #ecf0f1;
