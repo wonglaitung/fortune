@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-06T03:16:20+08:00",
-  "rows": 117696,
-  "stocks": 262,
-  "date_min": "2024-11-05",
+  "updated_at": "2026-11-07T02:48:58+08:00",
+  "rows": 115568,
+  "stocks": 257,
+  "date_min": "2024-11-06",
   "date_max": "2026-11-05",
   "failed": [
     {
@@ -326,11 +326,27 @@
       "error": "empty"
     },
     {
+      "code": "1112.HK",
+      "error": "ChunkedEncodingError: Response ended prematurely"
+    },
+    {
+      "code": "1112.HK",
+      "error": "empty"
+    },
+    {
       "code": "1636.HK",
       "error": "TypeError: 'NoneType' object is not subscriptable"
     },
     {
       "code": "1636.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1157.HK",
+      "error": "ChunkedEncodingError: Response ended prematurely"
+    },
+    {
+      "code": "1157.HK",
       "error": "empty"
     },
     {
@@ -358,6 +374,14 @@
       "error": "empty"
     },
     {
+      "code": "1357.HK",
+      "error": "ChunkedEncodingError: Response ended prematurely"
+    },
+    {
+      "code": "1357.HK",
+      "error": "empty"
+    },
+    {
       "code": "1622.HK",
       "error": "TypeError: 'NoneType' object is not subscriptable"
     },
@@ -366,11 +390,27 @@
       "error": "empty"
     },
     {
+      "code": "1119.HK",
+      "error": "ChunkedEncodingError: Response ended prematurely"
+    },
+    {
+      "code": "1119.HK",
+      "error": "empty"
+    },
+    {
       "code": "2772.HK",
       "error": "TypeError: 'NoneType' object is not subscriptable"
     },
     {
       "code": "2772.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1359.HK",
+      "error": "ChunkedEncodingError: Response ended prematurely"
+    },
+    {
+      "code": "1359.HK",
       "error": "empty"
     },
     {
