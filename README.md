@@ -59,7 +59,7 @@ python3 hsi_prediction.py --no-email
 
 **真实日报**
 - 日报目录：[output/comprehensive_reports/](output/comprehensive_reports/)
-- 历史示例：[2026-11-05.md](output/comprehensive_reports/2026-11-05.md)（最新版见目录）
+- 目录内文件名即日期；最新日报为目录中最新日期的文件。
 - 日报由 16:30 HKT 自动生成，顶部含「数据时点 + 港股/美股快照 + 重要新闻」，后接综合判断、重点个股与信息参考。
 - 仓库只保留最近 15 天日报；更早报告由 CI 自动清理。
 
