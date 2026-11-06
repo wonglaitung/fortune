@@ -1339,6 +1339,26 @@ def apply_email_placeholders(full_content, html_content, detailed_html='', detai
     return text_content, html_content
 
 
+def build_global_brief():
+    """运行时快照 + 重要新闻；失败时返回可读占位，不阻断主流程。"""
+    snapshot_text, news_text = "", ""
+    try:
+        from scripts.market_snapshot import collect as collect_snapshot, render as render_snapshot
+        snapshot_text = render_snapshot(collect_snapshot())
+        snapshot_text = snapshot_text.replace("# 市场快照", "### 市场快照", 1)
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 市场快照生成失败（跳过）: {e}")
+        snapshot_text = "### 市场快照\n\n> 本次快照不可用。\n"
+    try:
+        from scripts.news_digest import collect as collect_news, render as render_news
+        news_text = render_news(collect_news(8, "zh"))
+        news_text = news_text.replace("# 每日重要新闻", "### 重要新闻", 1)
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 重要新闻生成失败（跳过）: {e}")
+        news_text = "### 重要新闻\n\n> 本次新闻摘要不可用。\n"
+    return snapshot_text, news_text
+
+
 def generate_html_email(content, date_str):
     """
     生成HTML格式的邮件内容
@@ -5393,9 +5413,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 except Exception:
                     _grd_block = ""
                 event_text = generate_event_report_content(days=30)
-                full_content = banner_line + f"""**本文导航**：今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
+                print("🌍 生成运行时市场快照与重要新闻...")
+                snapshot_text, news_text = build_global_brief()
+                full_content = banner_line + f"""**本文导航**：今日速览 · 今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
 
 <!--RISK_PANEL-->
+
+# 一页速览
+
+## 一、数据时点与市场快照
+
+{snapshot_text}
+
+## 二、重要新闻
+
+{news_text}
+
+---
+
+# 今日综合判断
 
 {response}
 
