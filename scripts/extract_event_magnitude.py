@@ -185,9 +185,16 @@ def main():
                 df.loc[i, 'is_followup'] = 1
             else:
                 last = t
+    missing = int((df['magnitude_conf'] == 'missing').sum())
+    print(f'{len(df)} 条；high={sum(df.magnitude_conf=="high")} low={sum(df.magnitude_conf=="low")} missing={missing}')
+    print_cols = ['code', 'event_type', 'dilution_pct', 'discount_pct', 'offer_premium_pct', 'lockup_days', 'magnitude_conf']
+    print(df.reindex(columns=print_cols).to_string(index=False))
+    if len(df) and missing == len(df):
+        if 'error' in df.columns:
+            print('\n全部抽取失败：')
+            print(df.reindex(columns=['code', 'event_type', 'error']).to_string(index=False))
+        raise SystemExit('全部事件规模抽取失败')
     df.to_csv(args.out, index=False)
-    print(f'{len(df)} 条；high={sum(df.magnitude_conf=="high")} low={sum(df.magnitude_conf=="low")} missing={sum(df.magnitude_conf=="missing")}')
-    print(df[['code', 'event_type', 'dilution_pct', 'discount_pct', 'offer_premium_pct', 'lockup_days', 'magnitude_conf']].to_string(index=False))
 
 
 if __name__ == '__main__':

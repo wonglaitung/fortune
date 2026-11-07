@@ -29,7 +29,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install minimal deps
-        run: pip install pandas requests beautifulsoup4 lxml
+        run: pip install pandas requests beautifulsoup4 lxml pymupdf
 
       - name: Fetch HKEX announcements (2016-2026)
         run: python3 scripts/fetch_hkex_announcements.py --start 2016 --end 2026 --workers 2
