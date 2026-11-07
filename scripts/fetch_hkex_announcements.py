@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,26 +21,49 @@ import requests
 ROOT = 'data/hkex_announcements'
 BASE = 'https://www1.hkexnews.hk/search'
 UA = {'User-Agent': 'Mozilla/5.0 (personal research)'}
+_IDS_LOCK = threading.Lock()
 
 
 def _jsonp(text):
     return json.loads(text[text.index('(') + 1:text.rindex(')')])
 
 
+def _read_ids(p):
+    if not os.path.exists(p):
+        return {}
+    try:
+        with open(p) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_ids(p, cache):
+    os.makedirs(ROOT, exist_ok=True)
+    tmp = f'{p}.{os.getpid()}.{threading.get_ident()}.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(cache, f, indent=0, sort_keys=True)
+    os.replace(tmp, p)
+
+
 def stock_id(sess, code5):
     p = os.path.join(ROOT, '_ids.json')
-    cache = json.load(open(p)) if os.path.exists(p) else {}
-    if code5 in cache:
-        return cache[code5]
+    with _IDS_LOCK:
+        cache = _read_ids(p)
+        if code5 in cache:
+            return cache[code5]
     r = sess.get(f'{BASE}/prefix.do', params={
         'callback': 'cb', 'lang': 'EN', 'type': 'A', 'name': code5, 'market': 'SEHK'}, timeout=30)
     info = _jsonp(r.text).get('stockInfo') or []
     hit = next((x for x in info if x.get('code') == code5), None)
     if hit:
-        cache[code5] = int(hit['stockId'])
-        os.makedirs(ROOT, exist_ok=True)
-        json.dump(cache, open(p, 'w'), indent=0, sort_keys=True)
-    return cache.get(code5)
+        with _IDS_LOCK:
+            cache = _read_ids(p)
+            cache[code5] = int(hit['stockId'])
+            _write_ids(p, cache)
+        return cache[code5]
+    return None
 
 
 def search(sess, sid, f, t):
@@ -56,7 +80,10 @@ def search(sess, sid, f, t):
 def fetch_year(sess, code5, sid, year, sleep_s):
     p = os.path.join(ROOT, f'{code5}_{year}.json')
     if os.path.exists(p):
-        return json.load(open(p))
+        try:
+            return json.load(open(p))
+        except Exception:
+            pass
     rows = search(sess, sid, f'{year}0101', f'{year}1231')
     if len(rows) >= 1000:  # 可能截断，按半年再取
         h1 = search(sess, sid, f'{year}0101', f'{year}0630')
@@ -68,24 +95,31 @@ def fetch_year(sess, code5, sid, year, sleep_s):
                 merged.append(x)
         rows = merged
     os.makedirs(ROOT, exist_ok=True)
-    json.dump(rows, open(p, 'w'))
+    tmp = f'{p}.{os.getpid()}.{threading.get_ident()}.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(rows, f)
+    os.replace(tmp, p)
     time.sleep(sleep_s)
     return rows
 
 
 def worker(args):
     code5, years, sleep_s = args
-    sess = requests.Session(); sess.headers.update(UA)
-    sid = stock_id(sess, code5)
-    if not sid:
+    try:
+        sess = requests.Session(); sess.headers.update(UA)
+        sid = stock_id(sess, code5)
+        if not sid:
+            return code5, []
+        out = []
+        for y in years:
+            try:
+                out.extend(fetch_year(sess, code5, sid, y, sleep_s))
+            except Exception as e:
+                print(f'  ! {code5} {y}: {e}', flush=True)
+        return code5, out
+    except Exception as e:
+        print(f'  ! {code5} id: {e}', flush=True)
         return code5, []
-    out = []
-    for y in years:
-        try:
-            out.extend(fetch_year(sess, code5, sid, y, sleep_s))
-        except Exception as e:
-            print(f'  ! {code5} {y}: {e}', flush=True)
-    return code5, out
 
 
 def main():
