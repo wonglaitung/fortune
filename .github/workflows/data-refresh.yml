@@ -48,9 +48,11 @@ jobs:
         run: python3 scripts/fetch_di.py --universe 310 --start 2025 --end 2026
 
       - name: Fetch delisted securities
+        continue-on-error: true
         run: python3 scripts/fetch_hkex_delisted.py
 
       - name: Fetch Stock Connect northbound list
+        continue-on-error: true
         run: python3 scripts/fetch_stock_connect_northbound.py
 
       - name: Data freshness

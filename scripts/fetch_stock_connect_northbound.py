@@ -48,8 +48,16 @@ def fetch(market, url):
 
 
 def main():
-    rows = [fetch(k, v) for k, v in URLS.items()]
-    df = pd.concat([x for x in rows if not x.empty], ignore_index=True)
+    rows = []
+    for market, url in URLS.items():
+        try:
+            df = fetch(market, url)
+            if df.empty:
+                raise ValueError('空表')
+            rows.append(df)
+        except Exception as e:
+            raise SystemExit(f'抓取 {market} 北向名单失败：{e}')
+    df = pd.concat(rows, ignore_index=True)
     df.to_csv(OUT, index=False)
     print(f'{len(df)} 条 → {OUT}')
 

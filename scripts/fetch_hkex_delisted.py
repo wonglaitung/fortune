@@ -17,14 +17,19 @@ OUT = 'data/hkex_delisted.csv'
 
 
 def main():
-    r = requests.get(URL, headers={'User-Agent': 'Mozilla/5.0'}, timeout=60)
-    r.raise_for_status()
+    try:
+        r = requests.get(URL, headers={'User-Agent': 'Mozilla/5.0'}, timeout=60)
+        r.raise_for_status()
+    except Exception as e:
+        raise SystemExit(f'抓取除牌名单失败：{e}')
     soup = BeautifulSoup(r.text, 'lxml')
     rows = []
     for tr in soup.find_all('tr'):
         tds = [x.get_text(' ', strip=True) for x in tr.find_all('td')]
         if len(tds) >= 2 and tds[0].isdigit():
             rows.append({'code': tds[0].zfill(5), 'name': tds[1]})
+    if not rows:
+        raise SystemExit('未解析到除牌记录；保留现有 CSV')
     df = pd.DataFrame(rows).drop_duplicates(subset=['code', 'name'])
     df.to_csv(OUT, index=False)
     print(f'{len(df)} 条 → {OUT}')
