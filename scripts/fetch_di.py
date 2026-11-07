@@ -29,6 +29,18 @@ CACHE = 'data/di/cache'
 UA = {'User-Agent': 'Mozilla/5.0 (personal research)'}
 
 
+def preflight(sess):
+    try:
+        r = sess.get(BASE + 'NSSrchCorp.aspx?g_lang=en&lang=EN&src=MAIN', timeout=15)
+        if r.status_code != 200:
+            print(f'DI 预检失败：HTTP {r.status_code}', flush=True)
+            return False
+        return True
+    except Exception as e:
+        print(f'DI 预检失败：{e}', flush=True)
+        return False
+
+
 def _val(soup, name):
     t = soup.find('input', {'name': name})
     return t.get('value', '') if t else ''
@@ -175,10 +187,10 @@ def process_code(cfg, args):
                 links = _result_links(soup)
                 target = 'all' if args.include_directors else 'ss'
                 rows = parse_pages(sess, links[target]) if target in links else []
+                _save_cache(code5, y, rows)
             except Exception as e:
                 print(f'{code5} {y}: ERR {e}', flush=True)
                 rows = []
-            _save_cache(code5, y, rows)
         for r in rows:
             r['code'] = code5
             r['name_cfg'] = WATCHLIST.get(cfg, '')
@@ -203,6 +215,8 @@ def main():
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     sess = requests.Session(); sess.headers.update(UA)
+    if not preflight(sess):
+        raise SystemExit(2)
     all_rows = []
     codes = code_list(args)
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
@@ -217,11 +231,13 @@ def main():
             df = pd.concat([old, df], ignore_index=True)
         except Exception:
             pass
-    if not df.empty:
-        df = df.drop_duplicates(subset=['form_serial'], keep='last')
-        df['filing_date'] = pd.to_datetime(df.form_serial.str.extract(r'^[A-Z]+(\d{8})')[0], format='%Y%m%d', errors='coerce')
-        df['event_date'] = pd.to_datetime(df.event_date, format='mixed', dayfirst=True, errors='coerce')
-        df = df.sort_values(['filing_date', 'code'], na_position='last')
+    if df.empty:
+        print('未获取到任何 DI 记录；保留现有 CSV/manifest', flush=True)
+        raise SystemExit(2)
+    df = df.drop_duplicates(subset=['form_serial'], keep='last')
+    df['filing_date'] = pd.to_datetime(df.form_serial.str.extract(r'^[A-Z]+(\d{8})')[0], format='%Y%m%d', errors='coerce')
+    df['event_date'] = pd.to_datetime(df.event_date, format='mixed', dayfirst=True, errors='coerce')
+    df = df.sort_values(['filing_date', 'code'], na_position='last')
     df.to_csv(p, index=False)
     manifest = {'generated_at': datetime.now().isoformat(timespec='seconds'),
                 'rows': len(df), 'codes': df.code.nunique() if len(df) else 0,

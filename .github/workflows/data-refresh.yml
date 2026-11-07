@@ -16,7 +16,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 240
     env:
       TZ: Asia/Hong_Kong
     steps:
@@ -44,6 +44,7 @@ jobs:
         run: python3 scripts/extract_event_magnitude.py --events data/events/events.csv
 
       - name: Fetch DI notices (last 2 years)
+        continue-on-error: true
         run: python3 scripts/fetch_di.py --universe 310 --start 2025 --end 2026
 
       - name: Fetch delisted securities
