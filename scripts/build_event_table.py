@@ -77,6 +77,17 @@ def main():
     years = range(args.start_year, args.end_year + 1)
     suffix = '' if args.universe == 'watchlist' else '_310'
 
+    missing = []
+    for code in universe:
+        c5 = code.split('.')[0].zfill(5)
+        for y in years:
+            if not os.path.exists(f'data/hkex_announcements/{c5}_{y}.json'):
+                missing.append(f'{c5}_{y}')
+    expected = len(universe) * len(years)
+    if missing:
+        sample = ', '.join(missing[:20])
+        raise SystemExit(f'公告缓存不完整：缺失 {len(missing)}/{expected} 个 code-year；示例：{sample}')
+
     os.makedirs(OUT, exist_ok=True)
     rows, seen = [], set()
     for code, name in universe.items():

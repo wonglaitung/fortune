@@ -173,6 +173,9 @@ def main():
                      'cb_principal_hkd': (m.get('cb_principal') * FX['USD']) if m.get('cb_principal') else None,
                      'offer_price': m.get('offer_price'), 'offer_premium_pct': premium,
                      'lockup_days': m.get('lockup_days'), 'magnitude_conf': conf})
+    if not rows:
+        print(f'0 条；{len(ev)} 个公告中无可抽取事件，保留现有文件', flush=True)
+        return
     df = pd.DataFrame(rows)
     df['announce_ts'] = pd.to_datetime(df.announce_ts)
     df = df.sort_values(['code', 'event_type', 'announce_ts']).reset_index(drop=True)
