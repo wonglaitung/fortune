@@ -277694,10 +277694,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0318,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277714,10 +277714,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0993,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277734,10 +277734,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0689,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277754,10 +277754,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0343,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277774,10 +277774,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0132,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277794,10 +277794,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0475,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277814,10 +277814,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0793,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277834,10 +277834,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0797,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277854,10 +277854,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0019,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277874,10 +277874,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.13,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277894,10 +277894,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0128,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277914,10 +277914,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0447,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277934,10 +277934,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.3132,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277954,10 +277954,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0647,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277974,10 +277974,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0702,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -277994,10 +277994,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.1023,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278014,10 +278014,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0555,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278034,10 +278034,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.4397,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278054,10 +278054,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.16,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278074,10 +278074,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0024,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278094,10 +278094,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0118,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278114,10 +278114,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.1876,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278134,10 +278134,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0208,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278154,10 +278154,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0177,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278174,10 +278174,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1227,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278194,10 +278194,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278214,10 +278214,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.1573,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278234,10 +278234,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0286,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278254,10 +278254,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0805,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278274,10 +278274,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0124,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278294,10 +278294,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0907,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -278314,10 +278314,10 @@
       "model_type": "catboost",
       "data_date": "2026-10-14",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0455,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:32",
       "market": "HK"
     },
     {
@@ -298254,10 +298254,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0686,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298274,10 +298274,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0407,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298294,10 +298294,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0342,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298314,10 +298314,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0238,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298334,10 +298334,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0519,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298354,10 +298354,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0055,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298374,10 +298374,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0532,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298394,10 +298394,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0524,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298414,10 +298414,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0056,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298434,10 +298434,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.1084,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298454,10 +298454,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0065,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298474,10 +298474,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0153,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298494,10 +298494,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1011,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298514,10 +298514,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0574,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298534,10 +298534,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.2561,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298554,10 +298554,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0323,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298574,10 +298574,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0699,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298594,10 +298594,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.1523,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298614,10 +298614,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0824,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298634,10 +298634,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0291,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298654,10 +298654,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0155,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298674,10 +298674,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0431,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298694,10 +298694,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0183,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298714,10 +298714,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.1286,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298734,10 +298734,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0905,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298754,10 +298754,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0669,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298774,10 +298774,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0206,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298794,10 +298794,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0055,
+      "actual_direction": "down",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298814,10 +298814,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0475,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -298834,10 +298834,10 @@
       "model_type": "lightgbm",
       "data_date": "2026-11-04",
       "target_date": "2026-11-11",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0242,
+      "actual_direction": "up",
+      "evaluated_at": "2026-11-11T05:41:01",
       "market": "HK"
     },
     {
@@ -309057,7 +309057,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0012.HK_5d",
@@ -309076,7 +309077,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0016.HK_5d",
@@ -309095,7 +309097,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0388.HK_5d",
@@ -309114,7 +309117,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0700.HK_5d",
@@ -309133,7 +309137,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0728.HK_5d",
@@ -309152,7 +309157,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0883.HK_5d",
@@ -309171,7 +309177,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0939.HK_5d",
@@ -309190,7 +309197,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0941.HK_5d",
@@ -309209,7 +309217,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0981.HK_5d",
@@ -309228,7 +309237,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1088.HK_5d",
@@ -309247,7 +309257,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1109.HK_5d",
@@ -309266,7 +309277,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1138.HK_5d",
@@ -309285,7 +309297,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1288.HK_5d",
@@ -309304,7 +309317,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1347.HK_5d",
@@ -309323,7 +309337,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1398.HK_5d",
@@ -309342,7 +309357,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1810.HK_5d",
@@ -309361,7 +309377,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2269.HK_5d",
@@ -309380,7 +309397,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2388.HK_5d",
@@ -309399,7 +309417,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2533.HK_5d",
@@ -309418,7 +309437,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3690.HK_5d",
@@ -309437,7 +309457,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3968.HK_5d",
@@ -309456,7 +309477,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_6682.HK_5d",
@@ -309475,7 +309497,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9660.HK_5d",
@@ -309494,7 +309517,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2513.HK_5d",
@@ -309513,7 +309537,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9888.HK_5d",
@@ -309532,7 +309557,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9988.HK_5d",
@@ -309551,7 +309577,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1211.HK_5d",
@@ -309570,7 +309597,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1299.HK_5d",
@@ -309589,7 +309617,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2318.HK_5d",
@@ -309608,7 +309637,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0005.HK_10d",
@@ -309627,7 +309657,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0012.HK_10d",
@@ -309646,7 +309677,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0016.HK_10d",
@@ -309665,7 +309697,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0388.HK_10d",
@@ -309684,7 +309717,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0700.HK_10d",
@@ -309703,7 +309737,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0728.HK_10d",
@@ -309722,7 +309757,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0883.HK_10d",
@@ -309741,7 +309777,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0939.HK_10d",
@@ -309760,7 +309797,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0941.HK_10d",
@@ -309779,7 +309817,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0981.HK_10d",
@@ -309798,7 +309837,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1088.HK_10d",
@@ -309817,7 +309857,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1109.HK_10d",
@@ -309836,7 +309877,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1138.HK_10d",
@@ -309855,7 +309897,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1288.HK_10d",
@@ -309874,7 +309917,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1347.HK_10d",
@@ -309893,7 +309937,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1398.HK_10d",
@@ -309912,7 +309957,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1810.HK_10d",
@@ -309931,7 +309977,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2269.HK_10d",
@@ -309950,7 +309997,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2388.HK_10d",
@@ -309969,7 +310017,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2533.HK_10d",
@@ -309988,7 +310037,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3690.HK_10d",
@@ -310007,7 +310057,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3968.HK_10d",
@@ -310026,7 +310077,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_6682.HK_10d",
@@ -310045,7 +310097,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9660.HK_10d",
@@ -310064,7 +310117,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2513.HK_10d",
@@ -310083,7 +310137,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9888.HK_10d",
@@ -310102,7 +310157,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9988.HK_10d",
@@ -310121,7 +310177,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1211.HK_10d",
@@ -310140,7 +310197,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1299.HK_10d",
@@ -310159,7 +310217,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2318.HK_10d",
@@ -310178,7 +310237,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0005.HK_20d",
@@ -310197,7 +310257,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0012.HK_20d",
@@ -310216,7 +310277,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0016.HK_20d",
@@ -310235,7 +310297,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0388.HK_20d",
@@ -310254,7 +310317,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0700.HK_20d",
@@ -310273,7 +310337,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0728.HK_20d",
@@ -310292,7 +310357,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0883.HK_20d",
@@ -310311,7 +310377,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0939.HK_20d",
@@ -310330,7 +310397,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0941.HK_20d",
@@ -310349,7 +310417,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_0981.HK_20d",
@@ -310368,7 +310437,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1088.HK_20d",
@@ -310387,7 +310457,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1109.HK_20d",
@@ -310406,7 +310477,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1138.HK_20d",
@@ -310425,7 +310497,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1288.HK_20d",
@@ -310444,7 +310517,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1347.HK_20d",
@@ -310463,7 +310537,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1398.HK_20d",
@@ -310482,7 +310557,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1810.HK_20d",
@@ -310501,7 +310577,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2269.HK_20d",
@@ -310520,7 +310597,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2388.HK_20d",
@@ -310539,7 +310617,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2533.HK_20d",
@@ -310558,7 +310637,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3690.HK_20d",
@@ -310577,7 +310657,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_3968.HK_20d",
@@ -310596,7 +310677,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_6682.HK_20d",
@@ -310615,7 +310697,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9660.HK_20d",
@@ -310634,7 +310717,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2513.HK_20d",
@@ -310653,7 +310737,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9888.HK_20d",
@@ -310672,7 +310757,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_9988.HK_20d",
@@ -310691,7 +310777,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1211.HK_20d",
@@ -310710,7 +310797,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_1299.HK_20d",
@@ -310729,7 +310817,8 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     },
     {
       "prediction_id": "2026-11-11_2318.HK_20d",
@@ -310748,12 +310837,13 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null,
-      "evaluated_at": null
+      "evaluated_at": null,
+      "market": "HK"
     }
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-11-11T01:32:28",
+    "last_updated": "2026-11-11T05:42:02",
     "version": "1.0",
     "total_predictions": 15542
   }
