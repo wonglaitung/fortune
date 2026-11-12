@@ -515,6 +515,7 @@ HTML / SVG / 视频不入库。完整检查表见 [docs/AI_WORKFLOW.md](docs/AI_
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **验证方法**：[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)
 - **个股分析技能**：[.opencode/skills/equity-analysis/SKILL.md](.opencode/skills/equity-analysis/SKILL.md) ＋ `scripts/stock_fundamentals.py`
+- **长期持有/底仓候选**：[docs/LONG_TERM_CORE_SCREEN.md](docs/LONG_TERM_CORE_SCREEN.md) ＋ `scripts/screen_longterm_core.py` — 310 池筛选快照（**框架与成本结论，非 alpha**；见 D112）
 - **市场诊断技能**：[.opencode/skills/market-diagnostics/SKILL.md](.opencode/skills/market-diagnostics/SKILL.md)
 - **模型改进计划**：[docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) - 三层提升假设与预注册判据 ⭐
 - **决策备忘**：[docs/DECISIONS.md](docs/DECISIONS.md) - 个股 alpha 停止投入等关键决策 ⭐

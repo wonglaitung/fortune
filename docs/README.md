@@ -2,7 +2,7 @@
 
 > **本目录回答"该看哪份文档"。**
 > 项目总入口是根目录 [../AGENTS.md](../AGENTS.md)（规则 + 常用命令）；
-> 本文件是 docs/ 内 20 份文档的**导航地图**，不重复任何文档的内容。
+> 本文件是 docs/ 内 26 份文档的**导航地图**，不重复任何文档的内容。
 
 ---
 
@@ -18,7 +18,7 @@
 | **搞懂量化交易常见误区（方法论）** | [量化交易误解-正式文档.md](量化交易误解-正式文档.md)（四道陷阱理论版，与 lessons/DECISIONS 对应） |
 | **验证新模型 / 新特征 / 新周期** | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) ＋ 技能 `.opencode/command/model_validation.md` |
 | **加一个新特征** | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md)（8 步验证清单） |
-| **分析个股 / 长期投资价值 / 定投** | 技能 `.opencode/skills/equity-analysis/SKILL.md` ＋ `scripts/stock_fundamentals.py` |
+| **分析个股 / 长期投资价值 / 定投** | 技能 `.opencode/skills/equity-analysis/SKILL.md` ＋ `scripts/stock_fundamentals.py` ＋ [LONG_TERM_CORE_SCREEN.md](LONG_TERM_CORE_SCREEN.md)（310 池底仓候选快照） |
 | **做市场诊断 / 归因 / 幸存者检查** | 技能 `.opencode/skills/market-diagnostics/SKILL.md`（ic_attribution / cost_calibration / 事件研究） |
 | **搞懂 1/5/20 天三周期的结论** | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) |
 | **知道最近做过哪些实验、结论是什么** | [DECISIONS.md](DECISIONS.md) D1–D14 |
@@ -79,6 +79,7 @@
 | [STOCK_NETWORK_ANALYSIS.md](STOCK_NETWORK_ANALYSIS.md) | 2026-04-30 | 46 股 / 15 板块网络（MST+PMFG+…） |
 | [STOCK_CORRELATION_ANALYSIS.md](STOCK_CORRELATION_ANALYSIS.md) | 2026-04-28 | 股票关联与因果关系 |
 | [FEATURE_IMPORTANCE_ANALYSIS.md](FEATURE_IMPORTANCE_ANALYSIS.md) | 2026-04（局部更新） | 多周期特征重要性 Top10 |
+| [LONG_TERM_CORE_SCREEN.md](LONG_TERM_CORE_SCREEN.md) | 2026-11-12 | 长期持有（底仓）候选筛选：310 池过筛 17 只 + 摩擦成本分账 + 价值陷阱样本（**框架，非 alpha**） |
 
 ### E. 环境与工程
 
