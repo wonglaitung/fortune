@@ -57,6 +57,7 @@
 | ③ **个股差异** | 个股跑赢同类（剥①②后的残差） | 个股横截面模型 | ❌ 全周期全 null（D1 / D33 / D34 / D35） |
 | ④ **风格** | 价值 / 质量 / 动量 / 低波 | 价格型（D39）+ PIT 近似基本面（D41 / D42） | ❌ 价格型 null；**E/P 最接近（IR 0.64）但独立窗为负、滞后加大即弱 ⇒ 钉死**；规模无股数史 ⇒ 算不了 |
 | ⑤ **关联 / 题材** | 题材内挑股（分区）+ 沿关联边传播 | **D51**（题材分区）+ **D52**（E1 A-H lead-lag） | ❌ 题材内 **N_eff≈1 ⇒ 结构性测不出**；E1 边可交易方向 **null** |
+| ⑥ **底仓 / 长期持有** | 质量+价值选股、季度调仓、低换手 | **D113**（预注册成本后对照，见 `docs/LONG_TERM_VS_TACTICAL_EXPERIMENT.md`） | ❌ 超额 **−8.10%**（CI 全负）、27 格全负、DSR 0.000；**随机安慰剂同亏 6.81% ⇒ 主因集中度非选股**；且**未省换手**（257%/年）⇒ 不立底仓层 |
 
 ⇒ **①×② 交叉（D38）也 ❌**（分状态切换"周期/防御"，0/4，且不如"死拿周期组"）。
 ⇒ **"理念 / 形态"编码类也 ❌**：技术形态 → **不立项（D44）**；大师 / 短线理念→特征 → **不立项（D46，适用范围见 D47）**。
@@ -98,6 +99,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结宏观快照，`python3 scripts/pin_hk_snapshot.py` 先冻结个股行情快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**三冻结，缺一不可**（lessons 三.29/三.30/三.50）。验收=同配置连跑两次 CSV md5 相同。注意：runner **默认 `--label-mode rank`**（2026-10-22；复现旧 absolute 基线须显式 `--label-mode absolute`）且 **默认 F1=0**（D20 ⑦ 生产口径；复现 F1-on 旧基线须 `F1_FEATURES=1 F1_FORCE=1`）；`data/sfc_short/` 为周更文件不属三冻结——PIT t-7 + WF 窗口止于新周之前 ⇒ 追加不改窗口内特征，跨周复现仍须同版本 CSV；WF `--start-date` 是**全程起点**（测试期起点=start+训练窗），复现测试期 2023-06→2026-07 须 `--start-date 2020-06-01`（lessons 三.52） | - |
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
+| **底仓 vs 战术层对照** | `python3 scripts/backtest_longterm_core.py --grid` —— 质量+价值季度调仓的成本后对照（27 格 + 安慰剂 + DSR/PBO） | 研究复核（**D113 已判 🔴 不立底仓层**） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练（手动）** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection` | 需手动重训时 |
 | **⭐ 月度重训（生产）** | `bash scripts/monthly_retrain.sh` | 每月 1 日 CI（`monthly-retrain.yml`）；日常综合分析**只加载模型不重训**（`RETRAIN_MODELS=0`，D82） |

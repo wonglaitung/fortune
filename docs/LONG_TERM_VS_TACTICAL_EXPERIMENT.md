@@ -1,6 +1,8 @@
 # 预注册：底仓（长期持有）vs 战术层（20d）——成本后对照实验
 
-> **状态**：预登记（**看结果之前写死**）。跑完回填结果到 `docs/BASELINES.md`（B13）+ `docs/DECISIONS.md`（D113）。
+> **状态**：预登记（**看结果之前写死**，提交 `ac545346`）→ **已执行，判决 🔴**。
+> **结果**：`docs/BASELINES.md` **B13**；判决：`docs/DECISIONS.md` **D113**；教训：`lessons.md` 三.96。
+> 预注册正文**未改动**（保持"跑之前的样子"），以便事后核对判据是否被事后修改。
 > **脚本**：`scripts/backtest_longterm_core.py`（可复算）。
 > **触发**：`docs/LONG_TERM_CORE_SCREEN.md` §11「下一步能证伪『长期更好』的实验」。
 
