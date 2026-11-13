@@ -45,6 +45,10 @@
 | [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) | **还能怎么提升、判据是什么**（三层提升假设 + 预注册判据） | 判据变更时 |
 | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) | **三周期信号的真实价值**（八模式 / 传导） | 每轮复测 |
 | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md) | **怎么设计与验证特征** | 特征管线变更时 |
+| [SEASONALITY_HK.md](SEASONALITY_HK.md) | **日历季节性**（11/12 月是否更差、各月入市前瞻收益、抄底月分布；`scripts/seasonality_hsi.py`） | 年度/数据更新时 |
+| [YEAR_START_RALLY.md](YEAR_START_RALLY.md) | **年初入市/开门红/上半年升势**是否成立（`scripts/year_start_rally.py`） | 年度/数据更新时 |
+| [MONTH_ENTRY_EXIT.md](MONTH_ENTRY_EXIT.md) | **逐月入市/离开**：12×12 持有收益与年化 IR 矩阵 + 置换检验（`scripts/month_entry_exit.py`） | 年度/数据更新时 |
+| [SEASONAL_TIMING_PREREG.md](SEASONAL_TIMING_PREREG.md) | **季节性择时**预注册（P1–P8；程序 OOS vs 买入持有）｜结果 `output/seasonal_timing/result.md`（D114 🔴） | 一次性 |
 
 ### B. 设计与规范
 

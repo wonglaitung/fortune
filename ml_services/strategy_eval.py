@@ -24,7 +24,10 @@ def daily_mark(asset_returns: pd.Series, w, round_trip_cost: float = 0.0, lag: i
     - 不重叠期收益的稀疏净值会**低估**日内回撤、虚报风控（lessons 三.78）——一律用本函数逐日记。
     - `w` 可为常数（静态）或序列（择时）。
     """
-    w = pd.Series(w) if np.isscalar(w) else pd.Series(w)
+    if np.isscalar(w):
+        w = pd.Series(float(w), index=asset_returns.index)
+    else:
+        w = pd.Series(w)
     w = w.reindex(asset_returns.index).fillna(0.0)
     w_pos = w.shift(lag).fillna(0.0)
     turn = (w_pos - w_pos.shift(1)).abs()
