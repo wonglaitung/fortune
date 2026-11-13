@@ -49,6 +49,7 @@
 | [YEAR_START_RALLY.md](YEAR_START_RALLY.md) | **年初入市/开门红/上半年升势**是否成立（`scripts/year_start_rally.py`） | 年度/数据更新时 |
 | [MONTH_ENTRY_EXIT.md](MONTH_ENTRY_EXIT.md) | **逐月入市/离开**：12×12 持有收益与年化 IR 矩阵 + 置换检验（`scripts/month_entry_exit.py`） | 年度/数据更新时 |
 | [SEASONAL_TIMING_PREREG.md](SEASONAL_TIMING_PREREG.md) | **季节性择时**预注册（P1–P8；程序 OOS vs 买入持有）｜结果 `output/seasonal_timing/result.md`（D114 🔴） | 一次性 |
+| [ANNUAL_ONE_TRADE_PREREG.md](ANNUAL_ONE_TRADE_PREREG.md) | **年度一笔买卖**预注册（A1–A8；每年 1 买 1 卖、IR 目标）｜结果 `output/annual_one_trade/result.md`（D115 🔴） | 一次性 |
 
 ### B. 设计与规范
 

@@ -8,6 +8,17 @@
 
 ## 最新进展
 
+### 2026-11-13 年度“一笔买卖”策略验证：判 🔴（D115）⭐⭐
+
+**预注册** `docs/ANNUAL_ONE_TRADE_PREREG.md`（A1–A8）｜脚本 `scripts/annual_one_trade_backtest.py`｜
+F1 快照复用｜结果 `output/annual_one_trade/result.md`｜双跑 md5 一致。
+
+- 口径：每年固定日历 1 买 1 卖、年末空仓、次年重置，选择目标=风险调整 IR，扩张窗 OOS。
+- 程序 P（1996–2026）：Sharpe 0.05 vs 买入持有 0.24（Δ −0.19）；CAGR −0.41% vs 2.87%；
+  年度超额 CI [−10.6%, +0.4%]；PBO 0.66、DSR 0.075；2010+ ΔSharpe −0.25；MDE 7.9%/年。
+- 固定最优 4月→4月看似好（Sharpe 0.32、maxDD −21%），但 PBO/相邻参数否决 ⇒ 不可用。
+- 详见 D115 / lessons 三.99。
+
 ### 2026-11-13 季节性择时验证：主假设（程序 OOS）判 🔴（D114）⭐⭐
 
 **预注册** `docs/SEASONAL_TIMING_PREREG.md`（P1–P8 跑前写死）｜F1 快照 `data/hsi_snapshot/`｜
