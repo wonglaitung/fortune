@@ -8,6 +8,17 @@
 
 ## 最新进展
 
+### 2026-11-13 定投恒指 + 长期持有验证：判 🟡（D116）⭐⭐
+
+**预注册** `docs/DCA_LONGTERM_PREREG.md`（K1–K5）｜脚本 `scripts/dca_longterm_backtest.py`｜
+F1 `data/dca_snapshot/`｜银行=HKD 1M HIBOR｜结果 `output/dca_longterm/result.md`｜双跑 md5 一致。
+
+- 含息（2800.HK）10 年窗口：**76.9% 赚钱**，中位 IRR +4.10%，最差 −5.69%/年，跑赢银行 70.4%，最差浮亏 −40%。
+- 全期（2008→今）IRR +3.68% vs 银行 +1.80%；15 年窗口 83.3% 赚钱。
+- 不含息（^HSI 价格，1996→今）全期 +1.91% vs 银行 +1.81% ⇒ 分红贡献显著。
+- K3 过；K1/K2/K4 不过 ⇒ **“多数能赚、长期略胜存银行”，但不是稳赚**（约 1/4 的 10 年窗口亏）。
+- 详见 D116 / lessons 三.100。
+
 ### 2026-11-13 年度“一笔买卖”策略验证：判 🔴（D115）⭐⭐
 
 **预注册** `docs/ANNUAL_ONE_TRADE_PREREG.md`（A1–A8）｜脚本 `scripts/annual_one_trade_backtest.py`｜
