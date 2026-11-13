@@ -51,6 +51,8 @@
 | [SEASONAL_TIMING_PREREG.md](SEASONAL_TIMING_PREREG.md) | **季节性择时**预注册（P1–P8；程序 OOS vs 买入持有）｜结果 `output/seasonal_timing/result.md`（D114 🔴） | 一次性 |
 | [ANNUAL_ONE_TRADE_PREREG.md](ANNUAL_ONE_TRADE_PREREG.md) | **年度一笔买卖**预注册（A1–A8；每年 1 买 1 卖、IR 目标）｜结果 `output/annual_one_trade/result.md`（D115 🔴） | 一次性 |
 | [DCA_LONGTERM_PREREG.md](DCA_LONGTERM_PREREG.md) | **定投恒指+长期持有**预注册（K1–K5；含息/银行对照）｜结果 `output/dca_longterm/result.md`（D116 🟡） | 一次性 |
+| [WATCHLIST_30_SCREEN.md](WATCHLIST_30_SCREEN.md) | **自选 30 只基本面筛选**（`scripts/watchlist_screen.py`） | 季度/年报后 |
+| [DEEP_DIVE_4.md](DEEP_DIVE_4.md) | **腾讯/建行/平安/小米**深度分析（财务质量+估值历史+三情景） | 半年/年报后 |
 
 ### B. 设计与规范
 
