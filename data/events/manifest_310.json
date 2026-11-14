@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-07T22:03:01",
- "n_events": 2251,
+ "generated_at": "2026-11-14T14:06:23",
+ "n_events": 2252,
  "by_type": {
   "POSITIVE_PROFIT_ALERT": 672,
   "RIGHTS_ISSUE": 108,
@@ -8,7 +8,7 @@
   "PROFIT_WARNING": 726,
   "PLACEMENT_COMPANY": 215,
   "CB_CONVERSION": 135,
-  "PRIVATISATION": 126,
+  "PRIVATISATION": 127,
   "PLACEMENT_SHAREHOLDER": 28,
   "LOCKUP": 10,
   "SCHEME": 40
@@ -24,10 +24,10 @@
   "2023": 222,
   "2024": 198,
   "2025": 252,
-  "2026": 199
+  "2026": 200
  },
  "by_confidence": {
-  "high": 1970,
+  "high": 1971,
   "review": 281
  },
  "universe": "310"
