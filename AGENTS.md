@@ -227,6 +227,7 @@ python hsi_email.py --no-email
 5. **只留可 grep 的**：数值与判定写进 Markdown；**HTML / SVG / 视频不入库**。
 6. **含 `|` 的 shell 命令放代码块、不进表格**（表格内转义会改变命令语义）。
 7. **流程与检查表** → [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md)
+8. **时效**：分析类结论（个股/市场/策略）必须用**最新可得**的报告期（中期优先于年报）、最新价格、最新公司行动，并标注 `数据截至 YYYY-MM-DD`；有更新数据仍用旧数据 = 结论过时（`equity-analysis` G0 / `hypothesis-validation` G10）。个股最新期用 `python3 scripts/latest_financials.py --codes ...`。
 
 ---
 
