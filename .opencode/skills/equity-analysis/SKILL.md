@@ -28,6 +28,8 @@ description: >
 
 > **不看最新数据 = 观点必然过时。** 任何个股结论前先过这一闸。
 
+0. **先自动刷新，再判断**：运行 `python3 scripts/refresh_if_stale.py --codes <分析代码>`。财务缓存 >7 天、价格快照 >5 天才重抓；输出 `SKIP` = 未过时，直接用缓存，`REFRESH` = 已重抓。禁止手工判断"看起来旧"就全量重跑。复现/回测用 `--sources fund_cache`，不刷价格快照。
+
 1. **财务用最新报告期**：季度/中期 > 年报。
    - `data/fund_cache/{code}_利润表_中期.pkl`（累计口径）优先于 `_年度.pkl`；
    - 命令：`python3 scripts/latest_financials.py --codes 0700.HK,9988.HK,3690.HK`（自动取最新期、拆单季、算同比）；
@@ -249,6 +251,8 @@ G14 股本只用净利/EPS、不查 FF301/稀释        → FAIL
 ## 命令
 
 ```bash
+# 过期才刷新（新鲜则 SKIP，不重复抓）
+python3 scripts/refresh_if_stale.py --codes 0700.HK,9988.HK
 # 通用
 python3 scripts/stock_fundamentals.py --codes 0700.HK,1810.HK,0883.HK --ccy CNY
 # 金融股附录

@@ -128,6 +128,10 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 ### 缓存管理
 
 ```bash
+# 过期才刷新（财务 >7 天 / 价格 >5 天才抓；SKIP = 未过时，忽略）
+python3 scripts/refresh_if_stale.py --codes 0700.HK,9988.HK
+python3 scripts/refresh_if_stale.py --all-fund --sources fund_cache
+
 # 清除港股特征缓存（新增特征后必须执行）
 rm -rf data/feature_cache/*.pkl
 

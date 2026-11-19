@@ -117,6 +117,10 @@ python3 scripts/rotation_monitor.py --out output/rotation_monitor/latest.md
 - **中国信用**：社融、信贷、地产销售；月度更新。
 - 基本面数据没有更新时，报告中必须写“未更新”，不得用旧值假装当期。
 
+## 数据自动刷新（G8 前置步骤）
+
+每次监控输出前跑 `python3 scripts/refresh_if_stale.py --codes <监控代码>`；`SKIP` 即忽略、`REFRESH` 即用新数据。刷新后重取最新价与持仓并在报告写 as-of；冻结复现时加 `--sources fund_cache`。
+
 ## 硬规则
 
 ```
