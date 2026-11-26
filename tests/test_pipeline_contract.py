@@ -30,7 +30,7 @@ RUNNER_SRC = ROOT / 'scripts' / 'run_comprehensive_analysis.sh'
 CA_SRC = ROOT / 'comprehensive_analysis.py'
 
 F1_COLS = ['SFC_short_z', 'Net_Margin', 'ROE', 'ROA', 'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
-FLAG_NAMES = ['F1_FEATURES', 'F1_FORCE', 'HIBOR_FEATURES', 'HIBOR_FORCE']
+FLAG_NAMES = ['F1_FEATURES', 'F1_FORCE', 'HIBOR_FEATURES', 'HIBOR_FORCE', 'EVENT_FEATURES']
 
 
 def _src(path):
@@ -177,8 +177,9 @@ def test_runner_lookup_path_matches_feature_selection_output():
 def test_flag_default_defined_only_once():
     """每个 flag 的默认值只许一处（run_manifest.FLAG_DEFAULTS），门控点一律走 resolve_flags()。
 
-    **O5（2026-10-13）已修复**（原 xfail(strict=True)）：4 个真实门控点已改走
+    **O5（2026-10-13）已修复**（原 xfail(strict=True)）：全部真实门控点已改走
     resolve_flags()，两个 runner 只做透传、不再写 `${X:-1}`。
+    **P2c（2026-11）**：新增 EVENT_FEATURES（默认关）。
     """
     from ml_services.run_manifest import FLAG_DEFAULTS
     assert set(FLAG_DEFAULTS) == set(FLAG_NAMES)
@@ -216,11 +217,13 @@ def test_scope_label_is_tool_enforced():
 def test_run_manifest_defaults_match_actual_gating_sites():
     """清单报告的开关状态必须与**真实门控点**一致 —— 清单说谎 = 比没有清单更坏。
 
-    真实门控点（都是裸读 env，不走清单）：
+    真实门控点：
       F1_FEATURES     ml_trading_model.py:1673  `!= '1'`      → 未设=关
       F1_FORCE        walk_forward_validation.py:480 `== '1'`  → 未设=关
       HIBOR_FEATURES  us_market_data.py:572     `get(...,'1')`→ 未设=**开**
       HIBOR_FORCE     ml_trading_model.py:4516  `== '1'`      → 未设=关
+      EVENT_FEATURES  ml_trading_model.py:149 起 `resolve_flags().get('EVENT_FEATURES','0')`
+                                                           → 未设=关（P2c 消融默认）
     """
     import os
     import importlib
@@ -228,10 +231,12 @@ def test_run_manifest_defaults_match_actual_gating_sites():
     try:
         rmf = importlib.import_module('ml_services.run_manifest')
         flags = rmf.resolve_flags()
-        # D22/D23/D24：四个开关默认全 ON；空串（shell 透传未设）同样落到默认
+        # D22/D23/D24：四个开关默认全 ON；P2c 的 EVENT_FEATURES 默认 OFF；
+        # 空串（shell 透传未设）同样落到默认
         assert flags == {'F1_FEATURES': '1', 'F1_FORCE': '1',
-                         'HIBOR_FEATURES': '1', 'HIBOR_FORCE': '1'}, \
-            f'清单默认值与 D22/D23/D24 记载的默认口径不一致：{flags}'
+                         'HIBOR_FEATURES': '1', 'HIBOR_FORCE': '1',
+                         'EVENT_FEATURES': '0'}, \
+            f'清单默认值与 D22/D23/D24/P2c 记载的默认口径不一致：{flags}'
         for k in FLAG_NAMES:
             os.environ[k] = ''
         assert rmf.resolve_flags() == flags, '空串（shell 透传）未落到默认'

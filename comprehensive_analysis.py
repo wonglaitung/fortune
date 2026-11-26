@@ -588,6 +588,23 @@ def validate_advice_response(response, date_str=None):
     return text
 
 
+def normalize_llm_display_headings(text):
+    """把 LLM 正文里多份内嵌报告的标题降级并去掉中文序号，避免与外层章节编号冲突。"""
+    if not text:
+        return text
+    import re
+    out = []
+    for line in text.splitlines():
+        m = re.match(r'^(#{1,5})(\s+)(.+)$', line)
+        if m:
+            level = min(len(m.group(1)) + 1, 6)
+            title = re.sub(r'^[一二三四五六七八九十]+、\s*', '', m.group(3))
+            out.append('#' * level + m.group(2) + title)
+        else:
+            out.append(line)
+    return '\n'.join(out)
+
+
 def extract_llm_recommendations(filepath):
     """
     从大模型建议文件中提取买卖建议，分别提取短期和中期建议
@@ -5428,6 +5445,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 event_text = generate_event_report_content(days=30)
                 print("🌍 生成运行时市场快照与重要新闻...")
                 snapshot_text, news_text = build_global_brief()
+                response_display = normalize_llm_display_headings(response)
                 full_content = banner_line + f"""**本文导航**：今日速览 · 今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
 
 <!--RISK_PANEL-->
@@ -5446,7 +5464,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 # 今日综合判断
 
-{response}
+{response_display}
 
 ---
 

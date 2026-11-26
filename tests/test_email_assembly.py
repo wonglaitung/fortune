@@ -123,7 +123,7 @@ class TestEmailAssembly(unittest.TestCase):
                     os.remove(path)
 
         text = captured['text']
-        order = ['# 综合买卖建议', '## 重点个股分析', '# 信息参考',
+        order = ['## 综合买卖建议', '## 重点个股分析', '# 信息参考',
                  '# 附录', '## 附录 A', '## 附录 B']
         positions = [text.index(x) for x in order]
         self.assertEqual(positions, sorted(positions), order)
@@ -131,6 +131,26 @@ class TestEmailAssembly(unittest.TestCase):
         self.assertIn('0728.HK', text)
         self.assertNotIn('1600.HK', text)
         self.assertNotIn('<!--', text)
+
+
+class TestLlmHeadingNormalization(unittest.TestCase):
+    def test_demote_and_strip_chinese_numbering(self):
+        raw = ('# 综合买卖建议\n## 一、强烈买入\n### 细分\n'
+               '# 港股异常数据深度分析\n## 一、整体市场状态\n## 六、风险提示\n')
+        out = ca.normalize_llm_display_headings(raw)
+        self.assertIn('## 综合买卖建议', out)
+        self.assertIn('### 强烈买入', out)
+        self.assertIn('#### 细分', out)
+        self.assertIn('## 港股异常数据深度分析', out)
+        self.assertIn('### 整体市场状态', out)
+        self.assertIn('### 风险提示', out)
+        self.assertNotIn('一、', out)
+        self.assertNotIn('六、', out)
+        self.assertNotIn('\n# ', '\n' + out)
+
+    def test_empty(self):
+        self.assertEqual(ca.normalize_llm_display_headings(''), '')
+        self.assertEqual(ca.normalize_llm_display_headings(None), None)
 
 
 if __name__ == '__main__':

@@ -350,6 +350,9 @@ python hsi_email.py --no-email
    - 防复活靠契约测试：如 `tests/test_selection_mode_single_source.py::test_no_switch_symbols_anywhere` 扫描 `ml_services/`、`scripts/`、根目录 py，出现旧开关符号即红。
    - **旧实现 / 旧模型文件 / 旧格式一并删除**：不留「存档」目录、不留旧 `.pkl` / `.cbm`、不留别名类或兼容加载分支。判据同上（`grep` 旧符号 0 命中；旧产物文件不存在）。
    - 反面教材：保留开关会让两条口径长期并存，谁「优化」其中一条就静默分叉（D25/D30 的同类事故）。
+6. **测试失败先判责任方**：先查是测试过期还是被测代码错误——**测试脚本错就改测试，被测代码错就改代码**；不得为让测试变绿而放宽断言或改坏生产代码。
+   - 判据（可 FAIL）：`git log --oneline -- <被测文件> <测试文件>` 找引入变更的提交，核对默认值 / 门控点 / 口径；只有测试与现行代码口径不符时才改测试，且期望值与 docstring 同步更新。
+   - 案例：P2c（`1c64de81`）给 `FLAG_DEFAULTS` 加 `EVENT_FEATURES='0'` 却未同步 `tests/test_pipeline_contract.py` ⇒ 改测试（`FLAG_NAMES` + 期望字典），不动生产代码。
 
 ### 🚨 对抗性审核：⓪ 同一性闸 + 三道闸（强制，不可跳过）
 
