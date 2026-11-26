@@ -82,9 +82,14 @@ class TestCollectMacroEvents(unittest.TestCase):
         self.assertEqual(scores, sorted(scores, reverse=True))
         self.assertGreater(items[0]["score"], items[-1]["score"])
 
-    def test_all_fail_returns_empty(self):
+    def test_all_empty_days_returns_empty(self):
         with patch.object(er, "date", _FakeDate), patch.object(er, "fetch_rows", return_value=[]):
             self.assertEqual(er.collect_macro_events(days=5), [])
+
+    def test_all_fetch_fail_raises(self):
+        with patch.object(er, "date", _FakeDate), patch.object(er, "fetch_rows", return_value=None):
+            with self.assertRaises(RuntimeError):
+                er.collect_macro_events(days=5)
 
 
 class TestRenderBrief(unittest.TestCase):

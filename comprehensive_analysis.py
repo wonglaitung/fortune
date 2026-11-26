@@ -1379,8 +1379,25 @@ def build_global_brief():
         calendar_text = render_brief(events, 5)
         calendar_text = calendar_text.replace("# 每日关键事件", "### 近期关键宏观事件", 1)
     except Exception as e:  # noqa: BLE001
-        print(f"⚠️ 近期关键宏观事件生成失败（跳过）: {e}")
-        calendar_text = "### 近期关键宏观事件\n\n> 本次事件日历不可用。\n"
+        print(f"⚠️ 近期关键宏观事件生成失败（尝试缓存）: {e}")
+        calendar_text = ""
+        try:
+            import glob as _glob
+            import json as _json
+            import os as _os
+            caches = sorted(_glob.glob("output/event_radar/brief_*.json"))
+            with open(caches[-1], encoding="utf-8") as fh:
+                cached = _json.load(fh).get("events") or []
+            if not cached:
+                raise ValueError("empty cache")
+            from scripts.event_radar import render_brief
+            calendar_text = render_brief(cached, 5).replace(
+                "# 每日关键事件", "### 近期关键宏观事件（缓存）", 1)
+            calendar_text = calendar_text.replace(
+                "- 覆盖：",
+                f"- ⚠️ API 失败，改用缓存 {_os.path.basename(caches[-1])}（非当日新数据）；\n- 覆盖：", 1)
+        except Exception:  # noqa: BLE001
+            calendar_text = "### 近期关键宏观事件\n\n> 本次事件日历不可用（API 失败且无有效缓存）。\n"
     return snapshot_text, news_text, calendar_text
 
 

@@ -99,15 +99,19 @@ def why(event: str) -> str:
     return "宏观/政策信息，影响风险偏好"
 
 
-def fetch_rows(day: date) -> list[dict]:
-    try:
-        r = requests.get(CAL_URL, params={"date": day.isoformat()}, timeout=10,
-                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-        r.raise_for_status()
-        data = r.json().get("data") or {}
-        return data.get("rows") or []
-    except Exception:
-        return []
+def fetch_rows(day: date):
+    last = None
+    for attempt in range(2):
+        try:
+            r = requests.get(CAL_URL, params={"date": day.isoformat()}, timeout=20,
+                             headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+            r.raise_for_status()
+            data = r.json().get("data") or {}
+            return data.get("rows") or []
+        except Exception as e:
+            last = e
+    print(f"⚠️ {day} 日历抓取失败（已重试）: {type(last).__name__} {str(last)[:120]}")
+    return None
 
 
 def event_time(day: date, gmt: str):
@@ -120,7 +124,7 @@ def event_time(day: date, gmt: str):
 
 def calendar(day: date) -> list[dict]:
     out = []
-    for x in fetch_rows(day):
+    for x in (fetch_rows(day) or []):
         country, event, gmt = clean(x.get("country")), clean(x.get("eventName")), clean(x.get("gmt"))
         if country not in TRACK or not event or not gmt or gmt.upper() in ("24H", "ALL DAY"):
             continue
@@ -229,9 +233,11 @@ def collect_macro_events(days: int = 5, include_released: bool = True, now=None)
     end = today + timedelta(days=days)
     with ThreadPoolExecutor(max_workers=4) as ex:
         batches = list(ex.map(fetch_rows, dates))
+    if all(b is None for b in batches):
+        raise RuntimeError("Nasdaq 经济日历全部抓取失败")
     cand = []
     for day, rows in zip(dates, batches):
-        for x in rows:
+        for x in (rows or []):
             c, ev, gmt = clean(x.get("country")), clean(x.get("eventName")), clean(x.get("gmt"))
             if c not in TRACK or not ev or not gmt or gmt.upper() in ("24H", "ALL DAY"):
                 continue
