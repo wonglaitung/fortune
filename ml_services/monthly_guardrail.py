@@ -47,10 +47,14 @@ def latest_pred(horizon, market='hk'):
         # 覆盖 catboost 与 lightgbm（P4.1 A/B）两种目录
         cands = glob.glob(f"output/*_a_stock_*_{horizon}d/prediction_analysis.csv")
     else:
-        cands = [f for f in glob.glob(f"output/*_catboost_{horizon}d/prediction_analysis.csv")
+        cands = [f for f in glob.glob(f"output/*_lgbm_{horizon}d/prediction_analysis.csv")
                  if '_a_stock_' not in f]
         if not cands:
-            cands = glob.glob(f"output/walk_forward_catboost_{horizon}d_*.csv")
+            cands = [f for f in glob.glob(f"output/*_catboost_{horizon}d/prediction_analysis.csv")
+                     if '_a_stock_' not in f]
+        if not cands:
+            cands = (glob.glob(f"output/walk_forward_lgbm_{horizon}d_*.csv")
+                     + glob.glob(f"output/walk_forward_catboost_{horizon}d_*.csv"))
     if not cands:
         return None
     return max(cands, key=os.path.getmtime)

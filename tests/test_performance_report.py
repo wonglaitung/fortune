@@ -112,6 +112,28 @@ def test_guardrail_block_renders(monkeypatch, tmp_path):
     assert '2026-09-25' in b and b.count('✅') == 3
 
 
+def test_guardrail_block_new_format_with_excess_and_mde(monkeypatch, tmp_path):
+    """新版报告：净IR 带括号标签 + 超额IR + MDE 必须解析出来，不能显示 '-'。"""
+    from ml_services import performance_monitor as pm
+    p = tmp_path / "new_guardrail.md"
+    p.write_text(
+        "# 月度护栏复核（20d）\n\n- 日期: 2026-11-26\n"
+        "- 数据: `output/x_lgbm_20d/prediction_analysis.csv`\n\n"
+        "| 指标 | 值 | 门槛 |\n|------|----|------|\n"
+        "| 净IR（**绝对口径，含 beta**） | 0.18 [-0.98,1.37] | — 见超额行 |\n"
+        "| **超额 IR**（− 基准） | **-0.08** | ≥0.7 |\n"
+        "| **功效/MDE**（α=.05 功率80%） | 超额 IR 最小可探测 **1.55** | n=41 期 |\n"
+        "| **PBO** | **0.54** | <0.5 |\n"
+        "| **DSR**（最优 top20） | **0.762** | ≥0.95 |\n"
+        "| **超额 lift** | **+2.4pp** | >0 |\n\n"
+        "## 判定：🟡 保留低配（未达升级门槛）\n",
+        encoding="utf-8")
+    monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: str(p))
+    b = pm._guardrail_block()
+    assert '0.18' in b and '-0.08' in b and '1.55' in b and '+2.4pp' in b
+    assert '**-**' not in b
+
+
 def test_guardrail_block_empty_without_20d_file(monkeypatch):
     """无 20d 护栏文件 → 返回空串（宁缺毋滥，不显示错的）。"""
     from ml_services import performance_monitor as pm

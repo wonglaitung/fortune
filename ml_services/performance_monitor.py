@@ -561,6 +561,34 @@ def _guardrail_status() -> Optional[str]:
     return None
 
 
+def _guardrail_fields(text: str) -> dict:
+    import re
+
+    def find(pattern, default=''):
+        m = re.search(pattern, text, flags=re.MULTILINE)
+        return m.group(1).strip() if m else default
+
+    f = {
+        'date': find(r'- 日期:\s*(\d{4}-\d{2}-\d{2})', '未知日期'),
+        'verdict': find(r'^## 判定：(.+)$', '判定未知'),
+        'source': find(r'- 数据:\s*`?([^`\n]+?)`?\s*$', ''),
+        'pbo': find(r'\|\s*\*\*PBO\*\*\s*\|\s*\*\*([^*]+)\*\*', '-'),
+        'dsr': find(r'\|\s*\*\*DSR\*\*[^|]*\|\s*\*\*([^*]+)\*\*', '-'),
+        'excess': find(r'\|\s*\*\*超额 IR\*\*[^*]*\|\s*\*\*([^*]+)\*\*', ''),
+        'mde': find(r'最小可探测\s*\*\*([^*]+)\*\*', ''),
+        'lift': find(r'\|\s*\*\*超额 lift\*\*\s*\|\s*\*\*([^*]+)\*\*', ''),
+    }
+    ir = find(r'\|\s*净IR\s*\|\s*\*\*([^*]+)\*\*')
+    ci = find(r'\|\s*净IR\s*\|\s*\*\*[^*]+\*\*\s*(\[[^\]]*\])')
+    if not ir:
+        v = find(r'\|\s*净IR（[^|]*）\s*\|\s*([^|]+)')
+        m = re.match(r'\s*([-\d.]+)\s*(\[[^\]]*\])?', v)
+        if m:
+            ir, ci = m.group(1), m.group(2) or ''
+    f['ir'], f['ci'] = ir or '-', ci
+    return f
+
+
 def _guardrail_block() -> str:
     """解析 20d 护栏报告为综合分析报告用的 markdown 块（无 20d 文件返回空串）。
 
@@ -569,7 +597,6 @@ def _guardrail_block() -> str:
     🟢 三门槛全过可放大 15-20%；🟡 保留 ≤10% 低配；🔴 IR≤0 清仓。
     解析失败的字段显示 '-'，宁可少显示不错显示。
     """
-    import re
     path = _guardrail_file_20d()
     if path is None:
         return ""
@@ -578,17 +605,10 @@ def _guardrail_block() -> str:
             text = f.read()
     except OSError:
         return ""
-
-    def _find(pattern, default='-'):
-        m = re.search(pattern, text, flags=re.MULTILINE)
-        return (m.group(1).strip() if m else default)
-
-    date = _find(r'- 日期:\s*(\d{4}-\d{2}-\d{2})', '未知日期')
-    verdict = _find(r'^## 判定：(.+)$', '判定未知')
-    ir = _find(r'\|\s*净IR\s*\|\s*\*\*([^*]+)\*\*')
-    ci = _find(r'\|\s*净IR\s*\|\s*\*\*[^*]+\*\*\s*(\[[^\]]*\])', '')
-    pbo = _find(r'\|\s*\*\*PBO\*\*\s*\|\s*\*\*([^*]+)\*\*')
-    dsr = _find(r'\|\s*\*\*DSR\*\*[^|]*\|\s*\*\*([^*]+)\*\*')
+    f = _guardrail_fields(text)
+    date, verdict, ir, ci = f['date'], f['verdict'], f['ir'], f['ci']
+    pbo, dsr = f['pbo'], f['dsr']
+    excess, mde, lift = f['excess'] or '-', f['mde'] or '-', f['lift'] or '-'
 
     def _ok(val, op):
         try:
@@ -616,13 +636,17 @@ def _guardrail_block() -> str:
 >
 > | 门槛 | 要求 | 实测 |
 > |------|------|------|
-> | 净IR | ≥0.7 | **{ir}** {ci} {ir_ok} |
+> | 净IR（绝对/含beta） | 参考 | **{ir}** {ci} {ir_ok} |
+> | 超额IR（−等权基准） | ≥0.7 且 CI下界>0 | **{excess}** |
 > | PBO | <0.5 | **{pbo}** {pbo_ok} |
 > | DSR | ≥0.95 | **{dsr}** {dsr_ok} |
+> | MDE（80%功效） | 低于此值测不出 | **{mde}** |
+> | 超额lift | >0 | **{lift}** |
 >
-> 规格：TopK=10 按 raw prob 排序（D73）、20 日非重叠调仓、成本 0.5%；
+> 规格：TopK=10 按 raw 打分排序（D73）、20 日非重叠调仓、成本 0.5%；
 > 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（系统低配辅助信号）
 > —— 净IR=风险调整后收益（越高越好）；PBO=过拟合概率（越低越好）；DSR=统计显著性（越高越好）。
+> ⚠️ 判定式仍用绝对 IR（含 beta，三.68）：策略须先赢过等权基准；超额IR / MDE 供判读，不重复打勾。
 > 复核计算由系统自动完成，本报告仅转贴不重算"""
 
 
@@ -632,7 +656,6 @@ def _guardrail_html_summary() -> str:
     展示：判定 + 净IR(95%CI) / PBO / DSR 三门槛 ✅❌ + 配比语义。
     无 20d 文件或解析失败返回空串。
     """
-    import re
     path = _guardrail_file_20d()
     if path is None:
         return ""
@@ -641,17 +664,11 @@ def _guardrail_html_summary() -> str:
             text = f.read()
     except OSError:
         return ""
-
-    def _find(pattern, default='-'):
-        m = re.search(pattern, text, flags=re.MULTILINE)
-        return (m.group(1).strip() if m else default)
-
-    verdict = _find(r'^## 判定：(.+)$', '判定未知')
-    date = _find(r'- 日期:\s*(\d{4}-\d{2}-\d{2})', '未知日期')
-    ir = _find(r'\|\s*净IR\s*\|\s*\*\*([^*]+)\*\*')
-    ir_ci = _find(r'\|\s*净IR\s*\|\s*\*\*[^*]+\*\*\s*(\[[^\]]*\])', '')
-    pbo = _find(r'\|\s*\*\*PBO\*\*\s*\|\s*\*\*([^*]+)\*\*')
-    dsr = _find(r'\|\s*\*\*DSR\*\*[^|]*\|\s*\*\*([^*]+)\*\*')
+    g = _guardrail_fields(text)
+    verdict, date = g['verdict'], g['date']
+    ir, ir_ci = g['ir'], g['ci']
+    pbo, dsr = g['pbo'], g['dsr']
+    excess, mde = g['excess'] or '-', g['mde'] or '-'
 
     def _ok(val, op):
         try:
@@ -669,10 +686,10 @@ def _guardrail_html_summary() -> str:
         f'`{os.path.basename(path)}` {date}）：<b>{verdict}</b>'
         f"{(' — ' + alloc) if alloc else ''}<br>"
         f'净IR <b>{ir}</b> {ir_ci} '
-        f'{_ok(ir, lambda v: v >= 0.7)} · PBO <b>{pbo}</b> '
+        f'{_ok(ir, lambda v: v >= 0.7)} · 超额IR <b>{excess}</b> · MDE <b>{mde}</b> · PBO <b>{pbo}</b> '
         f'{_ok(pbo, lambda v: v < 0.5)} · DSR <b>{dsr}</b> '
         f'{_ok(dsr, lambda v: v >= 0.95)}'
-        '<br><span style="color:#999; font-size:11px;">净IR=风险调整后收益（越高越好）；PBO=过拟合概率'
+        '<br><span style="color:#999; font-size:11px;">净IR=风险调整后收益（越高越好）；超额IR=减等权基准（三.68）；PBO=过拟合概率'
         '（越低越好）；DSR=统计显著性（越高越好）。复核计算由系统自动完成，本报告仅转贴不重算；'
         '净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
         '</div>'
