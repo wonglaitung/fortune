@@ -1357,8 +1357,8 @@ def apply_email_placeholders(full_content, html_content, detailed_html='', detai
 
 
 def build_global_brief():
-    """运行时快照 + 重要新闻；失败时返回可读占位，不阻断主流程。"""
-    snapshot_text, news_text = "", ""
+    """运行时快照 + 重要新闻 + 近期关键宏观事件；失败时返回可读占位，不阻断主流程。"""
+    snapshot_text, news_text, calendar_text = "", "", ""
     try:
         from scripts.market_snapshot import collect as collect_snapshot, render as render_snapshot
         snapshot_text = render_snapshot(collect_snapshot())
@@ -1373,7 +1373,15 @@ def build_global_brief():
     except Exception as e:  # noqa: BLE001
         print(f"⚠️ 重要新闻生成失败（跳过）: {e}")
         news_text = "### 重要新闻\n\n> 本次新闻摘要不可用。\n"
-    return snapshot_text, news_text
+    try:
+        from scripts.event_radar import collect_macro_events, render_brief
+        events = collect_macro_events(days=5)[:10]
+        calendar_text = render_brief(events, 5)
+        calendar_text = calendar_text.replace("# 每日关键事件", "### 近期关键宏观事件", 1)
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 近期关键宏观事件生成失败（跳过）: {e}")
+        calendar_text = "### 近期关键宏观事件\n\n> 本次事件日历不可用。\n"
+    return snapshot_text, news_text, calendar_text
 
 
 def generate_html_email(content, date_str):
@@ -5444,9 +5452,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     _grd_block = ""
                 event_text = generate_event_report_content(days=30)
                 print("🌍 生成运行时市场快照与重要新闻...")
-                snapshot_text, news_text = build_global_brief()
+                snapshot_text, news_text, calendar_text = build_global_brief()
                 response_display = normalize_llm_display_headings(response)
-                full_content = banner_line + f"""**本文导航**：今日速览 · 今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
+                full_content = banner_line + f"""**本文导航**：今日速览 · 近期重点关注 · 今日综合买卖建议 · 重点个股分析 · 信息参考 · 附录
 
 <!--RISK_PANEL-->
 
@@ -5459,6 +5467,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ## 二、重要新闻
 
 {news_text}
+
+## 三、近期需重点关注（未来 5 天 + 近 24h）
+
+{calendar_text}
 
 ---
 
@@ -5476,11 +5488,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 # 信息参考
 
-## 一、恒生指数技术分析
+## 四、恒生指数技术分析
 
 {hsi_text}
 
-## 二、机器学习预测结果（20天）
+## 五、机器学习预测结果（20天）
 
 ### 机器学习模型（排序口径）
 
@@ -5489,11 +5501,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
 {_grd_block}
-## 三、公司行动与事件提示（近 30 天）
+## 六、公司行动与事件提示（近 30 天）
 
 {event_text}
 
-## 四、股票异常检测提醒
+## 七、股票异常检测提醒
 
 """
 
@@ -5502,19 +5514,19 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                 full_content += f"""
 
-## 五、板块分析（5日涨跌幅排名）
+## 八、板块分析（5日涨跌幅排名）
 
 {sector_text}
 
-## 六、股息信息（即将除净）
+## 九、股息信息（即将除净）
 
 {dividend_text}
 
-## 七、股票技术指标详情
+## 十、股票技术指标详情
 
 {technical_indicators_table}
 
-## 八、最近48小时模拟交易记录
+## 十一、最近48小时模拟交易记录
 
 {recent_transactions_text}
 

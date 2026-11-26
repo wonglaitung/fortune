@@ -66,7 +66,7 @@ class TestPlaceholderOrder(unittest.TestCase):
         full = (
             'BANNER\n<!--RISK_PANEL-->\nMAIN ADVICE\n'
             '<!--DETAILED_STOCKS_HTML-->\n<!--DETAILED_STOCKS_TEXT-->\n'
-            '# 信息参考\n## 一、恒生指数技术分析\n'
+            '# 信息参考\n## 四、恒生指数技术分析\n'
             '# 附录\n## 附录 B：技术指标说明\n'
         )
         text, html = ca.apply_email_placeholders(

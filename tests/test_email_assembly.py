@@ -89,6 +89,7 @@ class TestEmailAssembly(unittest.TestCase):
             patch.object(ca, 'get_hsi_email_indicators', return_value=None),
             patch.object(ca, 'get_stock_anomalies', return_value=[]),
             patch.object(ca, 'generate_anomaly_report_content', return_value='ANOMALY'),
+            patch.object(ca, 'build_global_brief', return_value=('SNAP', 'NEWS', 'CAL')),
             patch.object(ca, 'get_current_market_state', return_value=None),
             patch.object(ca, 'generate_technical_indicators_table', return_value='TABLE'),
             patch.object(ca, 'get_recent_transactions', return_value=pd.DataFrame()),
@@ -123,7 +124,12 @@ class TestEmailAssembly(unittest.TestCase):
                     os.remove(path)
 
         text = captured['text']
-        order = ['## 综合买卖建议', '## 重点个股分析', '# 信息参考',
+        order = ['## 三、近期需重点关注（未来 5 天 + 近 24h）',
+                 '## 综合买卖建议', '## 重点个股分析', '# 信息参考',
+                 '## 四、恒生指数技术分析', '## 五、机器学习预测结果（20天）',
+                 '## 六、公司行动与事件提示（近 30 天）', '## 七、股票异常检测提醒',
+                 '## 八、板块分析（5日涨跌幅排名）', '## 九、股息信息（即将除净）',
+                 '## 十、股票技术指标详情', '## 十一、最近48小时模拟交易记录',
                  '# 附录', '## 附录 A', '## 附录 B']
         positions = [text.index(x) for x in order]
         self.assertEqual(positions, sorted(positions), order)

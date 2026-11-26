@@ -92,6 +92,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（**16:30 HKT**；cron 已改 `30 8` UTC，D25） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
+| **每日关键宏观事件** | `python3 scripts/event_radar.py --brief --days 5`（Nasdaq 日历→HKT，家族归并+重要性排序；邮件「一页速览」自动调用，失败占位不阻断） | 每日收市后（随综合分析） |
 | **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type lgbm --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数。**2026-10-22 起 CLI 默认 `--label-mode rank`**；**D23 起默认 `F1_FEATURES=1 F1_FORCE=1`（例外观察采用；D20 ⑦ 期为 =0）**；复现 2026-10-11 前一切基线须显式 `--label-mode absolute` + `F1_FEATURES=0 F1_FORCE=0`，复现 F1-on 旧基线（212920/234941/B2）同 =1 但另需 `HIBOR_FEATURES=0`） | - |
 | **CCASS 日归档** | workflow `ccass-archive.yml`（310 只 4 线程 ≈20 分钟；自动打包提交到**私有数据仓**，运行前校验 private=true；压缩后 ≈0.4 MB/日）；或本地 `bash scripts/run_ccass_archive.sh`。**HKEX 仅保留约 12 个月、禁止公开再分发 ⇒ 主仓 `data/ccass/` 不入库** | 每交易日 HKT 20:00（D86） |
 | **SFC 卖空周报周更** | `python3 scripts/fetch_sfc_short.py`（增量抓 SFC 官方每周 CSV 追加 `data/sfc_short/`；`--dry` 预览 / `--full` 回填）；已挂进 `run_comprehensive_analysis.sh` 前置步骤 | 每周（SFC 周五发布后） |

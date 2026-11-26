@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""每日事件雷达（原型）。
+"""每日关键宏观事件雷达。
 
 数据源：
-- Nasdaq 经济日历 API：事件、GMT 时间、预期/实际/前值
+- Nasdaq 经济日历 API：事件、美东时间、预期/实际/前值
 - Federal Reserve RSS：最新官方新闻
 - yfinance：S&P500 / Nasdaq / VIX / 美债10Y / 美元指数 / 恒指
 
 用法：
-  python3 scripts/event_radar.py
-  python3 scripts/event_radar.py --days 3
+  python3 scripts/event_radar.py --brief --days 5
+  python3 scripts/event_radar.py --days 5
   python3 scripts/event_radar.py --out output/event_radar/today.md
 
 只做信息汇总与风险提示，不构成交易建议。
@@ -21,23 +21,34 @@ import argparse
 import json
 import re
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, time, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-import pandas as pd
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "output" / "event_radar"
 CAL_URL = "https://api.nasdaq.com/api/calendar/economicevents"
 FED_RSS = "https://www.federalreserve.gov/feeds/press_all.xml"
-HKT = timezone(timedelta(hours=8))
-EST = timezone(timedelta(hours=-5))
+HKT = ZoneInfo("Asia/Hong_Kong")
+NY = ZoneInfo("America/New_York")
 TRACK = {"United States", "China", "Hong Kong", "Euro Zone", "Japan"}
 KEY = [
     "FOMC", "Fed", "Interest Rate", "CPI", "PCE", "Nonfarm", "Unemployment",
     "GDP", "PMI", "Retail Sales", "Treasury", "Trade Balance", "Industrial Production",
+    "Industrial Profit", "Exports", "Imports",
 ]
+DROP = [
+    "gdpnow", "balance sheet", "reserve balances", "private nonfarm", "u6 unemployment",
+    "crude oil", "eia", "natural gas storage", "gasoline", "forecast 1m", "forecast 2m",
+]
+FAM_SCORE = {
+    "Rate Decision": 6.0, "CPI": 5.0, "Core PCE": 5.0, "Nonfarm Payrolls": 5.0,
+    "GDP": 4.0, "Unemployment Rate": 3.0, "PMI": 3.0, "Retail Sales": 2.0,
+    "Industrial Profits": 1.5, "Industrial Production": 1.5, "Trade": 1.0,
+}
 ASSETS = {
     "^GSPC": "S&P 500",
     "^IXIC": "Nasdaq",
@@ -88,31 +99,40 @@ def why(event: str) -> str:
     return "宏观/政策信息，影响风险偏好"
 
 
+def fetch_rows(day: date) -> list[dict]:
+    try:
+        r = requests.get(CAL_URL, params={"date": day.isoformat()}, timeout=10,
+                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        r.raise_for_status()
+        data = r.json().get("data") or {}
+        return data.get("rows") or []
+    except Exception:
+        return []
+
+
+def event_time(day: date, gmt: str):
+    try:
+        hh, mm = [int(v) for v in gmt.split(":")[:2]]
+        return datetime.combine(day, time(hh, mm), tzinfo=NY).astimezone(HKT)
+    except Exception:
+        return None
+
+
 def calendar(day: date) -> list[dict]:
-    r = requests.get(CAL_URL, params={"date": day.isoformat()}, timeout=25,
-                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-    r.raise_for_status()
-    data = r.json().get("data") or {}
     out = []
-    for x in data.get("rows") or []:
-        country = clean(x.get("country"))
-        event = clean(x.get("eventName"))
-        if country not in TRACK:
-            continue
-        gmt = clean(x.get("gmt"))
-        if not gmt or gmt.upper() == "24H":
+    for x in fetch_rows(day):
+        country, event, gmt = clean(x.get("country")), clean(x.get("eventName")), clean(x.get("gmt"))
+        if country not in TRACK or not event or not gmt or gmt.upper() in ("24H", "ALL DAY"):
             continue
         if not any(k.lower() in event.lower() for k in KEY):
             continue
         low = event.lower()
-        if any(k in low for k in ("gdpnow", "balance sheet", "reserve balances", "private nonfarm", "u6 unemployment")):
+        if any(k in low for k in DROP):
             continue
         if "speaks" in low and not any(k in low for k in ("powell", "chair", "vice chair")):
             continue
-        try:
-            hh, mm = [int(v) for v in gmt.split(":")[:2]]
-            dt = datetime.combine(day, time(hh, mm), tzinfo=EST).astimezone(HKT)
-        except Exception:
+        dt = event_time(day, gmt)
+        if dt is None:
             continue
         out.append({
             "hkt": dt.strftime("%m-%d %H:%M"),
@@ -125,6 +145,149 @@ def calendar(day: date) -> list[dict]:
             "why": why(event),
         })
     return out
+
+
+def family(event: str):
+    e = event.lower()
+    if "core pce" in e:
+        return "Core PCE"
+    if "pce" in e:
+        return "PCE"
+    if "gdp price" in e or "gdp sales" in e:
+        return None
+    if "gdp" in e:
+        return "GDP"
+    if "cpi" in e:
+        return "CPI"
+    if "nonfarm" in e:
+        return "Nonfarm Payrolls"
+    if "unemployment rate" in e:
+        return "Unemployment Rate"
+    if "retail sales" in e:
+        return "Retail Sales"
+    if "pmi" in e:
+        return "PMI"
+    if "industrial profit" in e:
+        return "Industrial Profits"
+    if "industrial production" in e:
+        return "Industrial Production"
+    if e in ("exports", "imports", "trade balance"):
+        return "Trade"
+    if any(k in e for k in ("interest rate", "fomc", "fed funds")):
+        return "Rate Decision"
+    return "Other"
+
+
+def importance(fam: str, country: str, actual, consensus) -> float:
+    s = FAM_SCORE.get(fam, 0.5)
+    s += 2 if country in ("United States", "China", "Hong Kong") else 1
+    a, c = num(actual), num(consensus)
+    if a is not None and c is not None:
+        s += min(abs(a - c) / (abs(c) + 1e-9) * 2, 3)
+    return s
+
+
+def event_why(fam: str, country: str) -> str:
+    if fam == "Rate Decision":
+        return "利率路径 → 折现率/银行NIM"
+    if fam in ("CPI", "Core PCE", "PCE"):
+        return {
+            "United States": "美国通胀 → 联储路径 → 美债/美元/港股",
+            "China": "中国通胀 → 政策空间",
+            "Japan": "日本通胀 → 日元/套息交易",
+            "Euro Zone": "欧元区通胀 → ECB 路径",
+            "Hong Kong": "香港通胀 → 本地利率",
+        }.get(country, "通胀 → 利率路径")
+    if fam in ("Nonfarm Payrolls", "Unemployment Rate"):
+        return ("美国就业 → 联储路径 → 美债/美元" if country == "United States"
+                else f"{country}就业 → 本地消费/政策")
+    if fam == "GDP":
+        return "增长 → 盈利/风险偏好"
+    if fam == "PMI":
+        return {
+            "China": "中国景气 → 周期/中资板块",
+            "United States": "美国景气 → 周期/估值",
+            "Japan": "日本景气 → 日元/出口链",
+            "Euro Zone": "欧元区景气 → ECB 路径",
+            "Hong Kong": "香港景气 → 本地股",
+        }.get(country, "景气 → 周期")
+    if fam == "Retail Sales":
+        return "消费强弱 → 盈利/利率"
+    if fam == "Industrial Profits":
+        return "中国工业盈利 → 中资周期"
+    if fam == "Trade":
+        return "贸易/外需 → 港股出口链"
+    if fam == "Industrial Production":
+        return "工业生产 → 周期/出口链"
+    return "宏观信息 → 风险偏好"
+
+
+def collect_macro_events(days: int = 5, include_released: bool = True, now=None) -> list[dict]:
+    today = date.today()
+    now = now or datetime.now(HKT)
+    dates = [today + timedelta(days=i) for i in range(-1, days + 1)]
+    end = today + timedelta(days=days)
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        batches = list(ex.map(fetch_rows, dates))
+    cand = []
+    for day, rows in zip(dates, batches):
+        for x in rows:
+            c, ev, gmt = clean(x.get("country")), clean(x.get("eventName")), clean(x.get("gmt"))
+            if c not in TRACK or not ev or not gmt or gmt.upper() in ("24H", "ALL DAY"):
+                continue
+            if not any(k.lower() in ev.lower() for k in KEY):
+                continue
+            low = ev.lower()
+            if any(k in low for k in DROP):
+                continue
+            if "speaks" in low and not any(k in low for k in ("powell", "chair", "vice chair")):
+                continue
+            fam = family(ev)
+            if fam in (None, "Other"):
+                continue
+            dt = event_time(day, gmt)
+            if dt is None or dt.date() > end:
+                continue
+            released = dt <= now
+            actual = clean(x.get("actual")) if (released and include_released) else ""
+            cand.append({
+                "dt": dt, "hkt": dt.strftime("%m-%d %H:%M"), "country": c, "event": ev,
+                "fam": fam, "consensus": clean(x.get("consensus")), "previous": clean(x.get("previous")),
+                "actual": actual, "score": importance(fam, c, actual if released else None, x.get("consensus")),
+                "why": event_why(fam, c),
+            })
+    best = {}
+    for e in cand:
+        k = (e["country"], e["fam"], e["dt"])
+        if k not in best or e["score"] > best[k]["score"]:
+            best[k] = e
+    items = list(best.values())
+    core = {(e["country"], e["dt"]) for e in items if e["fam"] == "Core PCE"}
+    items = [e for e in items if not (e["fam"] == "PCE" and (e["country"], e["dt"]) in core)]
+    items.sort(key=lambda e: (-e["score"], e["dt"]))
+    return items
+
+
+def render_brief(events: list[dict], days: int, max_n: int = 10) -> str:
+    lines = [
+        "# 每日关键事件",
+        "",
+        f"- 生成时间：{datetime.now(HKT):%Y-%m-%d %H:%M} HKT",
+        f"- 覆盖：近 1 日 + 未来 {days} 天；按重要性排序，最多 {max_n} 条",
+        "- 时间口径：Nasdaq 日历美东时间已转 HKT；实际值仅在事件时间已过时显示；发布日请与官方日历复核。",
+        "",
+        "| # | HKT | 地区 | 事件 | 预期 | 前值 | 实际(超预期) | 分 | 为什么重要 |",
+        "|---:|---|---|---|---:|---:|---:|---:|---|",
+    ]
+    for i, e in enumerate(events[:max_n], 1):
+        act = f"{e['actual']} ({surprise(e['actual'], e['consensus'])})" if e.get("actual") else "—"
+        lines.append(f"| {i} | {e['hkt']} | {e['country']} | {e['event']} | "
+                     f"{e['consensus'] or '—'} | {e['previous'] or '—'} | {act} | "
+                     f"{e['score']:.1f} | {e['why']} |")
+    if not events:
+        lines.append("| — | — | — | 无符合条件的已排期事件 | — | — | — | — | — |")
+    lines += ["", "> 只做事件清单；不判断方向、不构成交易建议。"]
+    return "\n".join(lines) + "\n"
 
 
 def market() -> tuple[list[dict], list[str]]:
@@ -167,73 +330,6 @@ def fed_news(n=3) -> list[dict]:
         return out
     except Exception:
         return []
-
-
-def score_event(e: dict) -> float:
-    name = e["event"].lower()
-    s = 0.0
-    if any(k in name for k in ("fomc", "interest rate decision", "fed interest rate")):
-        s += 6
-    if any(k in name for k in ("nonfarm payrolls", "cpi", "pce", "gdp")):
-        s += 5
-    if "unemployment rate" in name:
-        s += 3
-    if any(k in name for k in ("retail sales", "ism", "pmi")):
-        s += 2
-    if any(k in name for k in ("fed", "ecb", "boe", "boj")):
-        s += 2
-    if e["country"] in ("United States", "China", "Hong Kong"):
-        s += 2
-    elif e["country"] in ("Euro Zone", "Japan"):
-        s += 1
-    a, c = num(e["actual"]), num(e["consensus"])
-    if a is not None and c is not None:
-        s += min(abs(a - c) / (abs(c) + 1e-9) * 2, 3)
-    return s
-
-
-def brief_events(events: list[dict], max_n: int = 8) -> list[dict]:
-    ranked = sorted(events, key=lambda e: (-score_event(e), e["hkt"]))
-    seen, out = set(), []
-    for e in ranked:
-        name = e["event"].lower()
-        group = e["event"]
-        if "cpi" in name:
-            group = "CPI"
-        elif "nonfarm payrolls" in name:
-            group = "Nonfarm Payrolls"
-        elif "unemployment rate" in name:
-            group = "Unemployment Rate"
-        elif "retail sales" in name:
-            group = "Retail Sales"
-        key = (e["country"], group)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(e)
-        if len(out) >= max_n:
-            break
-    return sorted(out, key=lambda e: e["hkt"])
-
-
-def render_brief(events: list[dict], days: int) -> str:
-    lines = [
-        "# 每日关键事件",
-        "",
-        f"- 生成时间：{datetime.now(HKT):%Y-%m-%d %H:%M} HKT",
-        f"- 覆盖：近 1 日 + 未来 {days} 天；只列 5–10 条关键事件",
-        "- 时间口径：源为 Nasdaq 日历，已按 EST→HKT 转换；发布日请与官方日历复核。",
-        "",
-        "| # | HKT | 地区 | 事件 | 预期 | 实际 | 为什么重要 |",
-        "|---:|---|---|---|---:|---:|---|",
-    ]
-    for i, e in enumerate(events, 1):
-        lines.append(f"| {i} | {e['hkt']} | {e['country']} | {e['event']} | "
-                     f"{e['consensus'] or '—'} | {e['actual'] or '—'} | {e['why']} |")
-    if not events:
-        lines.append("| — | — | — | 无符合条件的已排期事件 | — | — | — |")
-    lines += ["", "> 只做事件清单；不判断方向、不构成交易建议。"]
-    return "\n".join(lines) + "\n"
 
 
 def render(events: list[dict], rows: list[dict], flags: list[str], fed: list[dict], days: int) -> str:
@@ -289,60 +385,49 @@ def render(events: list[dict], rows: list[dict], flags: list[str], fed: list[dic
         lines.append("| — | 未取到 RSS |")
 
     lines += ["", "## 5. 数据源与限制",
-              "- Nasdaq 经济日历：有 consensus/actual，但无重要性字段；本脚本用关键词筛选。",
+              "- Nasdaq 经济日历：有 consensus/actual，但无重要性字段；本脚本用关键词与家族分级筛选。",
               "- Fed RSS：官方新闻，非交易信号。",
               "- yfinance：行情延迟/复权口径有限；仅用于状态判断。",
-              "- 事件时间已转 HKT；跨时区事件需注意港股是否开市。",
+              "- 事件时间已按美东时区转 HKT；跨时区事件需注意港股是否开市。",
               "- 本报告只做信息汇总，不构成买卖建议。"]
     return "\n".join(lines) + "\n"
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="每日事件雷达")
-    ap.add_argument("--days", type=int, default=3, help="覆盖未来天数")
-    ap.add_argument("--brief", action="store_true", help="只输出 5–10 条关键事件")
-    ap.add_argument("--max", type=int, default=8, help="brief 模式最多条数")
+    ap = argparse.ArgumentParser(description="每日关键宏观事件雷达")
+    ap.add_argument("--days", type=int, default=5, help="覆盖未来自然日数")
+    ap.add_argument("--brief", action="store_true", help="只输出关键事件清单")
+    ap.add_argument("--max", type=int, default=10, help="brief 模式最多条数")
     ap.add_argument("--out", help="输出 md 路径")
     args = ap.parse_args()
 
     today = date.today()
-    events = []
-    for i in range(-1, args.days + 1):
-        try:
-            events += calendar(today + timedelta(days=i))
-        except Exception as e:
-            print(f"⚠️ {today + timedelta(days=i)} 日历失败: {e}")
-    seen, uniq = set(), []
-    for e in events:
-        k = (e["hkt"], e["country"], e["event"])
-        if k not in seen:
-            seen.add(k)
-            uniq.append(e)
-    events = sorted(uniq, key=lambda x: x["hkt"])
     if args.brief:
-        events = brief_events(events, args.max)
-        text = render_brief(events, args.days)
-        OUT.mkdir(parents=True, exist_ok=True)
-        md = Path(args.out) if args.out else OUT / f"brief_{today.isoformat()}.md"
-        js = md.with_suffix(".json")
-        md.parent.mkdir(parents=True, exist_ok=True)
-        md.write_text(text, encoding="utf-8")
-        js.write_text(json.dumps({"events": events}, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(text)
-        print(f"💾 {md}\n💾 {js}")
-        return 0
-
-    rows, flags = market()
-    fed = fed_news()
-    text = render(events, rows, flags, fed, args.days)
+        events = collect_macro_events(days=args.days)[:args.max]
+        text = render_brief(events, args.days, args.max)
+        payload = {"events": events}
+    else:
+        raw = []
+        for i in range(-1, args.days + 1):
+            raw += calendar(today + timedelta(days=i))
+        seen, events = set(), []
+        for e in raw:
+            k = (e["hkt"], e["country"], e["event"])
+            if k not in seen:
+                seen.add(k)
+                events.append(e)
+        events = sorted(events, key=lambda x: x["hkt"])
+        rows, flags = market()
+        fed = fed_news()
+        text = render(events, rows, flags, fed, args.days)
+        payload = {"events": events, "market": rows, "flags": flags, "fed": fed}
 
     OUT.mkdir(parents=True, exist_ok=True)
-    md = Path(args.out) if args.out else OUT / f"{today.isoformat()}.md"
+    md = Path(args.out) if args.out else OUT / (f"brief_{today.isoformat()}.md" if args.brief else f"{today.isoformat()}.md")
     js = md.with_suffix(".json")
     md.parent.mkdir(parents=True, exist_ok=True)
     md.write_text(text, encoding="utf-8")
-    js.write_text(json.dumps({"events": events, "market": rows, "flags": flags, "fed": fed},
-                             ensure_ascii=False, indent=2), encoding="utf-8")
+    js.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(text)
     print(f"💾 {md}\n💾 {js}")
     return 0

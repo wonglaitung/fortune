@@ -54,6 +54,7 @@ flowchart TD
 
 **关键依赖关系**：
 - `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
+- `scripts/event_radar.py` 抓 Nasdaq 经济日历（近 1 日 + 未来 5 天，美东→HKT，家族归并 + 重要性排序 + 实际值仅在事件时间已过时显示）；`build_global_brief()` 在邮件「一页速览」生成「三、近期需重点关注」，失败返回占位不阻断；只做信息汇总、不判断方向（D107）
 - **20d 预测加载优先级**：`ml_trading_model_catboost_20d.pkl`（**F1-off**）优先、缺则回退 `lightgbm_20d.pkl`（D20 ⑦ 四格多数判，2026-10-10 切换）。**两 pkl 均 F1-off**：catboost 版=生产重训版、LGBM 版=回退留档（D20 ⑥ A/B 判 F1 对 LGBM 反向）
 - F1 另类特征（D20）：SFC 卖空经 `scripts/fetch_sfc_short.py` 周更进 `data/sfc_short/`（入库跟踪，工作流 commit 写回）；基本面比率走 `data/fund_cache/`（gitignore 持久缓存，akshare，30s 超时）；两源均 PIT 正确（SFC `t-7` / 基本面固定滞后）
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
